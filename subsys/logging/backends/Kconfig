@@ -5,6 +5,7 @@ menu "Backends"
 
 rsource "Kconfig.adsp"
 rsource "Kconfig.adsp_mtrace"
+rsource "Kconfig.ambiq_swo"
 rsource "Kconfig.ble"
 rsource "Kconfig.efi_console"
 rsource "Kconfig.fs"

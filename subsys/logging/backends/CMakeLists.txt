@@ -11,6 +11,11 @@ zephyr_sources_ifdef(
 )
 
 zephyr_sources_ifdef(
+  CONFIG_LOG_BACKEND_AMBIQ_SWO
+  log_backend_ambiq_swo.c
+)
+
+zephyr_sources_ifdef(
   CONFIG_LOG_BACKEND_BLE
   log_backend_ble.c
 )
