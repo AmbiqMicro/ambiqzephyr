@@ -1,0 +1,16 @@
+sample:
+  description: Log Backend SWO Example
+    application
+  name: log backend swo example
+common:
+  tags: introduction
+  integration_platforms:
+    - native_posix
+  harness: console
+  harness_config:
+    type: one_line
+    regex:
+      - "(.*) Log Backend SWO Example! (.*)"
+tests:
+  sample.boards.ambiq.debug.log_backend_swo_example:
+    tags: introduction
