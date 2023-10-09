@@ -1,0 +1,3 @@
+
+rsource "mspi/Kconfig"
+rsource "ambt53/Kconfig"

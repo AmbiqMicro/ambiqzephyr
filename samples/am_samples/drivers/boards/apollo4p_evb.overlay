@@ -1,0 +1,50 @@
+#include <zephyr/dt-bindings/flash_controller/ospi.h>
+
+&pinctrl {
+	mspi0_default: mspi0_default{
+		group1 {
+			pinmux = <MSPI0_0_P64>,
+				<MSPI0_1_P65>,
+				<MSPI0_8_P72>;
+		};
+		group2 {
+			pinmux = <NCE52_P52>;
+			drive-push-pull;
+			drive-strength = "1.0";
+			ambiq,iom-nce-module = <32>;
+		};
+	};
+	mspi0_quad: mspi0_quad{
+		group1 {
+			pinmux = <MSPI0_0_P64>,
+				<MSPI0_1_P65>,
+				<MSPI0_2_P66>,
+				<MSPI0_3_P67>,
+				<MSPI0_8_P72>;
+		};
+		group2 {
+			pinmux = <NCE52_P52>;
+			drive-push-pull;
+			drive-strength = "1.0";
+			ambiq,iom-nce-module = <32>;
+		};
+	};
+};
+/* SPDX-License-Identifier: Apache-2.0 */
+qspi: &mspi0 {
+	compatible = "custom,ambiq-qspi";
+	pinctrl-0 = <&mspi0_default>;
+	pinctrl-1 = <&mspi0_quad>;
+	pinctrl-names = "default", "quad";
+	reg = <0x40060000 0x400>, <0x14000000 0x400>;
+	reg-names = "qspi", "qspi_mm";
+	status = "okay";
+	ambt53: ambt53@0 {
+		compatible = "custom,ambt53";
+		reg = <0>;
+		max-frequency = <4000000>;
+		dummy-cycles = <32>;
+		spi-bus-width = <OSPI_QUAD_MODE>;
+		status = "okay";
+	};
+};

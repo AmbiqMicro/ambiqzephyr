@@ -1,0 +1,18 @@
+# Copyright (c) 2019 Nordic Semiconductor
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig CUSTOM_MSPI_DRIVER
+    bool "MSPI driver"
+    default n
+    depends on DT_HAS_CUSTOM_AMBIQ_QSPI_ENABLED
+    select AMBIQ_HAL
+    select AMBIQ_HAL_USE_MSPI
+    help
+      Enable custom mspi driver for AMBT53
+
+config CUSTOM_SPI_INIT_PRIORITY
+	int "Init priority"
+	default 70
+	help
+	  Device driver initialization priority.
+
