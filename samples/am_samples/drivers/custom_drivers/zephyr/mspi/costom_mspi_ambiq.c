@@ -541,6 +541,7 @@ static int mspi_ambiq_init(const struct device *dev)
 	am_hal_mspi_config_t mspiCfg = {0};
 
 	mspiCfg.pTCB = NULL;
+	mspiCfg.bClkonD4 = 1;
 
 	int ret = am_hal_mspi_initialize(custom_mspi_get_module_idx(dev),
 					 &data->mspiHandle);
