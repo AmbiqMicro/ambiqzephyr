@@ -29,14 +29,43 @@
 			ambiq,iom-nce-module = <32>;
 		};
 	};
+
+	mspi2_default: mspi2_default{
+		group1 {
+			pinmux = <MSPI2_4_P78>,
+				<MSPI2_0_P74>,
+				<MSPI2_1_P75>;
+		};
+		group2 {
+			pinmux = <NCE83_P83>;
+			drive-push-pull;
+			drive-strength = "1.0";
+			ambiq,iom-nce-module = <36>;
+		};
+	};
+	mspi2_quad: mspi2_quad{
+		group1 {
+			pinmux = <MSPI2_4_P78>,
+				<MSPI2_0_P74>,
+				<MSPI2_1_P75>,
+				<MSPI2_2_P76>,
+				<MSPI2_3_P77>;
+		};
+		group2 {
+			pinmux = <NCE83_P83>;
+			drive-push-pull;
+			drive-strength = "1.0";
+			ambiq,iom-nce-module = <36>;
+		};
+	};
 };
 /* SPDX-License-Identifier: Apache-2.0 */
-qspi: &mspi0 {
+qspi: &mspi2 {
 	compatible = "custom,ambiq-qspi";
-	pinctrl-0 = <&mspi0_default>;
-	pinctrl-1 = <&mspi0_quad>;
+	pinctrl-0 = <&mspi2_default>;
+	pinctrl-1 = <&mspi2_quad>;
 	pinctrl-names = "default", "quad";
-	reg = <0x40060000 0x400>, <0x14000000 0x400>;
+	reg = <0x40062000 0x400>, <0x1C000000 0x4000000>;
 	reg-names = "qspi", "qspi_mm";
 	status = "okay";
 	ambt53: ambt53@0 {

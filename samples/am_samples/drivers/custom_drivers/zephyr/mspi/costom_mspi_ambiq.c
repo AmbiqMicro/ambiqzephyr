@@ -547,7 +547,7 @@ static int mspi_ambiq_init(const struct device *dev)
 	if (ret) {
 		return ret;
 	}
-
+  LOG_INF("mspi module idx: %d\r\n", custom_mspi_get_module_idx(dev));
 	ret = cfg->pwr_func();
 
 	// ret = am_hal_mspi_power_control(data->mspiHandle, AM_HAL_SYSCTRL_WAKE, false);

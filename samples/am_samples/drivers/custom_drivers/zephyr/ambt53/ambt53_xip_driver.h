@@ -141,7 +141,7 @@ struct ambt53_xip_driver_api {
 	void (*print)(const struct device *dev);
 };
 
-// void        ambt53_xip_print(const struct device *dev);
+void ambt53_basic_config_get(const struct device *xip_dev);
 void ambt53_status_get(const struct device *xip_dev, ambt53_status_reg_t *pStatus);
 void ambt53_status_clear(const struct device *xip_dev, ambt53_status_reg_t *pStatus);
 #ifdef __cplusplus

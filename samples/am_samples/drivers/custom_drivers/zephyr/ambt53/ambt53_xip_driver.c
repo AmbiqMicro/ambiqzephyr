@@ -66,35 +66,35 @@ static int ambt53_init(const struct device *xip_dev)
 		}
 
 		ambt53_remote_reset(xip_dev);
-		ambt53_remote_init(xip_dev);
-		// Switch MSPI to Quad/Octol mode if device spi width is 
-		if(config->spi_bus_width != OSPI_SPI_MODE)
-		{
-			mspi_cfg.generic_config.operation &= (~SPI_LINES_MASK);
-			switch (config->spi_bus_width)
-			{
-			case OSPI_DUAL_MODE:
-				mspi_cfg.generic_config.operation |= SPI_LINES_DUAL;
-				break;
-			case OSPI_QUAD_MODE:
-				mspi_cfg.generic_config.operation |= SPI_LINES_QUAD;
-				break;
-			case OSPI_OPI_MODE:
-				mspi_cfg.generic_config.operation |= SPI_LINES_OCTAL;
-				break;
-			}
-			ret = custom_mspi_config(config->bus, &mspi_cfg);
-			if (ret != 0) {
-				LOG_ERR("SPI reconfigure error: %d\n", ret);
-				break;
-			}
-		}
+		// ambt53_remote_init(xip_dev);
+		// // Switch MSPI to Quad/Octol mode if device spi width is 
+		// if(config->spi_bus_width != OSPI_SPI_MODE)
+		// {
+		// 	mspi_cfg.generic_config.operation &= (~SPI_LINES_MASK);
+		// 	switch (config->spi_bus_width)
+		// 	{
+		// 	case OSPI_DUAL_MODE:
+		// 		mspi_cfg.generic_config.operation |= SPI_LINES_DUAL;
+		// 		break;
+		// 	case OSPI_QUAD_MODE:
+		// 		mspi_cfg.generic_config.operation |= SPI_LINES_QUAD;
+		// 		break;
+		// 	case OSPI_OPI_MODE:
+		// 		mspi_cfg.generic_config.operation |= SPI_LINES_OCTAL;
+		// 		break;
+		// 	}
+		// 	ret = custom_mspi_config(config->bus, &mspi_cfg);
+		// 	if (ret != 0) {
+		// 		LOG_ERR("SPI reconfigure error: %d\n", ret);
+		// 		break;
+		// 	}
+		// }
 
-		ret = custom_mspi_enable_xip(config->bus);
-		if (ret != 0) {
-			LOG_ERR("Enable XIP error: %d\n", ret);
-			break;
-		}
+		// ret = custom_mspi_enable_xip(config->bus);
+		// if (ret != 0) {
+		// 	LOG_ERR("Enable XIP error: %d\n", ret);
+		// 	break;
+		// }
 	}while(0);
 
 	return ret;
@@ -106,7 +106,7 @@ static int ambt53_init(const struct device *xip_dev)
 //  Get the ambt53 xSPI basic configuration.
 //
 //*****************************************************************************
-static void ambt53_basic_config_get(const struct device *xip_dev)
+void ambt53_basic_config_get(const struct device *xip_dev)
 {
 	const struct ambt53_config *config = xip_dev->config;
     uint32_t ui32Ver = 0;
@@ -124,7 +124,7 @@ static void ambt53_basic_config_get(const struct device *xip_dev)
     custom_mspi_read(config->bus, &g_mspi_buf);
     if ( (ui32Ver == 0) || (ui32Cfg == 0) )
     {
-		LOG_ERR("The xSPI IP is not working! Please check your hardware...\n");
+		LOG_ERR("The xSPI IP is not working! Please check your hardware...ui32Ver=0x%x,ui32Cfg=0x%x\n", ui32Ver, ui32Cfg);
         return;
     }
     LOG_INF("xSPI IP version: %d.%d.%d\n", (ui32Ver & 0xFF), ((ui32Ver & 0xFF00) >> 8), ((ui32Ver & 0xFF0000) >> 16));

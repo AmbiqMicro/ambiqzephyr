@@ -20,12 +20,14 @@ int main(void)
 {
 	printk("Hello World from the app!\n");
 
-	dev = device_get_binding("AMBT53_XIP_DRIVER");
+	dev = DEVICE_DT_GET(DT_NODELABEL(ambt53));
 
 	__ASSERT(dev, "Failed to get device binding");
 
 	printk("device is %p, name is %s\n", dev, dev->name);
 	
+	ambt53_basic_config_get(dev);
+
 	k_object_access_grant(dev, k_current_get());
 	k_thread_user_mode_enter(user_entry, NULL, NULL, NULL);
 	return 0;
