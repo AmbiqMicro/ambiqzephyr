@@ -1,0 +1,59 @@
+# Copyright (c) 2019 Nordic Semiconductor ASA
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+    Properties defining the interface for ambt53 device.
+
+    Representation of a device on a spi/qspi/octospi bus:
+
+        ambt53: ambt53@0 {
+                compatible = "custom,ambt53";
+                reg = <0>;
+                max-frequency = <4000000>;
+                spi-bus-width = <OSPI_QUAD_MODE>;
+                reset-gpios = <&gpioa 2 GPIO_ACTIVE_LOW>;
+                dqs-en;
+                status = "okay";
+        };
+
+compatible: "custom,ambt53"
+
+include: [base.yaml]
+
+# on-bus: qspi
+
+properties:
+  reg:
+    required: true
+
+  max-frequency:
+    type: int
+    required: true
+    description: Maximum clock frequency of device's SPI/QSPI/OSPI interface in Hz
+  dummy-cycles:
+    type: int
+    required: true
+    description: Dummy cycles required for preparing data for read operation
+  reset-gpios:
+    type: phandle-array
+    description: RESETn pin
+  spi-bus-width:
+    type: int
+    required: true
+    description: |
+     The width of (Octo)SPI bus to which AMBT53 is connected.
+
+     Possible values are :
+      - OSPI_SPI_MODE  <1> = SPI mode on 1 data line
+      - OSPI_DUAL_MODE <2> = Dual mode on 2 data lines
+      - OSPI_QUAD_MODE <4> = Quad mode on 4 data lines
+      - OSPI_OPI_MODE  <8> = Octo mode on 8 data lines
+    enum:
+      - 1
+      - 2
+      - 4
+      - 8
+  dqs-en:
+    type: boolean
+    description: |
+      Enable DQS feature.

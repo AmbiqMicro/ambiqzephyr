@@ -1,0 +1,15 @@
+# Copyright (c) 2019 Nordic Semiconductor
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig AMBT53_XIP_DRIVER
+    bool "AMBT53 driver"
+    default n
+    depends on DT_HAS_CUSTOM_AMBT53_ENABLED
+    help
+      Enable custom driver for AMBT53
+
+config CUSTOM_AMBT53_INIT_PRIORITY
+	int "Init priority"
+	default 71
+	help
+	  Device driver initialization priority.
