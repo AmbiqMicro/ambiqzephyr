@@ -271,7 +271,17 @@ static int bt_ipc_send(struct net_buf *buf)
 	net_buf_push_u8(buf, pkt_indicator);
 
 	LOG_HEXDUMP_DBG(buf->data, buf->len, "Final HCI buffer:");
+
+	/* Using a peripheral bus(eg. SPI) as the IPC's physical layer requires
+	* exclusive operations on the bus, as a result requires ipc_service_send() 
+	* to be called from a cooperative thread.
+	*
+	* Calling `k_sched lock()` has the effect of making the current
+	* thread cooperative.
+	*/
+	k_sched_lock();
 	err = ipc_service_send(&hci_ept, buf->data, buf->len);
+	k_sched_unlock();
 	if (err < 0) {
 		LOG_ERR("Failed to send (err %d)", err);
 	}
