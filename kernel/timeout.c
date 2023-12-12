@@ -12,7 +12,7 @@
 #include <zephyr/drivers/timer/system_timer.h>
 #include <zephyr/sys_clock.h>
 
-static uint64_t curr_tick;
+uint64_t curr_tick;
 
 static sys_dlist_t timeout_list = SYS_DLIST_STATIC_INIT(&timeout_list);
 
@@ -206,8 +206,10 @@ int32_t z_get_next_timeout_expiry(void)
 	return ret;
 }
 
+extern void debug_system_tick();
 void sys_clock_announce(int32_t ticks)
 {
+	debug_system_tick();
 	k_spinlock_key_t key = k_spin_lock(&timeout_lock);
 
 	/* We release the lock around the callbacks below, so on SMP
