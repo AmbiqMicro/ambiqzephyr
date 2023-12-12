@@ -24,7 +24,7 @@ LOG_MODULE_REGISTER(bt_hci_driver);
 #define IPC_EVT 0x04
 #define IPC_ISO 0x05
 
-#define IPC_BOUND_TIMEOUT_IN_MS K_MSEC(1000)
+#define IPC_BOUND_TIMEOUT_IN_MS K_MSEC(20000)
 
 static struct ipc_ept hci_ept;
 static K_SEM_DEFINE(ipc_bound_sem, 0, 1);
