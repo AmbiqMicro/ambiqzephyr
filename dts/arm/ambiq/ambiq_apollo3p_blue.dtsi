@@ -70,7 +70,6 @@
 		reg = <0x10010000 0xB0000>;
 	};
 
-<<<<<<< HEAD
 	xip0: memory@52000000 {
 		compatible = "zephyr,memory-region";
 		reg = <0x52000000 0x2000000>;
@@ -89,8 +88,6 @@
 		zephyr,memory-region = "XIP2";
 	};
 
-=======
->>>>>>> 31632b0a0bd (soc: arm: ambiq: apollo3: Add support for Apollo3 Blue Plus SoC)
 	soc {
 		compatible = "ambiq,apollo3p-blue", "ambiq,apollo3x", "simple-bus";
 
@@ -109,7 +106,6 @@
 
 		counter0: counter@40008000 {
 			compatible = "ambiq,counter";
-<<<<<<< HEAD
 			reg = <0x40008000 0x20>;
 			interrupts = <14 0>;
 			status = "disabled";
@@ -160,9 +156,6 @@
 		counter7: counter@400080e0 {
 			compatible = "ambiq,counter";
 			reg = <0x400080E0 0x20>;
-=======
-			reg = <0x40008000 0x80>;
->>>>>>> 31632b0a0bd (soc: arm: ambiq: apollo3: Add support for Apollo3 Blue Plus SoC)
 			interrupts = <14 0>;
 			status = "disabled";
 		};
@@ -175,10 +168,7 @@
 			status = "disabled";
 			clocks = <&uartclk>;
 			ambiq,pwrcfg = <&pwrcfg 0x8 0x80>;
-<<<<<<< HEAD
 			zephyr,pm-device-runtime-auto;
-=======
->>>>>>> 31632b0a0bd (soc: arm: ambiq: apollo3: Add support for Apollo3 Blue Plus SoC)
 		};
 
 		uart1: uart@4001d000 {
@@ -189,103 +179,66 @@
 			status = "disabled";
 			clocks = <&uartclk>;
 			ambiq,pwrcfg = <&pwrcfg 0x8 0x100>;
-<<<<<<< HEAD
 			zephyr,pm-device-runtime-auto;
 		};
 
 		spi0: spi@50004000 {
-=======
-		};
-
-		iom0: iom@50004000 {
->>>>>>> 31632b0a0bd (soc: arm: ambiq: apollo3: Add support for Apollo3 Blue Plus SoC)
 			reg = <0x50004000 0x1000>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			interrupts = <6 0>;
 			status = "disabled";
 			ambiq,pwrcfg = <&pwrcfg 0x8 0x2>;
-<<<<<<< HEAD
 			zephyr,pm-device-runtime-auto;
 		};
 
 		spi1: spi@50005000 {
-=======
-		};
-
-		iom1: iom@50005000 {
->>>>>>> 31632b0a0bd (soc: arm: ambiq: apollo3: Add support for Apollo3 Blue Plus SoC)
 			reg = <0x50005000 0x1000>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			interrupts = <7 0>;
 			status = "disabled";
 			ambiq,pwrcfg = <&pwrcfg 0x8 0x4>;
-<<<<<<< HEAD
 			zephyr,pm-device-runtime-auto;
 		};
 
 		spi2: spi@50006000 {
-=======
-		};
-
-		iom2: iom@50006000 {
->>>>>>> 31632b0a0bd (soc: arm: ambiq: apollo3: Add support for Apollo3 Blue Plus SoC)
 			reg = <0x50006000 0x1000>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			interrupts = <8 0>;
 			status = "disabled";
 			ambiq,pwrcfg = <&pwrcfg 0x8 0x8>;
-<<<<<<< HEAD
 			zephyr,pm-device-runtime-auto;
 		};
 
 		spi3: spi@50007000 {
-=======
-		};
-
-		iom3: iom@50007000 {
->>>>>>> 31632b0a0bd (soc: arm: ambiq: apollo3: Add support for Apollo3 Blue Plus SoC)
 			reg = <0x50007000 0x1000>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			interrupts = <9 0>;
 			status = "disabled";
 			ambiq,pwrcfg = <&pwrcfg 0x8 0x10>;
-<<<<<<< HEAD
 			zephyr,pm-device-runtime-auto;
 		};
 
 		spi4: spi@50008000 {
-=======
-		};
-
-		iom4: iom@50008000 {
->>>>>>> 31632b0a0bd (soc: arm: ambiq: apollo3: Add support for Apollo3 Blue Plus SoC)
 			reg = <0x50008000 0x1000>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			interrupts = <10 0>;
 			status = "disabled";
 			ambiq,pwrcfg = <&pwrcfg 0x8 0x20>;
-<<<<<<< HEAD
 			zephyr,pm-device-runtime-auto;
 		};
 
 		spi5: spi@50009000 {
-=======
-		};
-
-		iom5: iom@50009000 {
->>>>>>> 31632b0a0bd (soc: arm: ambiq: apollo3: Add support for Apollo3 Blue Plus SoC)
 			reg = <0x50009000 0x1000>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			interrupts = <11 0>;
 			status = "disabled";
 			ambiq,pwrcfg = <&pwrcfg 0x8 0x40>;
-<<<<<<< HEAD
 			zephyr,pm-device-runtime-auto;
 		};
 
@@ -353,13 +306,6 @@
 			compatible = "ambiq,mspi-controller";
 			reg = <0x50014000 0x400>,<0x52000000 0x2000000>;
 			clock-frequency = <48000000>;
-=======
-		};
-
-		mspi0: spi@50014000 {
-			compatible = "ambiq,mspi";
-			reg = <0x50014000 0x400>;
->>>>>>> 31632b0a0bd (soc: arm: ambiq: apollo3: Add support for Apollo3 Blue Plus SoC)
 			interrupts = <20 0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -367,16 +313,10 @@
 			ambiq,pwrcfg = <&pwrcfg 0x8 0x800>;
 		};
 
-<<<<<<< HEAD
 		mspi1: mspi@50015000 {
 			compatible = "ambiq,mspi-controller";
 			reg = <0x50015000 0x400>,<0x54000000 0x2000000>;
 			clock-frequency = <48000000>;
-=======
-		mspi1: spi@50015000 {
-			compatible = "ambiq,mspi";
-			reg = <0x50015000 0x400>;
->>>>>>> 31632b0a0bd (soc: arm: ambiq: apollo3: Add support for Apollo3 Blue Plus SoC)
 			interrupts = <32 0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -384,16 +324,10 @@
 			ambiq,pwrcfg = <&pwrcfg 0x8 0x1000>;
 		};
 
-<<<<<<< HEAD
 		mspi2: mspi@50016000 {
 			compatible = "ambiq,mspi-controller";
 			clock-frequency = <48000000>;
 			reg = <0x50016000 0x400>,<0x56000000 0x2000000>;
-=======
-		mspi2: spi@50016000 {
-			compatible = "ambiq,mspi";
-			reg = <0x50016000 0x400>;
->>>>>>> 31632b0a0bd (soc: arm: ambiq: apollo3: Add support for Apollo3 Blue Plus SoC)
 			interrupts = <33 0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -401,7 +335,6 @@
 			ambiq,pwrcfg = <&pwrcfg 0x8 0x2000>;
 		};
 
-<<<<<<< HEAD
 		pinctrl: pin-controller@40010000 {
 			compatible = "ambiq,apollo3-pinctrl";
 			reg = <0x40010000 0x800>;
@@ -453,8 +386,6 @@
 			};
 		};
 
-=======
->>>>>>> 31632b0a0bd (soc: arm: ambiq: apollo3: Add support for Apollo3 Blue Plus SoC)
 		wdt0: watchdog@40024000 {
 			compatible = "ambiq,watchdog";
 			reg = <0x40024000 0x400>;
