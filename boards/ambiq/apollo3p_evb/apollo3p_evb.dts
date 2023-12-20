@@ -136,4 +136,3 @@
 &gpio64_95 {
 	status = "okay";
 };
-

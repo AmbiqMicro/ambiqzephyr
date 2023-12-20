@@ -40,7 +40,7 @@ static int ambiq_gpio_pin_configure(const struct device *dev, gpio_pin_t pin, gp
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
 	pin += dev_cfg->offset;
 
-	am_hal_gpio_pincfg_t pincfg = g_AM_HAL_GPIO_DISABLE;
+	am_hal_gpio_pincfg_t pincfg = g_AM_HAL_GPIO_DEFAULT;
 
 	if (flags & GPIO_INPUT) {
 		pincfg = g_AM_HAL_GPIO_INPUT;
@@ -60,7 +60,7 @@ static int ambiq_gpio_pin_configure(const struct device *dev, gpio_pin_t pin, gp
 		}
 	}
 	if (flags & GPIO_DISCONNECTED) {
-		pincfg = g_AM_HAL_GPIO_DISABLE;
+		pincfg = g_AM_HAL_GPIO_DEFAULT;
 	}
 
 	if (flags & GPIO_OUTPUT_INIT_HIGH) {
@@ -110,70 +110,6 @@ static int ambiq_gpio_pin_configure(const struct device *dev, gpio_pin_t pin, gp
 
 	return 0;
 }
-
-#if defined(CONFIG_SOC_SERIES_APOLLO3X)
-uint32_t am_hal_gpio_pinconfig_get(uint32_t ui32GpioNum, am_hal_gpio_pincfg_t *psGpioCfg)
-{
-	uint32_t ui32GPCfgAddr, ui32PadregAddr, ui32AltpadAddr;
-	uint32_t ui32GPCfgMask, ui32PadMask;
-	uint32_t ui32GPCfgShft, ui32PadShft;
-	uint32_t ui32GPCfgVal, ui32PadVal, ui32AltVal;
-
-	if (ui32GpioNum >= AM_HAL_GPIO_MAX_PADS) {
-		return AM_HAL_STATUS_OUT_OF_RANGE;
-	}
-
-	if (psGpioCfg == (am_hal_gpio_pincfg_t *)0x0) {
-		return AM_HAL_STATUS_INVALID_ARG;
-	}
-
-	ui32GPCfgAddr = AM_REGADDR(GPIO, CFGA) + ((ui32GpioNum >> 1) & ~0x3);
-	ui32PadregAddr = AM_REGADDR(GPIO, PADREGA) + (ui32GpioNum & ~0x3);
-	ui32AltpadAddr = AM_REGADDR(GPIO, ALTPADCFGA) + (ui32GpioNum & ~0x3);
-	ui32GPCfgShft = ((ui32GpioNum & 0x7) << 2);
-	ui32PadShft = ((ui32GpioNum & 0x3) << 3);
-	ui32GPCfgMask = (uint32_t)0xF << ui32GPCfgShft;
-	ui32PadMask = (uint32_t)0xFF << ui32PadShft;
-
-	ui32GPCfgVal = (AM_REGVAL(ui32GPCfgAddr) & ui32GPCfgMask) >> ui32GPCfgShft;
-	ui32PadVal = (AM_REGVAL(ui32PadregAddr) & ui32PadMask) >> ui32PadShft;
-	ui32AltVal = (AM_REGVAL(ui32AltpadAddr) & ui32PadMask) >> ui32PadShft;
-
-	psGpioCfg->eGPOutcfg =
-		(ui32GPCfgVal & GPIO_CFGA_GPIO0OUTCFG_Msk) >> GPIO_CFGA_GPIO0OUTCFG_Pos;
-	psGpioCfg->eGPInput =
-		(ui32PadVal & GPIO_PADREGA_PAD0INPEN_Msk) >> GPIO_PADREGA_PAD0INPEN_Pos;
-
-	if ((ui32PadVal & GPIO_PADREGA_PAD0PULL_Msk) >> GPIO_PADREGA_PAD0PULL_Pos) {
-		if ((ui32PadVal & GPIO_PADREGA_PAD0RSEL_Msk) >> GPIO_PADREGA_PAD0RSEL_Pos) {
-			psGpioCfg->ePullup = AM_HAL_GPIO_PIN_PULLUP_1_5K +
-					     ((ui32PadVal & GPIO_PADREGA_PAD0RSEL_Msk) >>
-					      GPIO_PADREGA_PAD0RSEL_Pos);
-		} else if (ui32GpioNum != 20) {
-			psGpioCfg->ePullup = AM_HAL_GPIO_PIN_PULLUP_WEAK;
-		} else {
-			psGpioCfg->ePullup = AM_HAL_GPIO_PIN_PULLDOWN;
-		}
-	} else {
-		psGpioCfg->ePullup = AM_HAL_GPIO_PIN_PULLUP_NONE;
-	}
-
-	psGpioCfg->uFuncSel =
-		(ui32PadVal & GPIO_PADREGA_PAD0FNCSEL_Msk) >> GPIO_PADREGA_PAD0FNCSEL_Pos;
-	psGpioCfg->eCEpol = (ui32GPCfgVal & GPIO_CFGA_GPIO0INTD_Msk) >> GPIO_CFGA_GPIO0INTD_Pos;
-	psGpioCfg->eIntDir =
-		(((ui32GPCfgVal & GPIO_CFGA_GPIO0INCFG_Msk) >> GPIO_CFGA_GPIO0INCFG_Pos) << 1) |
-		psGpioCfg->eCEpol;
-	psGpioCfg->eDriveStrength =
-		(((ui32AltVal & GPIO_ALTPADCFGA_PAD0_DS1_Msk) >> GPIO_ALTPADCFGA_PAD0_DS1_Pos)
-		 << 1) |
-		((ui32PadVal & GPIO_PADREGA_PAD0STRNG_Msk) >> GPIO_PADREGA_PAD0STRNG_Pos);
-	psGpioCfg->eGPRdZero =
-		(ui32GPCfgVal & GPIO_CFGA_GPIO0INCFG_Msk) >> GPIO_CFGA_GPIO0INCFG_Pos;
-
-	return AM_HAL_STATUS_SUCCESS;
-}
-#endif
 
 #ifdef CONFIG_GPIO_GET_CONFIG
 static int ambiq_gpio_get_config(const struct device *dev, gpio_pin_t pin, gpio_flags_t *out_flags)
@@ -322,9 +258,9 @@ static int ambiq_gpio_port_get_raw(const struct device *dev, gpio_port_value_t *
 	const struct ambiq_gpio_config *const dev_cfg = dev->config;
 
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
-	*value = AM_REGVAL(AM_REGADDR(GPIO, RDA) + (dev_cfg->offset >> 3));
+	*value = (*AM_HAL_GPIO_RDn(dev_cfg->offset));
 #else
-	*value = AM_REGVAL(AM_REGADDR(GPIO, RD0) + (dev_cfg->offset >> 5));
+	*value = (*AM_HAL_GPIO_RDn(dev_cfg->offset >> 2));
 #endif
 	return 0;
 }
@@ -451,9 +387,9 @@ static int ambiq_gpio_pin_interrupt_configure(const struct device *dev, gpio_pin
 	const struct ambiq_gpio_config *const dev_cfg = dev->config;
 	struct ambiq_gpio_data *const data = dev->data;
 
-	am_hal_gpio_pincfg_t pincfg = {0};
 	int ret;
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
+	am_hal_gpio_pincfg_t pincfg = g_AM_HAL_GPIO_DEFAULT;
 	int gpio_pin = pin + dev_cfg->offset;
 
 	ret = am_hal_gpio_pinconfig_get(gpio_pin, &pincfg);
@@ -499,6 +435,7 @@ static int ambiq_gpio_pin_interrupt_configure(const struct device *dev, gpio_pin
 		k_spin_unlock(&data->lock, key);
 	}
 #else
+	am_hal_gpio_pincfg_t pincfg = am_hal_gpio_pincfg_default;
 	int gpio_pin = pin + (dev_cfg->offset >> 2);
 	uint32_t int_status;
 
@@ -565,6 +502,9 @@ static int ambiq_gpio_manage_callback(const struct device *dev, struct gpio_call
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
 static void ambiq_gpio_cfg_func(void)
 {
+	/* Apollo3 GPIO banks share the same irq number, connect to bank0 once when init and handle
+	 * different banks in ambiq_gpio_isr
+	 */
 	static bool global_irq_init = true;
 
 	if (!global_irq_init) {
@@ -575,7 +515,6 @@ static void ambiq_gpio_cfg_func(void)
 
 	/* Shared irq config default to BANK0. */
 	IRQ_CONNECT(GPIO_IRQn, DT_INST_IRQ(0, priority), ambiq_gpio_isr, DEVICE_DT_INST_GET(0), 0);
-	return;
 }
 #endif
 
@@ -611,25 +550,24 @@ static const struct gpio_driver_api ambiq_gpio_drv_api = {
 };
 
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
-#define AMBIQ_GPIO_DEFINE(n)                                                                       \
-	static struct ambiq_gpio_data ambiq_gpio_data_##n;                                         \
-	static const struct ambiq_gpio_config ambiq_gpio_config_##n = {                            \
-		.common =                                                                          \
-			{                                                                          \
-				.port_pin_mask = GPIO_PORT_PIN_MASK_FROM_DT_INST(n),               \
-			},                                                                         \
-		.base = DT_REG_ADDR(DT_INST_PARENT(n)),                                            \
-		.offset = DT_INST_REG_ADDR(n),                                                     \
-		.ngpios = DT_INST_PROP(n, ngpios),                                                 \
-		.irq_num = DT_INST_IRQN(n)};                                                       \
-	DEVICE_DT_INST_DEFINE(n, &ambiq_gpio_init, NULL, &ambiq_gpio_data_##n,                     \
-			      &ambiq_gpio_config_##n, PRE_KERNEL_1, CONFIG_GPIO_INIT_PRIORITY,     \
-			      &ambiq_gpio_drv_api);
+/* Apollo3 GPIO banks share the same irq number, connect irq here will cause build error, so we
+ * leave this function blank here and do it in ambiq_gpio_cfg_func
+ */
+#define AMBIQ_GPIO_CONFIG_FUNC(n) static void ambiq_gpio_cfg_func_##n(void){};
 #else
+#define AMBIQ_GPIO_CONFIG_FUNC(n)                                                                  \
+	static void ambiq_gpio_cfg_func_##n(void)                                                  \
+	{                                                                                          \
+		IRQ_CONNECT(DT_INST_IRQN(n), DT_INST_IRQ(n, priority), ambiq_gpio_isr,             \
+			    DEVICE_DT_INST_GET(n), 0);                                             \
+                                                                                                   \
+		return;                                                                            \
+	};
+#endif
+
 #define AMBIQ_GPIO_DEFINE(n)                                                                       \
 	static struct ambiq_gpio_data ambiq_gpio_data_##n;                                         \
 	static void ambiq_gpio_cfg_func_##n(void);                                                 \
-                                                                                                   \
 	static const struct ambiq_gpio_config ambiq_gpio_config_##n = {                            \
 		.common =                                                                          \
 			{                                                                          \
@@ -640,17 +578,9 @@ static const struct gpio_driver_api ambiq_gpio_drv_api = {
 		.ngpios = DT_INST_PROP(n, ngpios),                                                 \
 		.irq_num = DT_INST_IRQN(n),                                                        \
 		.cfg_func = ambiq_gpio_cfg_func_##n};                                              \
-	static void ambiq_gpio_cfg_func_##n(void)                                                  \
-	{                                                                                          \
-                                                                                                   \
-		IRQ_CONNECT(DT_INST_IRQN(n), DT_INST_IRQ(n, priority), ambiq_gpio_isr,             \
-			    DEVICE_DT_INST_GET(n), 0);                                             \
-                                                                                                   \
-		return;                                                                            \
-	};                                                                                         \
-                                                                                                   \
+	AMBIQ_GPIO_CONFIG_FUNC(n)                                                                  \
 	DEVICE_DT_INST_DEFINE(n, &ambiq_gpio_init, NULL, &ambiq_gpio_data_##n,                     \
 			      &ambiq_gpio_config_##n, PRE_KERNEL_1, CONFIG_GPIO_INIT_PRIORITY,     \
 			      &ambiq_gpio_drv_api);
-#endif
+
 DT_INST_FOREACH_STATUS_OKAY(AMBIQ_GPIO_DEFINE)
