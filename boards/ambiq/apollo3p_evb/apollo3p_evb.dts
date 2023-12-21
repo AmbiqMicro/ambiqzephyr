@@ -73,6 +73,10 @@
 	status = "okay";
 };
 
+&wdt0 {
+	status = "okay";
+};
+
 &gpio0_31 {
 	status = "okay";
 };
