@@ -78,7 +78,7 @@
 };
 
 &wdt0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &iom0 {
