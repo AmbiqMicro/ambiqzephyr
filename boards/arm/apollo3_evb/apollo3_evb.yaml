@@ -10,6 +10,7 @@ toolchain:
 supported:
   - uart
   - watchdog
+  - counter
   - gpio
 testing:
   ignore_tags:
