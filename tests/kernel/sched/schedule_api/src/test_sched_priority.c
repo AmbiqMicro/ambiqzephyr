@@ -129,7 +129,7 @@ ZTEST(threads_scheduling_1cpu, test_priority_preemptible_wait_prio)
 	k_sem_init(&sync_sema, 0, THREAD_NUM);
 
 	/* Ensure that this code starts running at the start of a system tick */
-	k_usleep(1);
+	k_usleep(300);
 
 	/* set current thread to a non-negative priority */
 	last_prio = K_PRIO_PREEMPT(2);

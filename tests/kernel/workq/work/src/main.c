@@ -304,7 +304,7 @@ ZTEST(work_1cpu, test_1cpu_simple_queue)
 	zassert_equal(coophi_counter(), 0);
 
 	/* Let it run, then check it finished. */
-	k_sleep(K_TICKS(1));
+	k_sleep(K_TICKS(3));
 	zassert_equal(coophi_counter(), 1);
 	zassert_equal(k_work_busy_get(&common_work), 0);
 
@@ -370,7 +370,7 @@ ZTEST(work_1cpu, test_1cpu_sync_queue)
 	zassert_equal(coophi_counter(), 0);
 
 	/* Let it run, then check it didn't finish. */
-	k_sleep(K_TICKS(1));
+	k_sleep(K_TICKS(3));
 	zassert_equal(coophi_counter(), 0);
 	zassert_equal(k_work_busy_get(&common_work), K_WORK_RUNNING);
 
@@ -402,7 +402,7 @@ ZTEST(work_1cpu, test_1cpu_reentrant_queue)
 	zassert_equal(coophi_counter(), 0);
 
 	/* Release it so it's running and can be rescheduled. */
-	k_sleep(K_TICKS(1));
+	k_sleep(K_TICKS(3));
 	zassert_equal(coophi_counter(), 0);
 
 	/* Resubmit to a different queue. */
@@ -480,7 +480,7 @@ ZTEST(work_1cpu, test_1cpu_running_flush)
 	zassert_equal(k_work_busy_get(&common_work), K_WORK_QUEUED);
 
 	/* Release it so it's running. */
-	k_sleep(K_TICKS(1));
+	k_sleep(K_TICKS(3));
 	zassert_equal(k_work_busy_get(&common_work), K_WORK_RUNNING);
 	zassert_equal(coophi_counter(), 0);
 
@@ -515,7 +515,7 @@ ZTEST(work_1cpu, test_1cpu_delayed_flush)
 	zassert_equal(coophi_counter(), 0);
 
 	/* Align to tick then flush. */
-	k_sleep(K_TICKS(1));
+	k_sleep(K_TICKS(3));
 	flush_ms = k_uptime_get_32();
 	zassert_true(k_work_flush_delayable(&dwork, &work_sync));
 	wait_ms = last_handle_ms - flush_ms;
@@ -645,7 +645,7 @@ ZTEST(work_1cpu, test_1cpu_delayed_cancel_sync_wait)
 	zassert_equal(coophi_counter(), 0);
 
 	/* Get it to running, where it will block. */
-	k_sleep(K_TICKS(1));
+	k_sleep(K_TICKS(3));
 	zassert_equal(coophi_counter(), 0);
 	zassert_equal(k_work_delayable_busy_get(&dwork), K_WORK_RUNNING);
 
@@ -699,7 +699,7 @@ ZTEST(work_1cpu, test_1cpu_running_cancel)
 	zassert_equal(coophi_counter(), 0);
 
 	/* Release it so it's running. */
-	k_sleep(K_TICKS(1));
+	k_sleep(K_TICKS(3));
 	zassert_equal(coophi_counter(), 0);
 
 	/* Schedule the async process to capture state and release work. */
@@ -762,7 +762,7 @@ ZTEST(work_1cpu, test_1cpu_running_cancel_sync)
 	zassert_equal(coophi_counter(), 0);
 
 	/* Release it so it's running. */
-	k_sleep(K_TICKS(1));
+	k_sleep(K_TICKS(3));
 	zassert_equal(coophi_counter(), 0);
 
 	/* Schedule the async process to capture state and release work. */
@@ -992,7 +992,7 @@ ZTEST(work_1cpu, test_1cpu_basic_schedule)
 		       NULL);
 
 	/* Align to tick, then schedule after normal delay. */
-	k_sleep(K_TICKS(1));
+	k_sleep(K_TICKS(3));
 	sched_ms = k_uptime_get_32();
 	rc = k_work_schedule_for_queue(&coophi_queue, &dwork, K_MSEC(DELAY_MS));
 	zassert_equal(rc, 1);
@@ -1113,7 +1113,7 @@ ZTEST(work_1cpu, test_1cpu_immed_schedule)
 	zassert_equal(coophi_counter(), 0);
 
 	/* Let it run, then check it didn't finish. */
-	k_sleep(K_TICKS(1));
+	k_sleep(K_TICKS(3));
 	zassert_equal(coophi_counter(), 1);
 	zassert_equal(k_work_busy_get(wp), 0);
 
@@ -1152,7 +1152,7 @@ ZTEST(work_1cpu, test_1cpu_basic_reschedule)
 	/* Align to tick then reschedule on the cooperative queue for
 	 * the standard delay.
 	 */
-	k_sleep(K_TICKS(1));
+	k_sleep(K_TICKS(3));
 	sched_ms = k_uptime_get_32();
 	rc = k_work_reschedule_for_queue(&coophi_queue, &dwork,
 					  K_MSEC(DELAY_MS));
@@ -1199,7 +1199,7 @@ ZTEST(work_1cpu, test_1cpu_immed_reschedule)
 	zassert_equal(coophi_counter(), 0);
 
 	/* Let it run, then check it didn't finish. */
-	k_sleep(K_TICKS(1));
+	k_sleep(K_TICKS(3));
 	zassert_equal(coophi_counter(), 0);
 	zassert_equal(k_work_busy_get(wp), K_WORK_RUNNING);
 
@@ -1340,7 +1340,7 @@ ZTEST(work_1cpu, test_1cpu_system_queue)
 	zassert_equal(system_counter(), 0);
 
 	/* Let it run, then check it didn't finish. */
-	k_sleep(K_TICKS(1));
+	k_sleep(K_TICKS(3));
 	zassert_equal(system_counter(), 1);
 	zassert_equal(k_work_busy_get(&common_work), 0);
 
@@ -1367,7 +1367,7 @@ ZTEST(work_1cpu, test_1cpu_system_schedule)
 		       NULL);
 
 	/* Align to tick, then schedule after normal delay. */
-	k_sleep(K_TICKS(1));
+	k_sleep(K_TICKS(3));
 	sched_ms = k_uptime_get_32();
 	rc = k_work_schedule(&dwork, K_MSEC(DELAY_MS));
 	zassert_equal(rc, 1);
@@ -1420,7 +1420,7 @@ ZTEST(work_1cpu, test_1cpu_system_reschedule)
 	/* Align to tick then reschedule on the system queue for
 	 * the standard delay.
 	 */
-	k_sleep(K_TICKS(1));
+	k_sleep(K_TICKS(3));
 	sched_ms = k_uptime_get_32();
 	rc = k_work_reschedule(&dwork, K_MSEC(DELAY_MS));
 	zassert_equal(rc, 1);
