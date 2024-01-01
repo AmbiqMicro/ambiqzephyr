@@ -35,6 +35,12 @@ struct apollo3_pinctrl_soc_pin {
 	uint32_t ambiq_pull_up_ohms : 3;
 	/** IOM nCE module select */
 	uint32_t iom_nce : 6;
+    /** 1 if CE is IOM, 0 if MSPI*/
+    uint32_t bIomMSPIn      : 1;
+    /** IOM number (0-5) or MSPI (0-2) */
+    uint32_t uIOMnum        : 3;    //!< [19:17] IOM number (0-5) or MSPI (0-2)
+    /** NCE polarity */
+    uint32_t eCEpol         : 1;    //!< [22:22] NCE polarity.
 };
 
 typedef struct apollo3_pinctrl_soc_pin pinctrl_soc_pin_t;
@@ -59,6 +65,9 @@ typedef struct apollo3_pinctrl_soc_pin pinctrl_soc_pin_t;
 		DT_PROP(node_id, bias_pull_down),				\
 		DT_ENUM_IDX(node_id, ambiq_pull_up_ohms),			\
 		DT_PROP(node_id, ambiq_iom_nce_module),				\
+        DT_PROP(node_id, ambiq_ce_mspi_iom),				\
+        DT_PROP(node_id, ambiq_iom_mspi_port),				\
+        DT_PROP(node_id, ambiq_ce_polariy),				\
 	},
 
 /**
