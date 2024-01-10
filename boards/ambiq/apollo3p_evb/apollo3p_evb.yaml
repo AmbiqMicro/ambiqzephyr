@@ -12,6 +12,7 @@ supported:
   - watchdog
   - counter
   - gpio
+  - i2c
 testing:
   ignore_tags:
     - net
