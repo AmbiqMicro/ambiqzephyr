@@ -52,6 +52,12 @@
 	status = "disabled";
 };
 
+&bleif {
+	pinctrl-0 = <&bleif_default>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
 &mspi0 {
 	pinctrl-0 = <&mspi0_default>;
 	pinctrl-names = "default";
