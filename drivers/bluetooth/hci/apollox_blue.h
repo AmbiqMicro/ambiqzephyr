@@ -84,10 +84,12 @@ int bt_apollo_controller_init(spi_transmit_fun transmit);
 /**
  * @brief Vendor specific setup before general HCI command sequence for
  * Bluetooth application.
+ * 
+ * @param params Pointer of HCI setup parameters.
  *
  * @return 0 on success or negative error number on failure.
  */
-int bt_apollo_vnd_setup(void);
+int bt_apollo_vnd_setup(const struct bt_hci_setup_params *params);
 
 /**
  * @brief Check if vendor specific receiving handling is ongoing.

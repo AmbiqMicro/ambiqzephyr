@@ -382,11 +382,9 @@ static int bt_hci_open(void)
 
 static int bt_spi_setup(const struct bt_hci_setup_params *params)
 {
-	ARG_UNUSED(params);
-
 	int ret;
 
-	ret = bt_apollo_vnd_setup();
+	ret = bt_apollo_vnd_setup(params);
 
 	return ret;
 }
