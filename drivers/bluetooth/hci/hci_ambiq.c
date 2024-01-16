@@ -76,6 +76,7 @@ static const struct spi_buf_set spi_rx = {.buffers = &spi_rx_buf, .count = 1};
 
 static K_SEM_DEFINE(sem_irq, 0, 1);
 static K_SEM_DEFINE(sem_spi_available, 1, 1);
+static K_SEM_DEFINE(sem_hci_pending, 0, 1);
 
 void bt_packet_irq_isr(const struct device *unused1, struct gpio_callback *unused2,
 		       uint32_t unused3)
@@ -148,6 +149,9 @@ static int hci_event_filter(const uint8_t *evt_data)
 		switch (subevt_type) {
 		case BT_HCI_EVT_LE_ADVERTISING_REPORT:
 			return EVT_DISCARD;
+		case BT_HCI_EVT_LE_P256_PUBLIC_KEY_COMPLETE:
+		case BT_HCI_EVT_LE_GENERATE_DHKEY_COMPLETE:
+			k_sem_give(&sem_hci_pending);
 		default:
 			return EVT_OK;
 		}
@@ -333,6 +337,7 @@ static void bt_spi_rx_thread(void *p1, void *p2, void *p3)
 static int bt_hci_send(struct net_buf *buf)
 {
 	int ret = 0;
+	uint16_t opcode = 0;
 
 	/* Buffer needs an additional byte for type */
 	if (buf->len >= SPI_MAX_TX_MSG_LEN) {
@@ -346,6 +351,7 @@ static int bt_hci_send(struct net_buf *buf)
 		break;
 	case BT_BUF_CMD:
 		net_buf_push_u8(buf, HCI_CMD);
+		opcode = (uint16_t)(buf->data[1] + (buf->data[2] << 8));
 		break;
 	default:
 		LOG_ERR("Unsupported type");
@@ -355,6 +361,14 @@ static int bt_hci_send(struct net_buf *buf)
 
 	/* Send the SPI packet */
 	ret = spi_send_packet(buf->data, buf->len);
+
+	/* TODO: The BLE controller will reply the meta event after receiving the key generated
+	 * commands some seconds. The following HCI commands or ACL data cannot be sent before
+	 * receiving these events. Otherwise the controller will return SPI_NOT_READY error.
+	 */
+	if ((opcode == BT_HCI_OP_LE_P256_PUBLIC_KEY) || (opcode == BT_HCI_OP_LE_GENERATE_DHKEY)) {
+		k_sem_take(&sem_hci_pending, K_FOREVER);
+	}
 
 	net_buf_unref(buf);
 
