@@ -95,25 +95,25 @@
 	pinctrl-0 = <&spi1_default>;
 	pinctrl-names = "default";
 	clock-frequency = <1000000>;
-	status = "okay";
+	status = "disabled";
 };
 
 &mspi0 {
 	pinctrl-0 = <&mspi0_default>;
 	pinctrl-names = "default";
-	status = "okay";
+	status = "disabled";
 };
 
 &mspi1 {
 	pinctrl-0 = <&mspi1_default>;
 	pinctrl-names = "default";
-	status = "okay";
+	status = "disabled";
 };
 
 &mspi2 {
 	pinctrl-0 = <&mspi2_default>;
 	pinctrl-names = "default";
-	status = "okay";
+	status = "disabled";
 };
 
 &bleif {
