@@ -119,7 +119,7 @@ config BT_NO_DRIVER
 config BT_AMBIQ_HCI
 	bool "AMBIQ BT HCI driver"
 	select SPI
-	select BT_HCI_SET_PUBLIC_ADDR
+	select BT_HCI_SETUP
 	help
 	  Supports Ambiq Bluetooth SoC using SPI as the communication protocol.
 	  HCI packets are sent and received as single Byte transfers.

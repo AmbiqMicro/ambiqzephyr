@@ -62,8 +62,6 @@ static const struct device *clk32m_dev = DEVICE_DT_GET(CLK_32M_NODE);
 static const struct device *clk32k_dev = DEVICE_DT_GET(CLK_32K_NODE);
 #endif /* CONFIG_SOC_SERIES_APOLLO4X */
 
-static bt_addr_le_t apollo_bt_addr = {0};
-
 extern void bt_packet_irq_isr(const struct device *unused1, struct gpio_callback *unused2,
 			      uint32_t unused3);
 
@@ -399,7 +397,7 @@ static int bt_apollo_set_nvds(void)
 }
 #endif /* CONFIG_SOC_SERIES_APOLLO4X */
 
-int bt_apollo_vnd_setup(const struct bt_hci_setup_params *params)
+int bt_apollo_vnd_setup(void)
 {
 	int ret = 0;
 
@@ -409,21 +407,6 @@ int bt_apollo_vnd_setup(const struct bt_hci_setup_params *params)
 #endif /* CONFIG_SOC_SERIES_APOLLO4X */
 
 	return ret;
-}
-
-static void bt_apollo_set_bt_public_addr(void)
-{
-	am_hal_mcuctrl_device_t sDevice;
-
-	am_hal_mcuctrl_info_get(AM_HAL_MCUCTRL_INFO_DEVICEID, &sDevice);
-
-	/* Bluetooth address formed by ChipID1 (32 bits) and ChipID0 (8-23 bits). */
-	memcpy(&apollo_bt_addr.a.val[0], &sDevice.ui32ChipID1, sizeof(sDevice.ui32ChipID1));
-	apollo_bt_addr.a.val[4] = (sDevice.ui32ChipID0 >> 8) & 0xFF;
-	apollo_bt_addr.a.val[5] = (sDevice.ui32ChipID0 >> 16) & 0xFF;
-	apollo_bt_addr.type = BT_ADDR_LE_PUBLIC;
-
-	bt_id_create(&apollo_bt_addr, NULL);
 }
 
 int bt_apollo_dev_init(void)
@@ -444,8 +427,6 @@ int bt_apollo_dev_init(void)
 		return -ENODEV;
 	}
 #endif /* CONFIG_SOC_SERIES_APOLLO4X */
-
-	bt_apollo_set_bt_public_addr();
 
 	return 0;
 }
