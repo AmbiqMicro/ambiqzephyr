@@ -169,7 +169,6 @@ int ipc_static_vrings_init(struct ipc_static_vrings *vr, unsigned int role)
 	if (!vr->shm_device.name)
 		vr->shm_device.name = SHM_DEVICE_DEFAULT_NAME;
 	vr->shm_device.num_regions = 1;
-	vr->shm_physmap[0] = vr->shm_addr;
 
 	metal_io_init(vr->shm_device.regions, (void *) vr->shm_addr,
 		      vr->shm_physmap, vr->shm_size, -1, 0, NULL);
