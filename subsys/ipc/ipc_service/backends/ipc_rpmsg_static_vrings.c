@@ -25,7 +25,6 @@
 #define NUM_INSTANCES	DT_NUM_INST_STATUS_OKAY(DT_DRV_COMPAT)
 
 #define WQ_STACK_SIZE	CONFIG_IPC_SERVICE_BACKEND_RPMSG_WQ_STACK_SIZE
-#define IPC_WQ_PRIORITY (K_PRIO_PREEMPT(1))
 
 #define STATE_READY	(0)
 #define STATE_BUSY	(1)
@@ -34,14 +33,6 @@
 K_THREAD_STACK_DEFINE(mbox_stack, WQ_STACK_SIZE);
 
 static struct k_work_q ipc_wq;
-static struct k_fifo tx_fifo;
-
-struct fifo_msg_t {
-	struct ipc_rpmsg_ept *rpmsg_ept;
-	uint8_t buf[512];
-	uint32_t len;
-};
-
 struct backend_data_t {
 	/* RPMsg */
 	struct ipc_rpmsg_instance rpmsg_inst;
@@ -51,7 +42,6 @@ struct backend_data_t {
 
 	/* MBOX WQ */
 	struct k_work mbox_work;
-	struct k_work tx_work;
 
 	/* General */
 	unsigned int role;
@@ -308,26 +298,6 @@ static void virtio_notify_cb(struct virtqueue *vq, void *priv)
 	}
 }
 
-static void tx_work_process(struct k_work *item)
-{
-	struct backend_data_t *data;
-	struct fifo_msg_t *msg = NULL;
-	data = CONTAINER_OF(item, struct backend_data_t, mbox_work);
-
-	while ((msg = k_fifo_get(&tx_fifo, K_NO_WAIT)) != NULL) {
-		int ret = rpmsg_send(&msg->rpmsg_ept->ep, msg->buf, msg->len);
-
-		/* No buffers available */
-		if (ret == RPMSG_ERR_NO_BUFF) {
-			printk("tx_work_process no buffer\n");
-		}
-		else
-		{
-			k_free(msg);
-		}
-	}
-}
-
 static void mbox_callback_process(struct k_work *item)
 {
 	struct backend_data_t *data;
@@ -355,6 +325,12 @@ static int mbox_init(const struct device *instance)
 
 	prio = (conf->wq_prio_type == PRIO_COOP) ? K_PRIO_COOP(conf->wq_prio) :
 						   K_PRIO_PREEMPT(conf->wq_prio);
+	// All instance share a same work queue
+	if(!(ipc_wq.flags & K_WORK_QUEUE_STARTED))
+	{
+		k_work_queue_init(&ipc_wq);
+		k_work_queue_start(&ipc_wq, mbox_stack, WQ_STACK_SIZE, prio, NULL);
+	}
 
 	k_work_init(&data->mbox_work, mbox_callback_process);
 
@@ -527,17 +503,13 @@ static int send(const struct device *instance, void *token,
 	if (!rpmsg_ept) {
 		return -ENOENT;
 	}
-	struct fifo_msg_t *fifo_msg = k_malloc(sizeof(struct fifo_msg_t));
-	if(fifo_msg == NULL)
-	{
+
+	ret = rpmsg_send(&rpmsg_ept->ep, msg, len);
+
+	/* No buffers available */
+	if (ret == RPMSG_ERR_NO_BUFF) {
 		return -ENOMEM;
 	}
-	fifo_msg->rpmsg_ept = rpmsg_ept;
-	memcpy(fifo_msg->buf, msg, len);
-	fifo_msg->len = len;
-	k_fifo_put(&tx_fifo, fifo_msg);
-	ret = k_work_submit_to_queue(&ipc_wq, &data->tx_work);
-	ret = (ret > 0)?0 : ret;
 
 	return ret;
 }
@@ -598,8 +570,6 @@ static int open(const struct device *instance)
 	if (err != 0) {
 		goto error;
 	}
-
-	k_work_init(&data->tx_work, tx_work_process);
 
 	rpmsg_inst = &data->rpmsg_inst;
 
@@ -871,16 +841,3 @@ static int shared_memory_prepare(void)
 
 SYS_INIT(shared_memory_prepare, PRE_KERNEL_1, 1);
 #endif /* CONFIG_IPC_SERVICE_BACKEND_RPMSG_SHMEM_RESET */
-
-static int ipc_common_prepare(void)
-{
-	// All instance share a same work queue and tx fifo
-	k_work_queue_init(&ipc_wq);
-	k_work_queue_start(&ipc_wq, mbox_stack, WQ_STACK_SIZE, IPC_WQ_PRIORITY, NULL);
-	k_fifo_init(&tx_fifo);
-
-	return 0;
-}
-
-SYS_INIT(ipc_common_prepare, POST_KERNEL, CONFIG_IPC_SERVICE_REG_BACKEND_PRIORITY);
-
