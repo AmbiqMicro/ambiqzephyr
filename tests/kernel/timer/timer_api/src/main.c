@@ -35,9 +35,9 @@ struct timer_data {
 #define BUSY_TICK_SLEW_PPM 130000U
 #else
 /* On other platforms assume the clocks are perfectly aligned. */
-#define BUSY_TICK_SLEW_PPM 0U
+#define BUSY_TICK_SLEW_PPM 10U
 #endif
-#define PPM_DIVISOR 1000000U
+#define PPM_DIVISOR 100U
 
 /* If the tick clock is faster or slower than the busywait clock the
  * remaining time for a partially elapsed timer in ticks will be
