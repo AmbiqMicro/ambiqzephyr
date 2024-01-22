@@ -30,9 +30,8 @@
 #define STATE_BUSY	(1)
 #define STATE_INITED	(2)
 
-K_THREAD_STACK_DEFINE(mbox_stack, WQ_STACK_SIZE);
+K_THREAD_STACK_ARRAY_DEFINE(mbox_stack, NUM_INSTANCES, WQ_STACK_SIZE);
 
-static struct k_work_q ipc_wq;
 struct backend_data_t {
 	/* RPMsg */
 	struct ipc_rpmsg_instance rpmsg_inst;
@@ -42,6 +41,7 @@ struct backend_data_t {
 
 	/* MBOX WQ */
 	struct k_work mbox_work;
+	struct k_work_q mbox_wq;
 
 	/* General */
 	unsigned int role;
@@ -314,7 +314,7 @@ static void mbox_callback(const struct device *instance, uint32_t channel,
 {
 	struct backend_data_t *data = user_data;
 
-	k_work_submit_to_queue(&ipc_wq, &data->mbox_work);
+	k_work_submit_to_queue(&data->mbox_wq, &data->mbox_work);
 }
 
 static int mbox_init(const struct device *instance)
@@ -325,12 +325,9 @@ static int mbox_init(const struct device *instance)
 
 	prio = (conf->wq_prio_type == PRIO_COOP) ? K_PRIO_COOP(conf->wq_prio) :
 						   K_PRIO_PREEMPT(conf->wq_prio);
-	// All instance share a same work queue
-	if(!(ipc_wq.flags & K_WORK_QUEUE_STARTED))
-	{
-		k_work_queue_init(&ipc_wq);
-		k_work_queue_start(&ipc_wq, mbox_stack, WQ_STACK_SIZE, prio, NULL);
-	}
+
+	k_work_queue_init(&data->mbox_wq);
+	k_work_queue_start(&data->mbox_wq, mbox_stack[conf->id], WQ_STACK_SIZE, prio, NULL);
 
 	k_work_init(&data->mbox_work, mbox_callback_process);
 
@@ -345,6 +342,7 @@ static int mbox_init(const struct device *instance)
 static int mbox_deinit(const struct device *instance)
 {
 	const struct backend_config_t *conf = instance->config;
+	struct backend_data_t *data = instance->data;
 	k_tid_t wq_thread;
 	int err;
 
@@ -353,9 +351,9 @@ static int mbox_deinit(const struct device *instance)
 		return err;
 	}
 
-	k_work_queue_drain(&ipc_wq, 1);
+	k_work_queue_drain(&data->mbox_wq, 1);
 
-	wq_thread = k_work_queue_thread_get(&ipc_wq);
+	wq_thread = k_work_queue_thread_get(&data->mbox_wq);
 	k_thread_abort(wq_thread);
 
 	return 0;
