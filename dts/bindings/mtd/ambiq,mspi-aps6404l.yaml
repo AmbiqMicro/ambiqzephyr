@@ -1,0 +1,8 @@
+# Copyright 2024 Ambiq Micro Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: AP Memory APS6404L pSRAM on Ambiq MSPI bus
+
+compatible: "ambiq,mspi-aps6404l"
+
+include: ambiq,mspi-device.yaml

@@ -1,0 +1,54 @@
+# Copyright (c) 2024 Ambiq Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: Ambiq MSPI device
+
+include: [mspi-device.yaml, "jedec,jesd216.yaml"]
+
+properties:
+  mspi-io-mode:
+    required: true
+
+  mspi-data-rate:
+    required: true
+
+  hardware-ce-num:
+    type: int
+    required: true
+    default: 0
+    description: |
+      It can be only CE0 or CE1,
+      but there could be multiple of CE0 or CE1 for a controller
+
+  rx-dummy:
+    required: true
+
+  tx-dummy:
+    required: true
+
+  read-instruction:
+    required: true
+
+  write-instruction:
+    required: true
+
+  instruction-length:
+    required: true
+
+  address-length:
+    required: true
+
+  timing-config:
+    type: array
+    default: [0, 0, 0, 0, 0, 0]
+    description: |
+      Array of tuples to configure the timing parameters
+      default =
+      <
+        .bSendInstr        = false;
+        .bSendAddr         = false;
+        .bWriteLatency     = false;
+        .bTurnaround       = false;
+        .ui8WriteLatency   = 0;
+        .ui8TurnAround     = 0;
+      >

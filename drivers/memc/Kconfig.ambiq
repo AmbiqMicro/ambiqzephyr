@@ -1,0 +1,8 @@
+# Copyright 2024 Ambiq Micro Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config MEMC_AMBIQ_MSPI_APS6404L
+	bool "Ambiq MSPI AP Memory APS6404L pSRAM driver"
+	default y
+	depends on DT_HAS_AMBIQ_MSPI_APS6404L_ENABLED
+	select MSPI_AMBIQ_AP3

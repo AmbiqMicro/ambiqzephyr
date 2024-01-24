@@ -1,0 +1,15 @@
+# Ambiq SDK SPI
+#
+# Copyright (c) 2023 Antmicro <www.antmicro.com>
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+config MSPI_AMBIQ_AP3
+	bool "Ambiq Apollo3 series MSPI driver"
+	default n
+	depends on DT_HAS_AMBIQ_MSPI_CONTROLLER_ENABLED
+	select AMBIQ_HAL
+	select AMBIQ_HAL_USE_MSPI
+	help
+	  Enable driver for Ambiq MSPI.
