@@ -7,4 +7,7 @@ if SOC_APOLLO3_BLUE
 config NUM_IRQS
 	default 31
 
+config PM
+	default y
+
 endif # SOC_APOLLO3_BLUE
