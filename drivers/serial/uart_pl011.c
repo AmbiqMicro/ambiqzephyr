@@ -647,9 +647,8 @@ void pl011_isr(const struct device *dev)
 			DT_NODE_HAS_COMPAT(DT_INST_CLOCKS_CTLR(n), fixed_clock),        \
 			(DT_INST_PROP_BY_PHANDLE(n, clocks, clock_frequency)), (0)),    \
 	};							\
-								\
 	DEVICE_DT_INST_DEFINE(n, &pl011_init,			\
-			NULL,					\
+			PM_DEVICE_DT_INST_GET(n),					\
 			&pl011_data_port_##n,			\
 			&pl011_cfg_port_##n,			\
 			PRE_KERNEL_1,				\
