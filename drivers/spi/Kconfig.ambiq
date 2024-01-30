@@ -16,8 +16,8 @@ config SPI_AMBIQ
 	  Enable driver for Ambiq SPI.
 
 config SPI_AMBIQ_DMA
-    bool "AMBIQ APOLLO SPI DMA Support"
-    depends on SPI_AMBIQ
+	bool "AMBIQ APOLLO SPI DMA Support"
+	depends on SPI_AMBIQ
 	help
 	  Enable DMA for Ambiq SPI.
 
@@ -38,8 +38,8 @@ config MSPI_AMBIQ
 	  Enable driver for Ambiq MSPI.
 
 config MSPI_AMBIQ_DMA
-    bool "AMBIQ APOLLO MSPI DMA Support"
-    depends on MSPI_AMBIQ
+	bool "AMBIQ APOLLO MSPI DMA Support"
+	depends on MSPI_AMBIQ
 	help
 	  Enable DMA for Ambiq MSPI.
 
