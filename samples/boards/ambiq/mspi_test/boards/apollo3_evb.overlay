@@ -11,9 +11,3 @@
 	cs-gpios = <&gpio32_63 5 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>;
 };
 
-&mspi1 {
-	status = "disabled";
-};
-&mspi2 {
-	status = "disabled";
-};
