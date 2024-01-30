@@ -6,6 +6,8 @@
 // #include <zephyr/logging/log.h>
 #include <zephyr/drivers/spi.h>
 #include <zephyr/drivers/pinctrl.h>
+#include <zephyr/pm/device.h>
+#include <zephyr/pm/device_runtime.h>
 #include <zephyr/kernel.h>
 
 #define ADC_CONTEXT_USES_KERNEL_TIMER
@@ -18,8 +20,8 @@ LOG_MODULE_REGISTER(adc_ambiq, CONFIG_ADC_LOG_LEVEL);
 #define DT_DRV_COMPAT ambiq_adc
 
 typedef int (*ambiq_adc_pwr_func_t)(void);
-#define PWRCTRL_MAX_WAIT_US         5
-#define AMBIQ_ADC_SLOT_BUMBER       AM_HAL_ADC_MAX_SLOTS
+#define PWRCTRL_MAX_WAIT_US   5
+#define AMBIQ_ADC_SLOT_BUMBER AM_HAL_ADC_MAX_SLOTS
 
 struct adc_ambiq_config {
 	/* adc controller base address */
@@ -37,7 +39,7 @@ struct adc_ambiq_data {
 	void *adcHandle;
 	uint16_t *buffer;
 	uint16_t *repeat_buffer;
-    uint8_t active_channels;
+	uint8_t active_channels;
 };
 
 static int adc_ambiq_set_resolution(am_hal_adc_slot_prec_e *prec, uint8_t adc_resolution)
@@ -61,7 +63,8 @@ static int adc_ambiq_set_resolution(am_hal_adc_slot_prec_e *prec, uint8_t adc_re
 
 	return 0;
 }
-static int adc_ambiq_slot_config(const struct device *dev,const struct adc_sequence *sequence,am_hal_adc_slot_chan_e channel, uint32_t ui32SlotNumber)
+static int adc_ambiq_slot_config(const struct device *dev, const struct adc_sequence *sequence,
+				 am_hal_adc_slot_chan_e channel, uint32_t ui32SlotNumber)
 {
 	struct adc_ambiq_data *data = dev->data;
 	am_hal_adc_slot_config_t ADCSlotConfig;
@@ -71,18 +74,18 @@ static int adc_ambiq_slot_config(const struct device *dev,const struct adc_seque
 		return -ENOTSUP;
 	}
 
-    /* Set up an ADC slot */
-    ADCSlotConfig.eMeasToAvg = AM_HAL_ADC_SLOT_AVG_1;
-    ADCSlotConfig.eChannel = channel;
-    ADCSlotConfig.bWindowCompare = false;
-    ADCSlotConfig.bEnabled = true;
-    if (AM_HAL_STATUS_SUCCESS !=
-        am_hal_adc_configure_slot(data->adcHandle, ui32SlotNumber, &ADCSlotConfig)) {
-        LOG_ERR("configuring ADC Slot 0 failed.\n");
-        return -ENODEV;
-    }
+	/* Set up an ADC slot */
+	ADCSlotConfig.eMeasToAvg = AM_HAL_ADC_SLOT_AVG_1;
+	ADCSlotConfig.eChannel = channel;
+	ADCSlotConfig.bWindowCompare = false;
+	ADCSlotConfig.bEnabled = true;
+	if (AM_HAL_STATUS_SUCCESS !=
+	    am_hal_adc_configure_slot(data->adcHandle, ui32SlotNumber, &ADCSlotConfig)) {
+		LOG_ERR("configuring ADC Slot 0 failed.\n");
+		return -ENODEV;
+	}
 
-    return 0;
+	return 0;
 }
 /**
  * Interrupt handler
@@ -99,23 +102,23 @@ static void adc_ambiq_isr(const struct device *dev)
 	/* Clear the ADC interrupt.*/
 	am_hal_adc_interrupt_clear(data->adcHandle, ui32IntMask);
 
-    /*
-	* If we got a conversion completion interrupt (which should be our only
-	* ADC interrupt), go ahead and read the data.
-    */
+	/*
+	 * If we got a conversion completion interrupt (which should be our only
+	 * ADC interrupt), go ahead and read the data.
+	 */
 	if (ui32IntMask & AM_HAL_ADC_INT_CNVCMP) {
-        for(uint32_t i = 0; i< data->active_channels; i++){
-            /* Read the value from the FIFO. */
-            ui32NumSamples = 1;
-            am_hal_adc_samples_read(data->adcHandle, false, NULL, &ui32NumSamples, &Sample);
-            *data->buffer++ = Sample.ui32Sample;
-        }
+		for (uint32_t i = 0; i < data->active_channels; i++) {
+			/* Read the value from the FIFO. */
+			ui32NumSamples = 1;
+			am_hal_adc_samples_read(data->adcHandle, false, NULL, &ui32NumSamples,
+						&Sample);
+			*data->buffer++ = Sample.ui32Sample;
+		}
 		adc_context_on_sampling_done(&data->ctx, dev);
 	}
 }
 
-static int adc_ambiq_check_buffer_size(const struct adc_sequence *sequence,
-					uint8_t active_channels)
+static int adc_ambiq_check_buffer_size(const struct adc_sequence *sequence, uint8_t active_channels)
 {
 	size_t needed_buffer_size;
 
@@ -126,8 +129,8 @@ static int adc_ambiq_check_buffer_size(const struct adc_sequence *sequence,
 	}
 
 	if (sequence->buffer_size < needed_buffer_size) {
-		LOG_DBG("Provided buffer is too small (%u/%u)",
-			sequence->buffer_size, needed_buffer_size);
+		LOG_DBG("Provided buffer is too small (%u/%u)", sequence->buffer_size,
+			needed_buffer_size);
 		return -ENOMEM;
 	}
 
@@ -139,9 +142,9 @@ static int adc_ambiq_start_read(const struct device *dev, const struct adc_seque
 	struct adc_ambiq_data *data = dev->data;
 	const struct adc_ambiq_config *cfg = dev->config;
 	uint8_t channel_id = 0;
-    uint32_t channels = 0;
-	uint8_t	active_channels = 0;
-    uint8_t slot_index;
+	uint32_t channels = 0;
+	uint8_t active_channels = 0;
+	uint8_t slot_index;
 
 	int error = 0;
 
@@ -154,22 +157,22 @@ static int adc_ambiq_start_read(const struct device *dev, const struct adc_seque
 		LOG_ERR("No channel selected");
 		return -EINVAL;
 	}
-    active_channels = POPCOUNT(sequence->channels);
-    if (active_channels > AMBIQ_ADC_SLOT_BUMBER){
+	active_channels = POPCOUNT(sequence->channels);
+	if (active_channels > AMBIQ_ADC_SLOT_BUMBER) {
 		LOG_ERR("Too many channels for sequencer. Max: %d", AMBIQ_ADC_SLOT_BUMBER);
 		return -ENOTSUP;
 	}
 
-    channels = sequence->channels;
-    for (slot_index = 0; slot_index < active_channels; slot_index++) {
-        channel_id = find_lsb_set(channels) - 1;
-        error = adc_ambiq_slot_config(dev, sequence, channel_id, slot_index);
-        if(error < 0) {
-		    return error;
-	    }
+	channels = sequence->channels;
+	for (slot_index = 0; slot_index < active_channels; slot_index++) {
+		channel_id = find_lsb_set(channels) - 1;
+		error = adc_ambiq_slot_config(dev, sequence, channel_id, slot_index);
+		if (error < 0) {
+			return error;
+		}
 		channels &= ~BIT(channel_id);
-    }
-    __ASSERT_NO_MSG(channels == 0);
+	}
+	__ASSERT_NO_MSG(channels == 0);
 
 	/* Enable the ADC. */
 	am_hal_adc_enable(data->adcHandle);
@@ -178,7 +181,7 @@ static int adc_ambiq_start_read(const struct device *dev, const struct adc_seque
 	if (error < 0) {
 		return error;
 	}
-    data->active_channels = active_channels;
+	data->active_channels = active_channels;
 	data->buffer = sequence->buffer;
 	/* Start ADC conversion */
 	adc_context_start_read(&data->ctx, sequence);
@@ -192,10 +195,23 @@ static int adc_ambiq_read(const struct device *dev, const struct adc_sequence *s
 	struct adc_ambiq_data *data = dev->data;
 	int error;
 
+#if defined(CONFIG_PM_DEVICE_RUNTIME)
+	error = pm_device_runtime_get(dev);
+	if (error < 0) {
+		LOG_ERR("pm_device_runtime_get failed: %d", error);
+	}
+#endif
+
 	adc_context_lock(&data->ctx, false, NULL);
 	error = adc_ambiq_start_read(dev, sequence);
 	adc_context_release(&data->ctx, error);
 
+#if defined(CONFIG_PM_DEVICE_RUNTIME)
+	error = pm_device_runtime_put(dev);
+	if (error < 0) {
+		LOG_ERR("pm_device_runtime_put failed: %d", error);
+	}
+#endif
 	return error;
 }
 
@@ -270,7 +286,6 @@ static int adc_ambiq_init(const struct device *dev)
 
 	/* power on ADC*/
 	ret = cfg->pwr_func();
-	// am_hal_adc_power_control(data->adcHandle, AM_HAL_SYSCTRL_WAKE,false);
 
 	/* Set up the ADC configuration parameters. These settings are reasonable
 	 *  for accurate measurements at a low sample rate.
@@ -302,6 +317,33 @@ static int adc_ambiq_init(const struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_DEVICE
+static int adc_ambiq_pm_action(const struct device *dev, enum pm_device_action action)
+{
+	struct adc_ambiq_data *data = dev->data;
+	uint32_t ret;
+	am_hal_sysctrl_power_state_e status;
+
+	switch (action) {
+	case PM_DEVICE_ACTION_RESUME:
+		status = AM_HAL_SYSCTRL_WAKE;
+		break;
+	case PM_DEVICE_ACTION_SUSPEND:
+		status = AM_HAL_SYSCTRL_DEEPSLEEP;
+		break;
+	default:
+		return -ENOTSUP;
+	}
+
+	ret = am_hal_adc_power_control(data->adcHandle, status, true);
+
+	if (ret != AM_HAL_STATUS_SUCCESS) {
+		return -EPERM;
+	} else {
+		return 0;
+	}
+}
+#endif /* CONFIG_PM_DEVICE */
 /* reference voltage for the ADC */
 #define ADC_AMBIQ_DRIVER_API(n)                                                                    \
 	static const struct adc_driver_api adc_ambiq_driver_api_##n = {                            \
@@ -340,7 +382,8 @@ static int adc_ambiq_init(const struct device *dev)
 		.pin_cfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                      \
 		.pwr_func = pwr_on_ambiq_adc_##n,                                                  \
 	};                                                                                         \
-	DEVICE_DT_INST_DEFINE(n, &adc_ambiq_init, NULL, &adc_ambiq_data_##n,                       \
+	PM_DEVICE_DT_INST_DEFINE(n, adc_ambiq_pm_action);                                          \
+	DEVICE_DT_INST_DEFINE(n, &adc_ambiq_init, PM_DEVICE_DT_INST_GET(n), &adc_ambiq_data_##n,   \
 			      &adc_ambiq_config_##n, POST_KERNEL, CONFIG_ADC_INIT_PRIORITY,        \
 			      &adc_ambiq_driver_api_##n);
 

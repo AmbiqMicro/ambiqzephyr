@@ -29,8 +29,8 @@
 			idle: idle {
 				compatible = "zephyr,power-state";
 				power-state-name = "suspend-to-idle";
-				/* As Apollo3blue datasheet, run_to_sleep and sleep_to_run transition 
-				 * time are both lower than 1us, but considering the software overhead 
+				/* As Apollo3blue datasheet, run_to_sleep and sleep_to_run transition
+				 * time are both lower than 1us, but considering the software overhead
 				 * we set a bigger value.
 			     */
 				min-residency-us = <100>;
@@ -40,8 +40,8 @@
 			suspend_to_ram: suspend_to_ram {
 				compatible = "zephyr,power-state";
 				power-state-name = "suspend-to-ram";
-				/* As Apollo3blue datasheet, run_to_deepsleep transition time is lower than 
-				 * 1us and deepsleep_to_run transition time is about 25us, 
+				/* As Apollo3blue datasheet, run_to_deepsleep transition time is lower than
+				 * 1us and deepsleep_to_run transition time is about 25us,
 				 * but considering the software overhead, we set a bigger value.
 			     */
 				min-residency-us = <2000>;
@@ -300,6 +300,7 @@
 			status = "disabled";
 			#io-channel-cells = <1>;
 			ambiq,pwrcfg = <&pwrcfg 0x8 0x200>;
+			zephyr,pm-device-runtime-auto;
 		};
 
 		mspi0: spi@50014000 {
