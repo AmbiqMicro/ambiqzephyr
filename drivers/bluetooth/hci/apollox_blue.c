@@ -12,6 +12,7 @@
 
 #include <zephyr/init.h>
 #include <zephyr/sys/byteorder.h>
+#include <zephyr/drivers/spi.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/bluetooth/hci_driver.h>
@@ -57,6 +58,9 @@ static const struct device *clk32k_dev = DEVICE_DT_GET(CLK_32K_NODE);
 
 extern void bt_packet_irq_isr(const struct device *unused1, struct gpio_callback *unused2,
 			      uint32_t unused3);
+
+extern const struct device *spi_dev;
+extern struct spi_config spi_cfg;
 
 static bool irq_pin_state(void)
 {
@@ -125,9 +129,31 @@ int bt_apollo_spi_send(uint8_t *data, uint16_t len, bt_spi_transceive_fun transc
 	uint8_t response[2] = {0, 0};
 	uint16_t fail_count = 0;
 
+	const struct spi_buf buf[2] = {
+		{
+			.buf = command,
+			.len = 1
+		}, {
+			.buf = response,
+			.len = 2
+		}
+	};
+
+	struct spi_buf_set tx = {
+		.buffers = buf,
+		.count = 1
+	};
+
+	const struct spi_buf_set rx = {
+		.buffers = buf,
+		.count = 2
+	};
+
 	do {
 		/* Check if the controller is ready to receive the HCI packets. */
-		ret = transceive(command, 1, response, 2);
+		ret = spi_transceive(spi_dev, &spi_cfg, &tx, &rx);
+		// ret = transceive(command, 1, response, 2);
+
 		if ((response[0] != READY_BYTE0) || (response[1] != READY_BYTE1) || ret) {
 			bt_apollo_controller_ready_wait();
 		} else {
@@ -150,6 +176,26 @@ int bt_apollo_spi_rcv(uint8_t *data, uint16_t *len, bt_spi_transceive_fun transc
 	uint8_t response[2] = {0, 0};
 	uint16_t read_size = 0;
 
+	const struct spi_buf buf[2] = {
+		{
+			.buf = command,
+			.len = 1
+		}, {
+			.buf = response,
+			.len = 2
+		}
+	};
+
+	struct spi_buf_set tx = {
+		.buffers = buf,
+		.count = 1
+	};
+
+	const struct spi_buf_set rx = {
+		.buffers = buf,
+		.count = 2
+	};
+
 	do {
 		/* Skip if the IRQ pin is not in high state */
 		if (!irq_pin_state()) {
@@ -158,7 +204,8 @@ int bt_apollo_spi_rcv(uint8_t *data, uint16_t *len, bt_spi_transceive_fun transc
 		}
 
 		/* Check the available packet bytes */
-		ret = transceive(command, 1, response, 2);
+		ret = spi_transceive(spi_dev, &spi_cfg, &tx, &rx);
+		// ret = transceive(command, 1, response, 2);
 		if (ret) {
 			break;
 		}
