@@ -11,7 +11,9 @@
 #include <zephyr/sys/util.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/mspi.h>
+#if CONFIG_SOC_SERIES_APOLLO3X
 #include "mspi_ambiq_ap3.h"
+#endif
 
 LOG_MODULE_REGISTER(memc_ambiq_mspi_aps6404l, CONFIG_MEMC_LOG_LEVEL);
 
@@ -40,14 +42,18 @@ struct memc_mspi_aps6404l_config {
     struct mspi_dev_cfg                 tar_dev_cfg;
     struct mspi_xip_cfg                 tar_xip_cfg;
     struct mspi_scramble_cfg            tar_scramble_cfg;
+#if CONFIG_SOC_SERIES_APOLLO3X
     struct mspi_ambiq_ap3_timing_cfg    tar_timing_cfg;
+#endif
 };
 
 struct memc_mspi_aps6404l_data {
     struct mspi_dev_cfg                 dev_cfg;
     struct mspi_xip_cfg                 xip_cfg;
     struct mspi_scramble_cfg            scramble_cfg;
+#if CONFIG_SOC_SERIES_APOLLO3X
     struct mspi_ambiq_ap3_timing_cfg    timing_cfg;
+#endif
     struct mspi_xfer_packet             trans;
 
     struct k_sem                        lock;
@@ -364,25 +370,6 @@ static int memc_mspi_aps6404l_init(const struct device *psram)
         .ui32BreakTimeLimit = 80,                                                                 \
     }
 
-#define MSPI_DEVICE_CONFIG_QUAD(n)                                                                \
-    {                                                                                             \
-        .ui32CENum          = DT_INST_PROP(n, hardware_ce_num),                                   \
-        .ui32Freq           = 12000000,                                                           \
-        .eIOMode            = MSPI_IO_MODE_QUAD,                                                  \
-        .eDataRate          = MSPI_SINGLE_DATA_RATE,                                              \
-        .eCPP               = MSPI_CPP_MODE_0,                                                    \
-        .eEndian            = MSPI_XFER_LITTLE_ENDIAN,                                            \
-        .eCEPolarity        = MSPI_CE_ACTIVE_LOW,                                                 \
-        .ui32RXDummy        = 6,                                                                  \
-        .ui32TXDummy        = 0,                                                                  \
-        .ui32ReadInstr      = APS6404L_QUAD_READ,                                                 \
-        .ui32WriteInstr     = APS6404L_QUAD_WRITE,                                                \
-        .ui16InstrLength    = 0,                                                                  \
-        .ui16AddrLength     = 2,                                                                  \
-        .ui32MemBoundary    = 0x6,                                                                \
-        .ui32BreakTimeLimit = 30,                                                                 \
-    }
-
 #define MSPI_DEVICE_CONFIG(n)                                                                     \
     {                                                                                             \
         .ui32CENum          = DT_INST_PROP(n, hardware_ce_num),                                   \
@@ -417,6 +404,7 @@ static int memc_mspi_aps6404l_init(const struct device *psram)
         .ui32Size           = DT_INST_PROP_BY_IDX(n, scramble_config, 2),                         \
     }
 
+#if CONFIG_SOC_SERIES_APOLLO3X
 #define MSPI_TIMING_CONFIG(n)                                                                     \
     {                                                                                             \
         .bSendInstr         = DT_INST_PROP_BY_IDX(n, timing_config, 0),                           \
@@ -426,6 +414,7 @@ static int memc_mspi_aps6404l_init(const struct device *psram)
         .ui8WriteLatency    = DT_INST_PROP_BY_IDX(n, timing_config, 4),                           \
         .ui8TurnAround      = DT_INST_PROP_BY_IDX(n, timing_config, 5),                           \
     }
+#endif
 
 #define MSPI_DEVICE_ID(n)                                                                         \
     {                                                                                             \
@@ -444,7 +433,6 @@ static int memc_mspi_aps6404l_init(const struct device *psram)
         .bus                = DEVICE_DT_GET(DT_INST_BUS(n)),                                      \
         .dev_id             = MSPI_DEVICE_ID(n),                                                  \
         .serial_cfg         = MSPI_DEVICE_CONFIG_SERIAL(n),                                       \
-        .quad_cfg           = MSPI_DEVICE_CONFIG_QUAD(n),                                         \
         .tar_dev_cfg        = MSPI_DEVICE_CONFIG(n),                                              \
         .tar_xip_cfg        = MSPI_XIP_CONFIG(n),                                                 \
         .tar_scramble_cfg   = MSPI_SCRAMBLE_CONFIG(n),                                            \
