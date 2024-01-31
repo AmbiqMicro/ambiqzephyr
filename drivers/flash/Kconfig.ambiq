@@ -10,3 +10,31 @@ config FLASH_AMBIQ
 	select FLASH_HAS_DRIVER_ENABLED
 	help
 	  Enables Ambiq flash driver on MRAM.
+
+if DT_HAS_AMBIQ_MSPI_CONTROLLER_ENABLED
+
+menu "Ambiq MSPI flash driver"
+
+config FLASH_AMBIQ_MSPI_ATXP032
+	bool "Ambiq MSPI ATXP032 driver"
+	default y
+	depends on DT_HAS_AMBIQ_MSPI_ATXP032_ENABLED
+	select FLASH_HAS_PAGE_LAYOUT
+	select FLASH_HAS_DRIVER_ENABLED
+    select GPIO
+	select MSPI
+	select MSPI_AMBIQ_AP3 if SOC_SERIES_APOLLO3X
+
+config FLASH_AMBIQ_MSPI_NAND
+	bool "Ambiq MSPI NAND driver"
+	default y
+	depends on DT_HAS_AMBIQ_MSPI_NAND_ENABLED
+	select FLASH_HAS_PAGE_LAYOUT
+	select FLASH_HAS_DRIVER_ENABLED
+    select GPIO
+	select MSPI
+	select MSPI_AMBIQ_AP3 if SOC_SERIES_APOLLO3X
+
+endmenu
+
+endif # HAS_AMBIQ_MSPI
