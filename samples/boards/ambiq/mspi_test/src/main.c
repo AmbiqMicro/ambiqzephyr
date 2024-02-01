@@ -59,29 +59,23 @@ int main(void)
 	tx_set.buffers = &tx_buf;
 	tx_set.count = 1;
 
-	ret = spi_transceive(spi_dev, &spi_cfg_single, &tx_set, NULL);
+	while (1) {
+		ret = spi_transceive(spi_dev, &spi_cfg_single, &tx_set, NULL);
 
-	ret = spi_transceive(spi_dev, &spi_cfg_dual, &tx_set, NULL);
+		ret = spi_transceive(spi_dev, &spi_cfg_dual, &tx_set, NULL);
 
-	ret = spi_transceive(spi_dev, &spi_cfg_quad, &tx_set, NULL);
+		ret = spi_transceive(spi_dev, &spi_cfg_quad, &tx_set, NULL);
 
-	rx_set.buffers = &rx_buf;
-	rx_set.count = 1;
-	ret = spi_transceive(spi_dev, &spi_cfg_single, &tx_set, &rx_set);
-	printf(" tx (i)  : %02x %02x %02x %02x %02x\n", buff[0], buff[1], buff[2], buff[3],
-	       buff[4]);
-	printf(" rx (i)  : %02x %02x %02x %02x %02x\n",
-	       rxdata[0], rxdata[1], rxdata[2], rxdata[3], rxdata[4]);
-	tx_set.buffers = &tx_buf;
-	tx_set.count = 1;
+		rx_set.buffers = &rx_buf;
+		rx_set.count = 1;
+		ret = spi_transceive(spi_dev, &spi_cfg_single, &tx_set, &rx_set);
+		printf(" tx (i)  : %02x %02x %02x %02x %02x\n", buff[0], buff[1], buff[2], buff[3],
+		       buff[4]);
+		printf(" rx (i)  : %02x %02x %02x %02x %02x\n", rxdata[0], rxdata[1], rxdata[2],
+		       rxdata[3], rxdata[4]);
 
-    k_sleep(K_MSEC(2000));
+		k_sleep(K_MSEC(2000));
+	}
 
-
-	ret = spi_transceive(spi_dev, &spi_cfg_single, &tx_set, NULL);
-
-	ret = spi_transceive(spi_dev, &spi_cfg_dual, &tx_set, NULL);
-
-	ret = spi_transceive(spi_dev, &spi_cfg_quad, &tx_set, NULL);
 	return 0;
 }

@@ -9,7 +9,6 @@
 	status = "okay";
 	interrupt-parent = <&nvic>;
 	cs-gpios = <&gpio32_63 5 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>;
-    mspi-ce = <0>;
 };
 
 &mspi1 {
