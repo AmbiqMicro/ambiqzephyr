@@ -17,6 +17,9 @@ LOG_MODULE_REGISTER(spi_ambiq_bleif);
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/byteorder.h>
+#include <zephyr/pm/device.h>
+#include <zephyr/pm/policy.h>
+#include <zephyr/pm/device_runtime.h>
 #include <stdlib.h>
 #include <errno.h>
 #include "spi_context.h"
@@ -145,9 +148,25 @@ static int spi_ambiq_transceive(const struct device *dev, const struct spi_confi
 		return 0;
 	}
 
+#if defined(CONFIG_PM_DEVICE_RUNTIME)
+	int rc = pm_device_runtime_get(dev);
+
+	if (rc < 0) {
+		LOG_ERR("pm_device_runtime_get failed: %d", rc);
+	}
+#endif
+
 	spi_context_buffers_setup(&data->ctx, tx_bufs, rx_bufs, 1);
 
 	ret = spi_ambiq_xfer(dev, config);
+
+#if defined(CONFIG_PM_DEVICE_RUNTIME)
+	rc = pm_device_runtime_put(dev);
+
+	if (rc < 0) {
+		LOG_ERR("pm_device_runtime_put failed: %d", rc);
+	}
+#endif
 
 	return ret;
 }
@@ -198,6 +217,36 @@ static int spi_ambiq_init(const struct device *dev)
 	return ret;
 }
 
+#ifdef CONFIG_PM_DEVICE
+static int spi_ambiq_pm_action(const struct device *dev,
+			       enum pm_device_action action)
+{
+	printk("spi_ambiq_pm_action, action %d\n", action);
+	struct spi_ambiq_data *data = dev->data;
+	uint32_t ret;
+	am_hal_ble_power_state_e state;
+
+	switch (action) {
+	case PM_DEVICE_ACTION_RESUME:
+		state = AM_HAL_BLE_POWER_ACTIVE;
+		break;
+	case PM_DEVICE_ACTION_SUSPEND:
+		state = AM_HAL_BLE_POWER_OFF;
+		break;
+	default:
+		return -ENOTSUP;
+	}
+
+	ret = am_hal_ble_power_control(data->BLEhandle, state);
+
+	if (ret != AM_HAL_STATUS_SUCCESS) {
+		return -EPERM;
+	} else {
+		return 0;
+	}
+}
+#endif /* CONFIG_PM_DEVICE */
+
 #define AMBIQ_SPI_BLEIF_INIT(n)                                                                    \
 	PINCTRL_DT_INST_DEFINE(n);                                                                 \
 	static int pwr_on_ambiq_spi_##n(void)                                                      \
@@ -216,7 +265,8 @@ static int spi_ambiq_init(const struct device *dev)
 		.size = DT_INST_REG_SIZE(n),                                                       \
 		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                         \
 		.pwr_func = pwr_on_ambiq_spi_##n};                                                 \
-	DEVICE_DT_INST_DEFINE(n, spi_ambiq_init, NULL, &spi_ambiq_data##n, &spi_ambiq_config##n,   \
+	PM_DEVICE_DT_INST_DEFINE(n, spi_ambiq_pm_action);                                      \
+	DEVICE_DT_INST_DEFINE(n, spi_ambiq_init, PM_DEVICE_DT_INST_GET(n), &spi_ambiq_data##n, &spi_ambiq_config##n,   \
 			      POST_KERNEL, CONFIG_SPI_INIT_PRIORITY, &spi_ambiq_driver_api);
 
 DT_INST_FOREACH_STATUS_OKAY(AMBIQ_SPI_BLEIF_INIT)

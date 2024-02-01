@@ -184,6 +184,7 @@
 			#size-cells = <0>;
 			status = "disabled";
 			ambiq,pwrcfg = <&pwrcfg 0x8 0x8000>;
+			zephyr,pm-device-runtime-auto;
 
 			bt-hci@0 {
 				compatible = "ambiq,bt-hci-spi";
