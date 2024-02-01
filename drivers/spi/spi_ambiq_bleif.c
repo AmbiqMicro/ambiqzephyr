@@ -29,7 +29,7 @@ LOG_MODULE_REGISTER(spi_ambiq_bleif);
  * pins. The user can set the macro SPI_BLEIF_TIMING_OBSERVATION to 1 to configure the pins for
  * timing trace purpose.
  */
-#define SPI_BLEIF_TIMING_OBSERVATION 1
+#define SPI_BLEIF_TIMING_OBSERVATION 0
 
 typedef int (*ambiq_spi_pwr_func_t)(void);
 
