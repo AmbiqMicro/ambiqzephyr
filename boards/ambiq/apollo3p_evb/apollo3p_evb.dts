@@ -125,6 +125,13 @@
 	status = "okay";
 };
 
+&adc0 {
+	compatible = "ambiq,adc";
+	pinctrl-0 = <&adc0_default>;
+	pinctrl-names = "default";
+	status = "disabled";
+};
+
 &gpio0_31 {
 	status = "okay";
 };
@@ -136,4 +143,3 @@
 &gpio64_95 {
 	status = "okay";
 };
-
