@@ -1,6 +1,7 @@
 # Ambiq SDK SPI
 #
 # Copyright (c) 2023 Antmicro <www.antmicro.com>
+# Copyright (c) 2024 Ambiq Micro Inc. <www.ambiq.com>
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -22,3 +23,15 @@ config MSPI_AMBIQ
 	select AMBIQ_HAL_USE_MSPI
 	help
 	  Enable driver for Ambiq MSPI.
+
+config SPI_AMBIQ_BLEIF
+	bool "AMBIQ SPI-BLEIF driver"
+	default y
+	depends on DT_HAS_AMBIQ_SPI_BLEIF_ENABLED
+	select AMBIQ_HAL
+	select AMBIQ_HAL_USE_BLEIF
+	help
+	  Enable driver for Ambiq Apollox Blue SOC (e.g. Apollo3 Blue)
+	  which uses internal designed BLEIF module (different from the
+	  general IOM module) for SPI transceiver. It is always used for
+	  the HCI communication.
