@@ -296,7 +296,7 @@
 			interrupts = <19 0>;
 			interrupt-names = "ADC";
 			channel-count = <10>;
-            vref-mv = <1500>;
+			vref-mv = <1500>;
 			status = "disabled";
 			#io-channel-cells = <1>;
 			ambiq,pwrcfg = <&pwrcfg 0x8 0x200>;

@@ -3,8 +3,10 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-// #include <zephyr/logging/log.h>
-#include <zephyr/drivers/spi.h>
+
+#define DT_DRV_COMPAT ambiq_adc
+
+#include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/pm/device.h>
 #include <zephyr/pm/device_runtime.h>
@@ -12,22 +14,21 @@
 
 #define ADC_CONTEXT_USES_KERNEL_TIMER
 #include "adc_context.h"
+
+/* ambiq-sdk includes */
 #include <am_mcu_apollo.h>
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(adc_ambiq, CONFIG_ADC_LOG_LEVEL);
 
-#define DT_DRV_COMPAT ambiq_adc
-
 typedef int (*ambiq_adc_pwr_func_t)(void);
 #define PWRCTRL_MAX_WAIT_US   5
+/* Number of slots available. */
 #define AMBIQ_ADC_SLOT_BUMBER AM_HAL_ADC_MAX_SLOTS
 
 struct adc_ambiq_config {
-	/* adc controller base address */
 	uint32_t base;
 	int size;
-	/** Number of supported channels */
 	uint8_t num_channels;
 	void (*irq_config_func)(void);
 	const struct pinctrl_dev_config *pin_cfg;
@@ -87,9 +88,7 @@ static int adc_ambiq_slot_config(const struct device *dev, const struct adc_sequ
 
 	return 0;
 }
-/**
- * Interrupt handler
- */
+
 static void adc_ambiq_isr(const struct device *dev)
 {
 	struct adc_ambiq_data *data = dev->data;
@@ -229,7 +228,6 @@ static int adc_ambiq_channel_setup(const struct device *dev, const struct adc_ch
 		return -ENOTSUP;
 	}
 
-	// #TODO check if only support internal reference
 	if (chan_cfg->reference != ADC_REF_INTERNAL) {
 		LOG_ERR("Reference is not valid");
 		return -ENOTSUP;
@@ -270,19 +268,18 @@ static int adc_ambiq_init(const struct device *dev)
 {
 	struct adc_ambiq_data *data = dev->data;
 	const struct adc_ambiq_config *cfg = dev->config;
-	static void *pAdcHandle;
 	am_hal_adc_config_t ADCConfig;
 
 	int ret;
 
 	/* Initialize the ADC and get the handle*/
 	if (AM_HAL_STATUS_SUCCESS !=
-	    am_hal_adc_initialize((cfg->base - REG_ADC_BASEADDR) / (cfg->size * 4), &pAdcHandle)) {
+	    am_hal_adc_initialize((cfg->base - REG_ADC_BASEADDR) / (cfg->size * 4),
+				  &data->adcHandle)) {
 		ret = -ENODEV;
 		LOG_ERR("Faile to initialize ADC, code:%d", ret);
 		return ret;
 	}
-	data->adcHandle = pAdcHandle;
 
 	/* power on ADC*/
 	ret = cfg->pwr_func();
@@ -344,7 +341,7 @@ static int adc_ambiq_pm_action(const struct device *dev, enum pm_device_action a
 	}
 }
 #endif /* CONFIG_PM_DEVICE */
-/* reference voltage for the ADC */
+
 #define ADC_AMBIQ_DRIVER_API(n)                                                                    \
 	static const struct adc_driver_api adc_ambiq_driver_api_##n = {                            \
 		.channel_setup = adc_ambiq_channel_setup,                                          \

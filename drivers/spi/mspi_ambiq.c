@@ -56,6 +56,46 @@ struct mspi_ambiq_data {
 	am_hal_mspi_dev_config_t mspicfg;
 };
 
+am_hal_mspi_dev_config_t MspiCfgDefault = {
+	.ui8TurnAround = 0,
+	.eAddrCfg = 0,
+	.eInstrCfg = 0,
+#if defined(AM_PART_APOLLO4_API)
+	.ui16ReadInstr = 0,
+	.ui16WriteInstr = 0,
+#else
+	.ui8ReadInstr = 0,
+	.ui8WriteInstr = 0,
+#endif
+	.eDeviceConfig = AM_HAL_MSPI_FLASH_SERIAL_CE0,
+	.eSpiMode = AM_HAL_MSPI_SPI_MODE_0,
+	.eClockFreq = AM_HAL_MSPI_CLK_24MHZ,
+	.bSendAddr = false,
+	.bSendInstr = false,
+	.bTurnaround = false,
+#if defined(AM_PART_APOLLO3P)
+	.ui8WriteLatency = 0,
+	.bEnWriteLatency = false,
+	.bEmulateDDR = false,
+	.ui16DMATimeLimit = 80,
+	.eDMABoundary = AM_HAL_MSPI_BOUNDARY_BREAK1K,
+#elif defined(AM_PART_APOLLO4_API)
+	.ui8WriteLatency = 0,
+	.bEnWriteLatency = false,
+	.bEmulateDDR = false,
+	.ui16DMATimeLimit = 80,
+	.eDMABoundary = AM_HAL_MSPI_BOUNDARY_BREAK1K,
+#if defined(AM_PART_APOLL4)
+	.eDeviceNum = AM_HAL_MSPI_DEVICE0,
+#endif
+#else
+	.ui32TCBSize = 0,
+	.pTCB = NULL,
+	.scramblingStartAddr = 0,
+	.scramblingEndAddr = 0,
+#endif
+};
+
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
 static am_hal_mspi_device_e mspi_set_line(const struct mspi_ambiq_config *cfg,
 					  spi_operation_t operation)
@@ -125,7 +165,7 @@ static int mspi_config(const struct device *dev, const struct spi_config *config
 {
 	struct mspi_ambiq_data *data = dev->data;
 	int ret;
-	am_hal_mspi_dev_config_t mspicfg = {0};
+	am_hal_mspi_dev_config_t mspicfg = MspiCfgDefault;
 
 	if (config->operation & SPI_FULL_DUPLEX) {
 		LOG_ERR("Full-duplex not supported");
@@ -179,14 +219,15 @@ static int mspi_config(const struct device *dev, const struct spi_config *config
 	mspicfg.pTCB = data->pDMATCBBuffer;
 	mspicfg.ui32TCBSize = CONFIG_MSPI_DMA_TCB_BUFFER_SIZE;
 #endif /*CONFIG_MSPI_AMBIQ_DMA*/
-#else
+
+#else /* CONFIG_SOC_SERIES_APOLLO3X */
 	mspicfg.eClockFreq = mspi_set_freq(config->frequency);
 	if (mspicfg.eClockFreq == AM_HAL_MSPI_CLK_INVALID) {
 		return -ENOTSUP;
 	}
 	mspicfg.eDeviceConfig = AM_HAL_MSPI_FLASH_SERIAL_CE0;
 
-#endif
+#endif /* CONFIG_SOC_SERIES_APOLLO3X */
 
 	ret = am_hal_mspi_disable(data->mspiHandle);
 	if (ret) {
@@ -240,45 +281,7 @@ static int mspi_ambiq_xfer(const struct device *dev, const struct spi_config *co
 #elif defined(CONFIG_SOC_SERIES_APOLLO3X)
 
 #if defined(CONFIG_MSPI_AMBIQ_DMA)
-am_hal_mspi_dev_config_t MspiCfgDefault = {
-	.ui8TurnAround = 8,
-	.eAddrCfg = 0,
-	.eInstrCfg = 0,
-#if defined(AM_PART_APOLLO4_API)
-	.ui16ReadInstr = 0,
-	.ui16WriteInstr = 0,
-#else
-	.ui8ReadInstr = 0,
-	.ui8WriteInstr = 0,
-#endif
-	.eDeviceConfig = AM_HAL_MSPI_FLASH_SERIAL_CE0,
-	.eSpiMode = AM_HAL_MSPI_SPI_MODE_0,
-	.eClockFreq = AM_HAL_MSPI_CLK_24MHZ,
-	.bSendAddr = false,
-	.bSendInstr = false,
-	.bTurnaround = false,
-#if defined(AM_PART_APOLLO3P)
-	.ui8WriteLatency = 0,
-	.bEnWriteLatency = false,
-	.bEmulateDDR = false,
-	.ui16DMATimeLimit = 80,
-	.eDMABoundary = AM_HAL_MSPI_BOUNDARY_BREAK1K,
-#elif defined(AM_PART_APOLLO4_API)
-	.ui8WriteLatency = 0,
-	.bEnWriteLatency = false,
-	.bEmulateDDR = false,
-	.ui16DMATimeLimit = 80,
-	.eDMABoundary = AM_HAL_MSPI_BOUNDARY_BREAK1K,
-#if defined(AM_PART_APOLL4)
-	.eDeviceNum = AM_HAL_MSPI_DEVICE0,
-#endif
-#else
-	.ui32TCBSize = 0,
-	.pTCB = NULL,
-	.scramblingStartAddr = 0,
-	.scramblingEndAddr = 0,
-#endif
-};
+
 static void pfnMSPI_Callback(void *pCallbackCtxt, uint32_t status)
 {
 	const struct device *dev = pCallbackCtxt;
@@ -358,7 +361,7 @@ static int mspi_ambiq_xfer(const struct device *dev, const struct spi_config *co
 		gpio_pin_configure_dt(cfg->cs_gpio, GPIO_OUTPUT_HIGH);
 		ret = pinctrl_apply_state(cfg->pcfg, PINCTRL_STATE_DEFAULT);
 	}
-#else
+#else /*CONFIG_MSPI_AMBIQ_DMA*/
 	am_hal_mspi_pio_transfer_t trans = {0};
 
 	trans.bSendAddr = false;
@@ -373,6 +376,8 @@ static int mspi_ambiq_xfer(const struct device *dev, const struct spi_config *co
 		ret = am_hal_mspi_blocking_transfer(data->mspiHandle, &trans, MSPI_TIMEOUT_US);
 
 	} else if (ctx->rx_len == 0) {
+		/* tx only, nothing to rx */
+		/* Set the transfer direction to TX (Write) */
 		trans.eDirection = AM_HAL_MSPI_TX;
 		trans.pui32Buffer = (uint32_t *)ctx->tx_buf;
 		trans.ui32NumBytes = ctx->tx_len;
@@ -386,11 +391,12 @@ static int mspi_ambiq_xfer(const struct device *dev, const struct spi_config *co
 		 * complete.
 		 */
 		gpio_pin_configure_dt(cfg->cs_gpio, GPIO_OUTPUT_LOW);
+		/* Set the transfer direction to TX (Write) */
 		trans.eDirection = AM_HAL_MSPI_TX;
 		trans.pui32Buffer = (uint32_t *)ctx->tx_buf;
 		trans.ui32NumBytes = ctx->tx_len;
 		ret = am_hal_mspi_blocking_transfer(data->mspiHandle, &trans, MSPI_TIMEOUT_US);
-
+		/* Set the transfer direction to RX (Read) */
 		trans.eDirection = AM_HAL_MSPI_RX;
 		trans.pui32Buffer = (uint32_t *)ctx->rx_buf;
 		trans.ui32NumBytes = ctx->rx_len;
@@ -401,7 +407,7 @@ static int mspi_ambiq_xfer(const struct device *dev, const struct spi_config *co
 	}
 	spi_context_complete(ctx, dev, 0);
 
-#endif
+#endif /*CONFIG_MSPI_AMBIQ_DMA*/
 
 	return ret;
 }
@@ -424,7 +430,6 @@ static int mspi_ambiq_transceive(const struct device *dev, const struct spi_conf
 		LOG_ERR("pm_device_runtime_get failed: %d", ret);
 	}
 #endif
-	/* context setup */
 	spi_context_lock(&data->ctx, false, NULL, NULL, config);
 
 	ret = mspi_config(dev, config);
@@ -542,8 +547,6 @@ static int mspi_ambiq_init(const struct device *dev)
 
 #endif /*CONFIG_MSPI_AMBIQ_DMA*/
 
-#else
-#error Unknown device.
 #endif
 
 	spi_context_unlock_unconditionally(&data->ctx);
@@ -646,6 +649,4 @@ DT_INST_FOREACH_STATUS_OKAY(AMBIQ_MSPI_DEFINE)
 
 DT_INST_FOREACH_STATUS_OKAY(AMBIQ_MSPI_DEFINE)
 
-#else
-#error Unknown device.
 #endif
