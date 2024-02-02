@@ -293,7 +293,7 @@
 
 		adc0: adc@50010000 {
 			reg = <0x50010000 0x400>;
-			interrupts = <19 0>;
+			interrupts = <18 0>;
 			interrupt-names = "ADC";
 			channel-count = <10>;
 			vref-mv = <1500>;

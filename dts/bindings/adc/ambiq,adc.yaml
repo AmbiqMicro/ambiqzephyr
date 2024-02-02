@@ -10,15 +10,13 @@ properties:
   reg:
     required: true
 
-#   interrupts:
-#     required: true
+  interrupts:
+    required: true
+
   channel-count:
     type: int
     required: true
     description: The maximum channels supported on each unit.
-
-  "#io-channel-cells":
-    const: 1
 
   vref-mv:
     type: int
@@ -27,3 +25,4 @@ properties:
 
 io-channel-cells:
   - input
+
