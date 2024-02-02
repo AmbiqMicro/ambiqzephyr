@@ -69,8 +69,8 @@ static int mspi_config(const struct device *dev, const struct spi_config *config
 	int ret;
 	am_hal_mspi_dev_config_t mspicfg = {0};
 
-	if (config->operation & SPI_HALF_DUPLEX) {
-		LOG_ERR("Half-duplex not supported");
+	if (config->operation & SPI_FULL_DUPLEX) {
+		LOG_ERR("Full-duplex not supported");
 		return -ENOTSUP;
 	}
 
