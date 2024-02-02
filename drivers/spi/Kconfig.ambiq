@@ -35,3 +35,16 @@ config MSPI_AMBIQ
 	select AMBIQ_HAL_USE_MSPI
 	help
 	  Enable driver for Ambiq MSPI.
+
+config MSPI_AMBIQ_DMA
+	bool "AMBIQ APOLLO MSPI DMA Support"
+	depends on MSPI_AMBIQ
+	help
+	  Enable DMA for Ambiq MSPI.
+
+config MSPI_DMA_TCB_BUFFER_SIZE
+	int "DMA Transfer Control Buffer size in words."
+	default 1024
+	depends on MSPI_AMBIQ_DMA
+	help
+	  DMA Transfer Control Buffer size in words
