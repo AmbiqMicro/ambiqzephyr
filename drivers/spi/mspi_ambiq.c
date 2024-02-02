@@ -11,6 +11,8 @@ LOG_MODULE_REGISTER(mspi_ambiq);
 
 #include <zephyr/drivers/spi.h>
 #include <zephyr/drivers/pinctrl.h>
+#include <zephyr/pm/device.h>
+#include <zephyr/pm/device_runtime.h>
 #include <zephyr/kernel.h>
 
 #include "spi_context.h"
@@ -223,7 +225,6 @@ static int mspi_config(const struct device *dev, const struct spi_config *config
 	if (mspicfg.eClockFreq == AM_HAL_MSPI_CLK_INVALID) {
 		return -ENOTSUP;
 	}
-
 	mspicfg.eDeviceConfig = AM_HAL_MSPI_FLASH_SERIAL_CE0;
 
 #endif /* CONFIG_SOC_SERIES_APOLLO3X */
@@ -421,7 +422,12 @@ static int mspi_ambiq_transceive(const struct device *dev, const struct spi_conf
 	if (!tx_bufs && !rx_bufs) {
 		return 0;
 	}
-
+#if defined(CONFIG_PM_DEVICE_RUNTIME)
+	ret = pm_device_runtime_get(dev);
+	if (ret < 0) {
+		LOG_ERR("pm_device_runtime_get failed: %d", ret);
+	}
+#endif
 	spi_context_lock(&data->ctx, false, NULL, NULL, config);
 
 	ret = mspi_config(dev, config);
@@ -435,6 +441,13 @@ static int mspi_ambiq_transceive(const struct device *dev, const struct spi_conf
 
 done:
 	spi_context_release(&data->ctx, ret);
+
+#if defined(CONFIG_PM_DEVICE_RUNTIME)
+	ret = pm_device_runtime_put(dev);
+	if (ret < 0) {
+		LOG_ERR("pm_device_runtime_put failed: %d", ret);
+	}
+#endif
 
 	return ret;
 }
@@ -504,6 +517,7 @@ static int mspi_ambiq_init(const struct device *dev)
 
 #ifdef CONFIG_MSPI_AMBIQ_DMA
 	void *buf;
+
 	cfg->irq_config_func();
 
 	buf = k_malloc(CONFIG_MSPI_DMA_TCB_BUFFER_SIZE * 4);
@@ -537,6 +551,34 @@ static int mspi_ambiq_init(const struct device *dev)
 	spi_context_unlock_unconditionally(&data->ctx);
 	return 0;
 }
+
+#ifdef CONFIG_PM_DEVICE
+static int mspi_ambiq_pm_action(const struct device *dev, enum pm_device_action action)
+{
+	struct mspi_ambiq_data *data = dev->data;
+	uint32_t ret;
+	am_hal_sysctrl_power_state_e status;
+
+	switch (action) {
+	case PM_DEVICE_ACTION_RESUME:
+		status = AM_HAL_SYSCTRL_WAKE;
+		break;
+	case PM_DEVICE_ACTION_SUSPEND:
+		status = AM_HAL_SYSCTRL_DEEPSLEEP;
+		break;
+	default:
+		return -ENOTSUP;
+	}
+
+	ret = am_hal_mspi_power_control(data->mspiHandle, status, true);
+
+	if (ret != AM_HAL_STATUS_SUCCESS) {
+		return -EPERM;
+	} else {
+		return 0;
+	}
+}
+#endif /* CONFIG_PM_DEVICE */
 
 #if defined(CONFIG_SOC_SERIES_APOLLO4X)
 #define AMBIQ_MSPI_DEFINE(n)                                                                       \
@@ -586,7 +628,7 @@ DT_INST_FOREACH_STATUS_OKAY(AMBIQ_MSPI_DEFINE)
 	};                                                                                         \
 	static struct gpio_dt_spec ce_gpios##n[] = {COND_CODE_1(                                   \
 		DT_NODE_HAS_PROP(DT_DRV_INST(n), cs_gpios),                                        \
-		(DT_INST_FOREACH_PROP_ELEM_SEP(n, cs_gpios, GPIO_DT_SPEC_GET_BY_IDX, (, ))), ())}; \
+		(DT_INST_FOREACH_PROP_ELEM_SEP(n, cs_gpios, GPIO_DT_SPEC_GET_BY_IDX, (,))), ())}; \
 	static struct mspi_ambiq_data mspi_ambiq_data##n = {                                       \
 		SPI_CONTEXT_INIT_LOCK(mspi_ambiq_data##n, ctx),                                    \
 		SPI_CONTEXT_INIT_SYNC(mspi_ambiq_data##n, ctx)};                                   \
@@ -595,11 +637,12 @@ DT_INST_FOREACH_STATUS_OKAY(AMBIQ_MSPI_DEFINE)
 		.size = DT_INST_REG_SIZE(n),                                                       \
 		.mspi_ce = DT_INST_PROP_OR(i, mspi_ce, MSPI_CE_NUMBER),                            \
 		.cs_gpio = (struct gpio_dt_spec *)ce_gpios##n,                                     \
-		IF_ENABLED(CONFIG_MSPI_AMBIQ_DMA, (.irq_config_func = mspi_irq_config_func_##n, )) \
+		IF_ENABLED(CONFIG_MSPI_AMBIQ_DMA, (.irq_config_func = mspi_irq_config_func_##n,)) \
 			.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                 \
 		.pwr_func = pwr_on_ambiq_mspi_##n,                                                 \
 	};                                                                                         \
-	DEVICE_DT_INST_DEFINE(n, mspi_ambiq_init, NULL, &mspi_ambiq_data##n,                       \
+	PM_DEVICE_DT_INST_DEFINE(n, mspi_ambiq_pm_action);                                         \
+	DEVICE_DT_INST_DEFINE(n, mspi_ambiq_init, PM_DEVICE_DT_INST_GET(n), &mspi_ambiq_data##n,   \
 			      &mspi_ambiq_config##n, POST_KERNEL, CONFIG_SPI_INIT_PRIORITY,        \
 			      &mspi_ambiq_driver_api);
 
