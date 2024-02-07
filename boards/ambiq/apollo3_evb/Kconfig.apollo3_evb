@@ -15,3 +15,6 @@ config PM_DEVICE_RUNTIME
 # management operations are executed in the idle task
 config IDLE_STACK_SIZE
 	default 2048 if PM
+
+config SYS_CLOCK_TICKS_PER_SEC
+	default 1024
