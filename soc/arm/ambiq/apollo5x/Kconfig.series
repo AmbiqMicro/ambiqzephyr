@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright (c) 2024 Ambiq Micro Inc.
+
+# Ambiq Apollo5 MCU Series
+
+config SOC_SERIES_APOLLO5X
+    bool "Apollo5 Series MCU"
+    select ARM
+    select SOC_FAMILY_AMBIQ
+    select HAS_SWO
+    select AMBIQ_HAL
+    help
+      Enable support for Apollo5X MCU series
