@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright (c) 2024 Ambiq Micro Inc.
+
+config BOARD
+	default "apollo5_eb"
+	depends on BOARD_APOLLO5_EB
