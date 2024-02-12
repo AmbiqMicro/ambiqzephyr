@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Copyright (c) 2023 Antmicro <www.antmicro.com>
+# Copyright (c) 2024 Ambiq Micro Inc.
 
 config PINCTRL_AMBIQ_APOLLO4
 	bool "Ambiq Apollo4 pin controller driver"
@@ -10,3 +11,12 @@ config PINCTRL_AMBIQ_APOLLO4
 	select AMBIQ_HAL_USE_GPIO
 	help
 	  Ambiq Apollo4 pinctrl driver
+
+config PINCTRL_AMBIQ_APOLLO5
+	bool "Ambiq Apollo5 pin controller driver"
+	default y
+	depends on DT_HAS_AMBIQ_APOLLO5_PINCTRL_ENABLED
+	select AMBIQ_HAL
+	select AMBIQ_HAL_USE_GPIO
+	help
+	  Ambiq Apollo5 pinctrl driver
