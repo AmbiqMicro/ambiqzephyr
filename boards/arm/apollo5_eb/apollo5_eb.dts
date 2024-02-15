@@ -22,6 +22,11 @@
 	};
 };
 
+&itm {
+	pinctrl-0 = <&swo_default>;
+	pinctrl-names = "default";
+};
+
 &uart0 {
 	current-speed = <115200>;
 	pinctrl-0 = <&uart0_default>;

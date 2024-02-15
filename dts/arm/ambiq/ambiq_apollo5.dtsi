@@ -18,8 +18,17 @@
         #size-cells = <0>;
 
         cpu0: cpu@0 {
-            compatible = "arm,cortex-m55";
-            reg = <0>;
+			device_type = "cpu";
+			compatible = "arm,cortex-m55";
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			itm: itm@e0000000 {
+				compatible = "arm,armv8m-itm";
+				reg = <0xe0000000 0x1000>;
+				swo-ref-frequency = <48000000>;
+			};
         };
     };
 

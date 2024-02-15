@@ -10,6 +10,21 @@ config AMBIQ_HAL
 
 if AMBIQ_HAL
 
+config AMBIQ_HAL_USE_ITM
+	bool
+	help
+	  Use the ITM HAL from Ambiq
+
+config AMBIQ_HAL_USE_TPIU
+	bool
+	help
+	  Use the TPIU HAL from Ambiq
+
+config AMBIQ_HAL_USE_DCU
+	bool
+	help
+	  Use the DCU HAL from Ambiq
+
 config AMBIQ_HAL_USE_GPIO
 	bool
 	help

@@ -16,4 +16,9 @@
 			input-enable;
 		};
 	};
+	swo_default: swo_default {
+		group0 {
+			pinmux = <SWO_P28>;
+		};
+	};
 };
