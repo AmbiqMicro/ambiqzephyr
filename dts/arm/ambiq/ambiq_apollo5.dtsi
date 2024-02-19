@@ -24,66 +24,66 @@
     };
 
     /* MRAM region */
-    flash0: flash@410000 {
+    flash0: flash@MRAM_BASE_NAME {
         compatible = "soc-nv-flash";
-        reg = <0x00410000 0x3F0000>;
+        reg = <MRAM_BASE_ADDR MRAM_MAX_SIZE>;
     };
 
     /* TCM */
-    itcm: itcm@0 {
+    itcm: itcm@ITCM_BASE_NAME {
         compatible = "zephyr,memory-region";
-        reg = <0x00000000 0x40000>;
+        reg = <ITCM_BASE_ADDR ITCM_MAX_SIZE>;
         zephyr,memory-region = "ITCM";
     };
 
-    dtcm: dtcm@20000000 {
+    dtcm: dtcm@DTCM_BASE_NAME {
         compatible = "zephyr,memory-region";
-        reg = <0x20000000 0x7C000>;
+        reg = <DTCM_BASE_ADDR DTCM_MAX_SIZE>;
         zephyr,memory-region = "DTCM";
     };
 
     /* SRAM */
-    sram0: memory@20080000 {
+    sram0: memory@SSRAM_BASE_NAME {
         compatible = "mmio-sram";
-        reg = <0x20080000 0x300000>;
+        reg = <SSRAM_BASE_ADDR SSRAM_MAX_SIZE>;
     };
 
     soc {
         compatible = "ambiq,apollo5", "ambiq,apollo5x", "simple-bus";
 
-        pwrcfg: pwrcfg@40021000 {
+        pwrcfg: pwrcfg@PWRCTRL_BASE_NAME {
             compatible = "ambiq,pwrctrl";
-            reg = <0x40021000 0x400>;
+            reg = <PWRCTRL_REG_BASE PWRCTRL_REG_SIZE>;
             #pwrcfg-cells = <2>;
         };
 
-        stimer0: stimer@40008800 {
+        stimer0: stimer@STIMER_BASE_NAME {
             compatible = "ambiq,stimer";
-            reg = <0x40008800 0x80>;
+            reg = <STIMER_REG_BASE STIMER_REG_SIZE>;
             interrupts = <32 0>;
             status = "okay";
         };
 
-        wdt0: watchdog@40024000 {
+        wdt0: watchdog@WDT_BASE_NAME {
             compatible = "ambiq,watchdog";
-            reg = <0x40024000 0x400>;
+            reg = <WDT_REG_BASE WDT_REG_SIZE>;
             interrupts = <1 0>;
             clock-frequency = <16>;
             status = "disabled";
         };
 
-		uart0: uart@4001c000 {
+		uart0: uart@UART0_BASE_NAME {
 			compatible = "ambiq,uart", "arm,pl011";
-			reg = <0x4001c000 0x1000>;
+			reg = <UART0_REG_BASE UART0_REG_SIZE>;
 			interrupts = <15 0>;
 			interrupt-names = "UART0";
 			status = "disabled";
 			clocks = <&uartclk>;
 			ambiq,pwrcfg = <&pwrcfg 0x4 0x200>;
 		};
-		uart1: uart@4001d000 {
+		uart1: uart@UART1_BASE_NAME {
 			compatible = "ambiq,uart", "arm,pl011";
-			reg = <0x4001d000 0x1000>;
+			reg = <UART1_REG_BASE UART1_REG_SIZE>;
 			interrupts = <16 0>;
 			interrupt-names = "UART1";
 			status = "disabled";
@@ -91,9 +91,9 @@
 			ambiq,pwrcfg = <&pwrcfg 0x4 0x400>;
 		};
 
-		uart2: uart@4001e000 {
+		uart2: uart@UART2_BASE_NAME {
 			compatible = "ambiq,uart", "arm,pl011";
-			reg = <0x4001e000 0x1000>;
+			reg = <UART2_REG_BASE UART2_REG_SIZE>;
 			interrupts = <17 0>;
 			interrupt-names = "UART2";
 			status = "disabled";
@@ -101,9 +101,9 @@
 			ambiq,pwrcfg = <&pwrcfg 0x4 0x800>;
 		};
 
-		uart3: uart@4001f000 {
+		uart3: uart@UART3_BASE_NAME {
 			compatible = "ambiq,uart", "arm,pl011";
-			reg = <0x4001f000 0x1000>;
+			reg = <UART3_REG_BASE UART3_REG_SIZE>;
 			interrupts = <18 0>;
 			interrupt-names = "UART3";
 			status = "disabled";
