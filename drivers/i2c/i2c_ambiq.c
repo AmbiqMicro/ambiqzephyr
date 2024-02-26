@@ -170,10 +170,10 @@ static int i2c_ambiq_transfer(const struct device *dev, struct i2c_msg *msgs, ui
 	}
 
 #if defined(CONFIG_PM_DEVICE_RUNTIME)
-	int rc = pm_device_runtime_get(dev);
+	ret = pm_device_runtime_get(dev);
 
-	if (rc < 0) {
-		LOG_ERR("pm_device_runtime_get failed: %d", rc);
+	if (ret < 0) {
+		LOG_ERR("pm_device_runtime_get failed: %d", ret);
 	}
 #endif
 
@@ -196,10 +196,13 @@ end:
 	k_sem_give(&data->bus_sem);
 
 #if defined(CONFIG_PM_DEVICE_RUNTIME)
-	rc = pm_device_runtime_put(dev);
+	/* Use async put to avoid useless device suspension/resumption
+	 * when doing consecutive transmission.
+	 */
+	ret = pm_device_runtime_put_async(dev, K_MSEC(2));
 
-	if (rc < 0) {
-		LOG_ERR("pm_device_runtime_put failed: %d", rc);
+	if (ret < 0) {
+		LOG_ERR("pm_device_runtime_put failed: %d", ret);
 	}
 #endif
 
