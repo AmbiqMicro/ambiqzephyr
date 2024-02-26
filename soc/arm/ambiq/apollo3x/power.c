@@ -52,12 +52,13 @@ void pm_state_exit_post_ops(enum pm_state state, uint8_t substate_id)
 
 	switch (state) {
 	case PM_STATE_SUSPEND_TO_IDLE: {
-		/*Nothing is needed after soc is wake up.*/
+		/* Nothing is needed after soc is wake up.*/
 		break;
 	}
 	case PM_STATE_SUSPEND_TO_RAM: {
-		/*Flash, cache, sram automatically switch to active state on wake up,
-		/*Nothing needed for software.*/
+		/* Flash, cache, sram automatically switch to active state on wake up,
+		 * Nothing needed for software.
+		 */
 		break;
 	}
 	default: {
