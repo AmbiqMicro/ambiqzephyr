@@ -445,7 +445,11 @@ done:
 	spi_context_release(&data->ctx, ret);
 
 #if defined(CONFIG_PM_DEVICE_RUNTIME)
-	ret = pm_device_runtime_put(dev);
+	/* Use async put to avoid useless device suspension/resumption
+	 * when doing consecutive transmission.
+	 */
+	ret = pm_device_runtime_put_async(dev, K_MSEC(2));
+
 	if (ret < 0) {
 		LOG_ERR("pm_device_runtime_put failed: %d", ret);
 	}
