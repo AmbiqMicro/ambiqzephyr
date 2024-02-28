@@ -52,6 +52,8 @@ struct spi_ambiq_data {
 #define SPI_STAT(dev) (SPI_BASE + REG_STAT)
 #define SPI_WORD_SIZE 8
 
+#define SPI_CS_INDEX  3
+
 #ifdef CONFIG_SPI_AMBIQ_DMA
 static void pfnSPI_Callback(void *pCallbackCtxt, uint32_t status)
 {
@@ -157,11 +159,17 @@ static int spi_config(const struct device *dev, const struct spi_config *config)
 static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *config)
 {
 	struct spi_ambiq_data *data = dev->data;
+	const struct spi_ambiq_config *cfg = dev->config;
 	struct spi_context *ctx = &data->ctx;
 	int ret = 0;
 	bool bContinue = (config->operation & SPI_HOLD_ON_CS) ? true : false;
 
 	am_hal_iom_transfer_t trans = {0};
+#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+    uint32_t iom_nce = cfg->pcfg->states->pins[SPI_CS_INDEX].iom_nce;
+#else
+    uint32_t iom_nce = cfg->pcfg->states->pins[SPI_CS_INDEX].iom_nce % 4;
+#endif
 
 	/* There's data to send */
 	if (ctx->tx_len) {
@@ -173,6 +181,7 @@ static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *con
 			trans.pui32RxBuffer = (uint32_t *)ctx->rx_buf;
 			trans.pui32TxBuffer = (uint32_t *)ctx->tx_buf;
 			trans.ui32NumBytes = MAX(ctx->rx_len, ctx->tx_len);
+			trans.uPeerInfo.ui32SpiChipSelect = iom_nce;
 			am_hal_iom_spi_blocking_fullduplex(data->IOMHandle, &trans);
 			spi_context_complete(ctx, dev, 0);
 		} else {
@@ -214,6 +223,7 @@ static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *con
 				trans.bContinue = bContinue;
 				trans.pui32RxBuffer = (uint32_t *)ctx->rx_buf;
 				trans.ui32NumBytes = ctx->rx_len;
+				trans.uPeerInfo.ui32SpiChipSelect = iom_nce;
 #ifdef CONFIG_SPI_AMBIQ_DMA
 				if (AM_HAL_STATUS_SUCCESS !=
 				    am_hal_iom_nonblocking_transfer(data->IOMHandle, &trans,
@@ -231,6 +241,7 @@ static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *con
 				trans.bContinue = bContinue;
 				trans.ui32NumBytes = ctx->tx_len;
 				trans.pui32TxBuffer = (uint32_t *)ctx->tx_buf;
+				trans.uPeerInfo.ui32SpiChipSelect = iom_nce;
 #ifdef CONFIG_SPI_AMBIQ_DMA
 				if (AM_HAL_STATUS_SUCCESS !=
 				    am_hal_iom_nonblocking_transfer(data->IOMHandle, &trans,
@@ -251,6 +262,7 @@ static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *con
 		trans.bContinue = bContinue;
 		trans.pui32RxBuffer = (uint32_t *)ctx->rx_buf;
 		trans.ui32NumBytes = ctx->rx_len;
+		trans.uPeerInfo.ui32SpiChipSelect = iom_nce;
 #ifdef CONFIG_SPI_AMBIQ_DMA
 		if (AM_HAL_STATUS_SUCCESS !=
 		    am_hal_iom_nonblocking_transfer(data->IOMHandle, &trans, pfnSPI_Callback,
