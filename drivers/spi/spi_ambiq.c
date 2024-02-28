@@ -88,11 +88,6 @@ static int spi_config(const struct device *dev, const struct spi_config *config)
 		return 0;
 	}
 
-	if (config->operation & SPI_FULL_DUPLEX) {
-		LOG_ERR("Full-duplex not supported");
-		return -ENOTSUP;
-	}
-
 	if (SPI_WORD_SIZE_GET(config->operation) != 8) {
 		LOG_ERR("Word size must be %d", SPI_WORD_SIZE);
 		return -ENOTSUP;
@@ -170,71 +165,85 @@ static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *con
 
 	/* There's data to send */
 	if (ctx->tx_len) {
-		/* Push one byte instruction in default */
-#if defined(CONFIG_SOC_SERIES_APOLLO3X)
-		trans.ui32Instr = *ctx->tx_buf;
-#else
-		trans.ui64Instr = *ctx->tx_buf;
-#endif
-		trans.ui32InstrLen = 1;
-		spi_context_update_tx(ctx, 1, 1);
-
-		/* This is the start of RX */
-		if (ctx->rx_buf != NULL) {
-			/* More instruction bytes to send */
-			if (ctx->tx_len > 0) {
-				/* The instruction length can only be 0~5. */
-				if (ctx->tx_len > 4) {
-					spi_context_complete(ctx, dev, 0);
-					return -ENOTSUP;
-				}
-
-				/* Put the remaining TX data in instruction. */
-				trans.ui32InstrLen += ctx->tx_len;
-				for (int i = 0; i < trans.ui32InstrLen - 1; i++) {
-#if defined(CONFIG_SOC_SERIES_APOLLO3X)
-					trans.ui32Instr = (trans.ui32Instr << 8) | (*ctx->tx_buf);
-#else
-					trans.ui64Instr = (trans.ui64Instr << 8) | (*ctx->tx_buf);
-#endif
-					spi_context_update_tx(ctx, 1, 1);
-				}
-			}
-
-			/* Set RX direction and receive data. */
-			trans.eDirection = AM_HAL_IOM_RX;
+		/* Full duplex blocking transfer */
+		if (config->operation & SPI_FULL_DUPLEX) {
+			/* Assume the instructions been filled in the header of tx_buf */
+			trans.eDirection = AM_HAL_IOM_FULLDUPLEX;
 			trans.bContinue = bContinue;
 			trans.pui32RxBuffer = (uint32_t *)ctx->rx_buf;
-			trans.ui32NumBytes = ctx->rx_len;
-#ifdef CONFIG_SPI_AMBIQ_DMA
-			if (AM_HAL_STATUS_SUCCESS !=
-			    am_hal_iom_nonblocking_transfer(data->IOMHandle, &trans,
-							    pfnSPI_Callback, (void *)dev)) {
-				return -EFAULT;
-			}
-
-			ret = spi_context_wait_for_completion(ctx);
-#else
-			ret = am_hal_iom_blocking_transfer(data->IOMHandle, &trans);
-#endif
-		} else {
-			/* Set TX direction to send data. */
-			trans.eDirection = AM_HAL_IOM_TX;
-			trans.bContinue = bContinue;
-			trans.ui32NumBytes = ctx->tx_len;
 			trans.pui32TxBuffer = (uint32_t *)ctx->tx_buf;
-#ifdef CONFIG_SPI_AMBIQ_DMA
-			if (AM_HAL_STATUS_SUCCESS !=
-			    am_hal_iom_nonblocking_transfer(data->IOMHandle, &trans,
-							    pfnSPI_Callback, (void *)dev)) {
-				return -EFAULT;
-			}
-
-			ret = spi_context_wait_for_completion(ctx);
-#else
-			ret = am_hal_iom_blocking_transfer(data->IOMHandle, &trans);
+			trans.ui32NumBytes = MAX(ctx->rx_len, ctx->tx_len);
+			am_hal_iom_spi_blocking_fullduplex(data->IOMHandle, &trans);
 			spi_context_complete(ctx, dev, 0);
+		} else {
+			/* Push one byte instruction in default */
+#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+			trans.ui32Instr = *ctx->tx_buf;
+#else
+			trans.ui64Instr = *ctx->tx_buf;
 #endif
+			trans.ui32InstrLen = 1;
+			spi_context_update_tx(ctx, 1, 1);
+
+			/* This is the start of RX */
+			if (ctx->rx_buf != NULL) {
+				/* More instruction bytes to send */
+				if (ctx->tx_len > 0) {
+					/* The instruction length can only be 0~5. */
+					if (ctx->tx_len > 4) {
+						spi_context_complete(ctx, dev, 0);
+						return -ENOTSUP;
+					}
+
+					/* Put the remaining TX data in instruction. */
+					trans.ui32InstrLen += ctx->tx_len;
+					for (int i = 0; i < trans.ui32InstrLen - 1; i++) {
+#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+						trans.ui32Instr =
+							(trans.ui32Instr << 8) | (*ctx->tx_buf);
+#else
+						trans.ui64Instr =
+							(trans.ui64Instr << 8) | (*ctx->tx_buf);
+#endif
+						spi_context_update_tx(ctx, 1, 1);
+					}
+				}
+
+				/* Set RX direction and receive data. */
+				trans.eDirection = AM_HAL_IOM_RX;
+				trans.bContinue = bContinue;
+				trans.pui32RxBuffer = (uint32_t *)ctx->rx_buf;
+				trans.ui32NumBytes = ctx->rx_len;
+#ifdef CONFIG_SPI_AMBIQ_DMA
+				if (AM_HAL_STATUS_SUCCESS !=
+				    am_hal_iom_nonblocking_transfer(data->IOMHandle, &trans,
+								    pfnSPI_Callback, (void *)dev)) {
+					return -EFAULT;
+				}
+
+				ret = spi_context_wait_for_completion(ctx);
+#else
+				ret = am_hal_iom_blocking_transfer(data->IOMHandle, &trans);
+#endif
+			} else {
+				/* Set TX direction to send data. */
+				trans.eDirection = AM_HAL_IOM_TX;
+				trans.bContinue = bContinue;
+				trans.ui32NumBytes = ctx->tx_len;
+				trans.pui32TxBuffer = (uint32_t *)ctx->tx_buf;
+#ifdef CONFIG_SPI_AMBIQ_DMA
+				if (AM_HAL_STATUS_SUCCESS !=
+				    am_hal_iom_nonblocking_transfer(data->IOMHandle, &trans,
+								    pfnSPI_Callback, (void *)dev)) {
+					return -EFAULT;
+				}
+
+				ret = spi_context_wait_for_completion(ctx);
+#else
+				ret = am_hal_iom_blocking_transfer(data->IOMHandle, &trans);
+				spi_context_complete(ctx, dev, 0);
+#endif
+			}
 		}
 	} else {
 		/* Set RX direction to receive data and release CS after transmission. */
@@ -372,8 +381,7 @@ end:
 }
 
 #ifdef CONFIG_PM_DEVICE
-static int spi_ambiq_pm_action(const struct device *dev,
-			       enum pm_device_action action)
+static int spi_ambiq_pm_action(const struct device *dev, enum pm_device_action action)
 {
 	struct spi_ambiq_data *data = dev->data;
 	uint32_t ret;
@@ -392,13 +400,10 @@ static int spi_ambiq_pm_action(const struct device *dev,
 
 	ret = am_hal_iom_power_ctrl(data->IOMHandle, status, true);
 
-	if(ret != AM_HAL_STATUS_SUCCESS)
-	{
+	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("am_hal_iom_power_ctrl failed: %d", ret);
 		return -EPERM;
-	}
-	else
-	{
+	} else {
 		return 0;
 	}
 }
@@ -430,8 +435,9 @@ static int spi_ambiq_pm_action(const struct device *dev,
 		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                         \
 		.irq_config_func = spi_irq_config_func_##n,                                        \
 		.pwr_func = pwr_on_ambiq_spi_##n};                                                 \
-	PM_DEVICE_DT_INST_DEFINE(n, spi_ambiq_pm_action);									\
-	DEVICE_DT_INST_DEFINE(n, spi_ambiq_init, PM_DEVICE_DT_INST_GET(n), &spi_ambiq_data##n, &spi_ambiq_config##n,   \
-			      POST_KERNEL, CONFIG_SPI_INIT_PRIORITY, &spi_ambiq_driver_api);
+	PM_DEVICE_DT_INST_DEFINE(n, spi_ambiq_pm_action);                                          \
+	DEVICE_DT_INST_DEFINE(n, spi_ambiq_init, PM_DEVICE_DT_INST_GET(n), &spi_ambiq_data##n,     \
+			      &spi_ambiq_config##n, POST_KERNEL, CONFIG_SPI_INIT_PRIORITY,         \
+			      &spi_ambiq_driver_api);
 
 DT_INST_FOREACH_STATUS_OKAY(AMBIQ_SPI_INIT)
