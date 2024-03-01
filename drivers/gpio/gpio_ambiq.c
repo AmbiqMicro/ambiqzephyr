@@ -434,14 +434,9 @@ static int ambiq_gpio_pin_interrupt_configure(const struct device *dev, gpio_pin
 
 		k_spinlock_key_t key = k_spin_lock(&data->lock);
 
-#if defined(CONFIG_SOC_APOLLO3_BLUE)
-		ret = am_hal_gpio_interrupt_clear(AM_HAL_GPIO_BIT(gpio_pin));
-		ret = am_hal_gpio_interrupt_enable(AM_HAL_GPIO_BIT(gpio_pin));
-#elif defined(CONFIG_SOC_APOLLO3P_BLUE)
 		AM_HAL_GPIO_MASKCREATE(GpioIntMask);
 		ret = am_hal_gpio_interrupt_clear(AM_HAL_GPIO_MASKBIT(pGpioIntMask, gpio_pin));
-		ret = am_hal_gpio_interrupt_enable(AM_HAL_GPIO_MASKBIT(pGpioIntMask, gpio_pin));
-#endif
+		ret = am_hal_gpio_interrupt_disable(AM_HAL_GPIO_MASKBIT(pGpioIntMask, gpio_pin));
 		k_spin_unlock(&data->lock, key);
 
 	} else {
@@ -468,14 +463,9 @@ static int ambiq_gpio_pin_interrupt_configure(const struct device *dev, gpio_pin
 
 		k_spinlock_key_t key = k_spin_lock(&data->lock);
 
-#if defined(CONFIG_SOC_APOLLO3_BLUE)
-		ret = am_hal_gpio_interrupt_clear(AM_HAL_GPIO_BIT(gpio_pin));
-		ret = am_hal_gpio_interrupt_enable(AM_HAL_GPIO_BIT(gpio_pin));
-#elif defined(CONFIG_SOC_APOLLO3P_BLUE)
 		AM_HAL_GPIO_MASKCREATE(GpioIntMask);
 		ret = am_hal_gpio_interrupt_clear(AM_HAL_GPIO_MASKBIT(pGpioIntMask, gpio_pin));
 		ret = am_hal_gpio_interrupt_enable(AM_HAL_GPIO_MASKBIT(pGpioIntMask, gpio_pin));
-#endif
 		k_spin_unlock(&data->lock, key);
 	}
 #else
