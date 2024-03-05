@@ -58,6 +58,15 @@ static am_hal_ctimer_config_t g_sContTimer =
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
 static void counter_irq_config_func(void)
 {
+	static bool global_irq_init = true;
+
+	if (!global_irq_init) {
+		return;
+	}
+
+	global_irq_init = false;
+
+	/* Shared irq config default to ctimer0. */
 	NVIC_ClearPendingIRQ(CTIMER_IRQn);
 	IRQ_CONNECT(CTIMER_IRQn, DT_INST_IRQ(0, priority), counter_ambiq_isr, DEVICE_DT_INST_GET(0), 0);
 	irq_enable(CTIMER_IRQn);
@@ -238,23 +247,39 @@ static const struct counter_driver_api counter_api = {
 	.get_top_value = counter_ambiq_get_top_value,
 };
 
+#define APOLLO3_HANDLE_SHARED_TIMER_IRQ(n)						       \
+	static const struct device *const dev_##n =			       \
+		DEVICE_DT_INST_GET(n);				       \
+	struct counter_ambiq_data *const data_##n = dev_##n->data;         \
+    uint32_t status_##n = CTIMERn(n)->INTSTAT;         \
+    status_##n &= CTIMERn(n)->INTEN;         \
+	if (status_##n) { \
+        counter_ambiq_get_value(dev_##n, &now); \
+        if (data_##n->callback) { \
+            data_##n->callback(dev_##n, 0, now, data_##n->user_data); \
+        } \
+	}
+
 static void counter_ambiq_isr(void *arg)
 {
-	const struct device *dev = (const struct device *)arg;
-	struct counter_ambiq_data *data = dev->data;
 	uint32_t now = 0;
 
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
+	ARG_UNUSED(arg);
 	am_hal_ctimer_int_clear(AM_HAL_CTIMER_INT_TIMERA0);
+
+	DT_INST_FOREACH_STATUS_OKAY(APOLLO3_HANDLE_SHARED_TIMER_IRQ)
 #else
+	const struct device *dev = (const struct device *)arg;
+	struct counter_ambiq_data *data = dev->data;
 	const struct counter_ambiq_config *cfg = dev->config;
 	am_hal_timer_interrupt_clear(AM_HAL_TIMER_MASK(cfg->instance, AM_HAL_TIMER_COMPARE1));
-#endif
 	counter_ambiq_get_value(dev, &now);
 
 	if (data->callback) {
 		data->callback(dev, 0, now, data->user_data);
 	}
+#endif
 }
 
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)

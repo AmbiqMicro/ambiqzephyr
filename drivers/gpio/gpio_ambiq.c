@@ -387,26 +387,44 @@ static int ambiq_gpio_port_toggle_bits(const struct device *dev, gpio_port_pins_
 	return 0;
 }
 
+#define APOLLO3_HANDLE_SHARED_GPIO_IRQ(n)						       \
+	static const struct device *const dev_##n =			       \
+		DEVICE_DT_INST_GET(n);				       \
+	const struct ambiq_gpio_config *cfg_##n = dev_##n->config;      \
+	struct ambiq_gpio_data *const data_##n = dev_##n->data;         \
+	uint32_t status_##n = (uint32_t)(ui64Status >> cfg_##n->offset); \
+	if (status_##n) { \
+		gpio_fire_callbacks(&data_##n->cb, dev_##n, status_##n); \
+	}
+
+#define APOLLO3P_HANDLE_SHARED_GPIO_IRQ(n)						       \
+	static const struct device *const dev_##n =			       \
+		DEVICE_DT_INST_GET(n);				       \
+	struct ambiq_gpio_data *const data_##n = dev_##n->data;         \
+	if (pGpioIntStatusMask->U.Msk[n]) { \
+		gpio_fire_callbacks(&data_##n->cb, dev_##n, pGpioIntStatusMask->U.Msk[n]); \
+	}
+
 static void ambiq_gpio_isr(const struct device *dev)
 {
-	struct ambiq_gpio_data *const data = dev->data;
-	const struct ambiq_gpio_config *const dev_cfg = dev->config;
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
+	ARG_UNUSED(dev);
+
 #if defined(CONFIG_SOC_APOLLO3_BLUE)
-	uint64_t ui64Status;
-	am_hal_gpio_interrupt_status_get(false, &ui64Status);
-	am_hal_gpio_interrupt_clear(ui64Status);
-	gpio_fire_callbacks(&data->cb, dev, (uint32_t)(ui64Status >> dev_cfg->offset));
+    uint64_t ui64Status;
+    am_hal_gpio_interrupt_status_get(false, &ui64Status);
+    am_hal_gpio_interrupt_clear(ui64Status);
+	DT_INST_FOREACH_STATUS_OKAY(APOLLO3_HANDLE_SHARED_GPIO_IRQ)
 #elif defined(CONFIG_SOC_APOLLO3P_BLUE)
-	uint8_t ui8Group = dev_cfg->offset >> 5;
 	AM_HAL_GPIO_MASKCREATE(GpioIntStatusMask);
 	am_hal_gpio_interrupt_status_get(false, pGpioIntStatusMask);
 	am_hal_gpio_interrupt_clear(pGpioIntStatusMask);
-	gpio_fire_callbacks(&data->cb, dev, pGpioIntStatusMask->U.Msk[ui8Group]);
+	DT_INST_FOREACH_STATUS_OKAY(APOLLO3P_HANDLE_SHARED_GPIO_IRQ)
 #endif
 #else
-
 	uint32_t int_status;
+	struct ambiq_gpio_data *const data = dev->data;
+	const struct ambiq_gpio_config *const dev_cfg = dev->config;
 
 	am_hal_gpio_interrupt_irq_status_get(dev_cfg->irq_num, false, &int_status);
 	am_hal_gpio_interrupt_irq_clear(dev_cfg->irq_num, int_status);
@@ -535,6 +553,15 @@ static int ambiq_gpio_manage_callback(const struct device *dev, struct gpio_call
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
 static void ambiq_gpio_cfg_func(void)
 {
+	static bool global_irq_init = true;
+
+	if (!global_irq_init) {
+		return;
+	}
+
+	global_irq_init = false;
+
+	/* Shared irq config default to BANK0. */
 	IRQ_CONNECT(GPIO_IRQn, DT_INST_IRQ(0, priority), ambiq_gpio_isr, DEVICE_DT_INST_GET(0), 0);
 	return;
 }
