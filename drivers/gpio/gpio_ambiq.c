@@ -143,7 +143,21 @@ uint32_t am_hal_gpio_pinconfig_get(uint32_t ui32GpioNum, am_hal_gpio_pincfg_t *p
 		(ui32GPCfgVal & GPIO_CFGA_GPIO0OUTCFG_Msk) >> GPIO_CFGA_GPIO0OUTCFG_Pos;
 	psGpioCfg->eGPInput =
 		(ui32PadVal & GPIO_PADREGA_PAD0INPEN_Msk) >> GPIO_PADREGA_PAD0INPEN_Pos;
-	psGpioCfg->ePullup = (ui32PadVal & GPIO_PADREGA_PAD0RSEL_Msk) >> GPIO_PADREGA_PAD0RSEL_Pos;
+
+	if ((ui32PadVal & GPIO_PADREGA_PAD0PULL_Msk) >> GPIO_PADREGA_PAD0PULL_Pos) {
+		if ((ui32PadVal & GPIO_PADREGA_PAD0RSEL_Msk) >> GPIO_PADREGA_PAD0RSEL_Pos) {
+			psGpioCfg->ePullup = AM_HAL_GPIO_PIN_PULLUP_1_5K +
+					     ((ui32PadVal & GPIO_PADREGA_PAD0RSEL_Msk) >>
+					      GPIO_PADREGA_PAD0RSEL_Pos);
+		} else if (ui32GpioNum != 20) {
+			psGpioCfg->ePullup = AM_HAL_GPIO_PIN_PULLUP_WEAK;
+		} else {
+			psGpioCfg->ePullup = AM_HAL_GPIO_PIN_PULLDOWN;
+		}
+	} else {
+		psGpioCfg->ePullup = AM_HAL_GPIO_PIN_PULLUP_NONE;
+	}
+
 	psGpioCfg->uFuncSel =
 		(ui32PadVal & GPIO_PADREGA_PAD0FNCSEL_Msk) >> GPIO_PADREGA_PAD0FNCSEL_Pos;
 	psGpioCfg->eCEpol = (ui32GPCfgVal & GPIO_CFGA_GPIO0INTD_Msk) >> GPIO_CFGA_GPIO0INTD_Pos;
@@ -387,22 +401,20 @@ static int ambiq_gpio_port_toggle_bits(const struct device *dev, gpio_port_pins_
 	return 0;
 }
 
-#define APOLLO3_HANDLE_SHARED_GPIO_IRQ(n)						       \
-	static const struct device *const dev_##n =			       \
-		DEVICE_DT_INST_GET(n);				       \
-	const struct ambiq_gpio_config *cfg_##n = dev_##n->config;      \
-	struct ambiq_gpio_data *const data_##n = dev_##n->data;         \
-	uint32_t status_##n = (uint32_t)(ui64Status >> cfg_##n->offset); \
-	if (status_##n) { \
-		gpio_fire_callbacks(&data_##n->cb, dev_##n, status_##n); \
+#define APOLLO3_HANDLE_SHARED_GPIO_IRQ(n)                                                          \
+	static const struct device *const dev_##n = DEVICE_DT_INST_GET(n);                         \
+	const struct ambiq_gpio_config *cfg_##n = dev_##n->config;                                 \
+	struct ambiq_gpio_data *const data_##n = dev_##n->data;                                    \
+	uint32_t status_##n = (uint32_t)(ui64Status >> cfg_##n->offset);                           \
+	if (status_##n) {                                                                          \
+		gpio_fire_callbacks(&data_##n->cb, dev_##n, status_##n);                           \
 	}
 
-#define APOLLO3P_HANDLE_SHARED_GPIO_IRQ(n)						       \
-	static const struct device *const dev_##n =			       \
-		DEVICE_DT_INST_GET(n);				       \
-	struct ambiq_gpio_data *const data_##n = dev_##n->data;         \
-	if (pGpioIntStatusMask->U.Msk[n]) { \
-		gpio_fire_callbacks(&data_##n->cb, dev_##n, pGpioIntStatusMask->U.Msk[n]); \
+#define APOLLO3P_HANDLE_SHARED_GPIO_IRQ(n)                                                         \
+	static const struct device *const dev_##n = DEVICE_DT_INST_GET(n);                         \
+	struct ambiq_gpio_data *const data_##n = dev_##n->data;                                    \
+	if (pGpioIntStatusMask->U.Msk[n]) {                                                        \
+		gpio_fire_callbacks(&data_##n->cb, dev_##n, pGpioIntStatusMask->U.Msk[n]);         \
 	}
 
 static void ambiq_gpio_isr(const struct device *dev)
@@ -411,9 +423,9 @@ static void ambiq_gpio_isr(const struct device *dev)
 	ARG_UNUSED(dev);
 
 #if defined(CONFIG_SOC_APOLLO3_BLUE)
-    uint64_t ui64Status;
-    am_hal_gpio_interrupt_status_get(false, &ui64Status);
-    am_hal_gpio_interrupt_clear(ui64Status);
+	uint64_t ui64Status;
+	am_hal_gpio_interrupt_status_get(false, &ui64Status);
+	am_hal_gpio_interrupt_clear(ui64Status);
 	DT_INST_FOREACH_STATUS_OKAY(APOLLO3_HANDLE_SHARED_GPIO_IRQ)
 #elif defined(CONFIG_SOC_APOLLO3P_BLUE)
 	AM_HAL_GPIO_MASKCREATE(GpioIntStatusMask);
