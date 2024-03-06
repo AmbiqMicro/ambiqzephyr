@@ -28,6 +28,12 @@ config SPI_DMA_TCB_BUFFER_SIZE
 	help
 	  DMA Transfer Control Buffer size in words
 
+config SPI_AMBIQ_FULLDUPLEX
+	bool "AMBIQ APOLLO SPI FullDuplex Support"
+	depends on SPI_AMBIQ
+	help
+	  Enable FullDuplex for Ambiq SPI.
+
 config MSPI_AMBIQ
 	bool "AMBIQ MSPI driver"
 	default y

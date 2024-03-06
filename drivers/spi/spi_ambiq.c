@@ -52,7 +52,7 @@ struct spi_ambiq_data {
 #define SPI_STAT(dev) (SPI_BASE + REG_STAT)
 #define SPI_WORD_SIZE 8
 
-#define SPI_CS_INDEX  3
+#define SPI_CS_INDEX 3
 
 #ifdef CONFIG_SPI_AMBIQ_DMA
 static void pfnSPI_Callback(void *pCallbackCtxt, uint32_t status)
@@ -166,25 +166,30 @@ static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *con
 
 	am_hal_iom_transfer_t trans = {0};
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
-    uint32_t iom_nce = cfg->pcfg->states->pins[SPI_CS_INDEX].iom_nce;
+	uint32_t iom_nce = cfg->pcfg->states->pins[SPI_CS_INDEX].iom_nce;
 #else
-    uint32_t iom_nce = cfg->pcfg->states->pins[SPI_CS_INDEX].iom_nce % 4;
+	uint32_t iom_nce = cfg->pcfg->states->pins[SPI_CS_INDEX].iom_nce % 4;
 #endif
 
 	/* There's data to send */
 	if (ctx->tx_len) {
-		/* Full duplex blocking transfer */
-		if (config->operation & SPI_FULL_DUPLEX) {
-			/* Assume the instructions been filled in the header of tx_buf */
+#ifdef CONFIG_SPI_AMBIQ_FULLDUPLEX
+		/* Ambiq SPI Full duplex is only supported for blocking transactions,
+		 * both fullduplex and halfduplex work in 4-wire mode, while in halfduplex
+		 * mode SPI can only do one direction transfer simultaniously
+		 */
+		if ((!(config->operation & SPI_HALF_DUPLEX)) && (ctx->rx_len)) {
 			trans.eDirection = AM_HAL_IOM_FULLDUPLEX;
-			trans.bContinue = bContinue;
+			trans.bContinue = false;
 			trans.pui32RxBuffer = (uint32_t *)ctx->rx_buf;
 			trans.pui32TxBuffer = (uint32_t *)ctx->tx_buf;
 			trans.ui32NumBytes = MAX(ctx->rx_len, ctx->tx_len);
 			trans.uPeerInfo.ui32SpiChipSelect = iom_nce;
-			am_hal_iom_spi_blocking_fullduplex(data->IOMHandle, &trans);
+			ret = am_hal_iom_spi_blocking_fullduplex(data->IOMHandle, &trans);
 			spi_context_complete(ctx, dev, 0);
-		} else {
+		} else
+#endif
+		{
 			/* Push one byte instruction in default */
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
 			trans.ui32Instr = *ctx->tx_buf;
@@ -228,7 +233,8 @@ static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *con
 				if (AM_HAL_STATUS_SUCCESS !=
 				    am_hal_iom_nonblocking_transfer(data->IOMHandle, &trans,
 								    pfnSPI_Callback, (void *)dev)) {
-					return -EFAULT;
+					spi_context_complete(ctx, dev, 0);
+					return -EIO;
 				}
 
 				ret = spi_context_wait_for_completion(ctx);
@@ -246,7 +252,8 @@ static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *con
 				if (AM_HAL_STATUS_SUCCESS !=
 				    am_hal_iom_nonblocking_transfer(data->IOMHandle, &trans,
 								    pfnSPI_Callback, (void *)dev)) {
-					return -EFAULT;
+					spi_context_complete(ctx, dev, 0);
+					return -EIO;
 				}
 
 				ret = spi_context_wait_for_completion(ctx);
@@ -265,9 +272,10 @@ static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *con
 		trans.uPeerInfo.ui32SpiChipSelect = iom_nce;
 #ifdef CONFIG_SPI_AMBIQ_DMA
 		if (AM_HAL_STATUS_SUCCESS !=
-		    am_hal_iom_nonblocking_transfer(data->IOMHandle, &trans, pfnSPI_Callback,
-						    (void *)dev)) {
-			return -EFAULT;
+		    am_hal_iom_nonblocking_transfer(data->IOMHandle, &trans,
+						    pfnSPI_Callback, (void *)dev)) {
+			spi_context_complete(ctx, dev, 0);
+			return -EIO;
 		}
 
 		ret = spi_context_wait_for_completion(ctx);
@@ -316,13 +324,16 @@ end:
 	spi_context_release(&data->ctx, ret);
 
 #if defined(CONFIG_PM_DEVICE_RUNTIME)
-	/* Use async put to avoid useless device suspension/resumption
-	 * when doing consecutive transmission.
-	 */
-	ret = pm_device_runtime_put_async(dev, K_MSEC(2));
+	/* Do not power off if need to hold the CS */
+	if (!(config->operation & SPI_HOLD_ON_CS)) {
+		/* Use async put to avoid useless device suspension/resumption
+		 * when doing consecutive transmission.
+		 */
+		ret = pm_device_runtime_put_async(dev, K_MSEC(2));
 
-	if (ret < 0) {
-		LOG_ERR("pm_device_runtime_put failed: %d", ret);
+		if (ret < 0) {
+			LOG_ERR("pm_device_runtime_put failed: %d", ret);
+		}
 	}
 #endif
 

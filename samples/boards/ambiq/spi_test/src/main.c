@@ -22,6 +22,7 @@ static const struct device *spi_dev = DEVICE_DT_GET(TESE_SPI);
 
 #define TEST_FREQ_HZ 8000000U	//48000000U
 
+#define XOR_BYTE            0
 
 static struct spi_config spi_cfg_single = {
 	.frequency = TEST_FREQ_HZ,
@@ -43,7 +44,10 @@ int main(void)
 
 	#define DATA_SIZE	1024
 	uint8_t buff[DATA_SIZE] = {0};
-	memset(buff, 0x5A, DATA_SIZE);
+	// Initialize Test Data
+	for (uint32_t i = 0; i < DATA_SIZE; i++) {
+		buff[i] = (i & 0xFF) ^ XOR_BYTE;
+	}
 	uint8_t rxdata[DATA_SIZE];
 
 	struct spi_buf tx_buf[1] = {
@@ -56,17 +60,28 @@ int main(void)
 	tx_set.buffers = tx_buf;
 	tx_set.count = 1;
 
+	spi_cfg_single.operation |= SPI_HALF_DUPLEX;
+	// Half duplex tx
 	ret = spi_transceive(spi_dev, &spi_cfg_single, &tx_set, NULL);
 
-	tx_buf[0].len = 1;
 	rx_set.buffers = rx_buf;
+	rx_buf[0].len = DATA_SIZE;
 	rx_set.count = 1;
-	spi_cfg_single.operation |= SPI_HOLD_ON_CS;
+	spi_cfg_single.operation &= ~SPI_HALF_DUPLEX;
+	// Full duplex
+	ret = spi_transceive(spi_dev, &spi_cfg_single, &tx_set, &rx_set);
+
+	memset(buff, 0x5A, DATA_SIZE);
+	tx_buf[0].len = 1;
+	rx_buf[0].len = 0;
+	spi_cfg_single.operation |= SPI_HOLD_ON_CS | SPI_HALF_DUPLEX;
+	// Half duplex tx continue
 	ret = spi_transceive(spi_dev, &spi_cfg_single, &tx_set, &rx_set);
 
 	tx_buf[0].len = 0;
 	rx_buf[0].len = DATA_SIZE;
 	spi_cfg_single.operation &= ~SPI_HOLD_ON_CS;
+	// Half duplex rx
 	ret = spi_transceive(spi_dev, &spi_cfg_single, &tx_set, &rx_set);
 
 	return 0;
