@@ -201,7 +201,10 @@ static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *con
 
 			/* More instruction bytes to send */
 			if (ctx->tx_len > 0) {
-				/* The instruction length can only be 0~AM_HAL_IOM_MAX_OFFSETSIZE. */
+                /*
+				 * The instruction length can only be:
+				 * 	0~AM_HAL_IOM_MAX_OFFSETSIZE.
+				 */
 				if (ctx->tx_len > AM_HAL_IOM_MAX_OFFSETSIZE - 1) {
 					spi_context_complete(ctx, dev, 0);
 					return -ENOTSUP;
