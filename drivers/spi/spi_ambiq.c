@@ -172,13 +172,13 @@ static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *con
 #endif
 
 	/* There's data to send */
-	if (ctx->tx_len) {
+	if (spi_context_tx_on(ctx)) {
 #ifdef CONFIG_SPI_AMBIQ_FULLDUPLEX
 		/* Ambiq SPI Full duplex is only supported for blocking transactions,
 		 * both fullduplex and halfduplex work in 4-wire mode, while in halfduplex
 		 * mode SPI can only do one direction transfer simultaniously
 		 */
-		if ((!(config->operation & SPI_HALF_DUPLEX)) && (ctx->rx_len)) {
+		if ((!(config->operation & SPI_HALF_DUPLEX)) && (spi_context_rx_on(ctx))) {
 			trans.eDirection = AM_HAL_IOM_FULLDUPLEX;
 			trans.bContinue = false;
 			trans.pui32RxBuffer = (uint32_t *)ctx->rx_buf;
@@ -199,30 +199,30 @@ static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *con
 			trans.ui32InstrLen = 1;
 			spi_context_update_tx(ctx, 1, 1);
 
-			/* This is the start of RX */
-			if (ctx->rx_buf != NULL) {
-				/* More instruction bytes to send */
-				if (ctx->tx_len > 0) {
-					/* The instruction length can only be 0~AM_HAL_IOM_MAX_OFFSETSIZE. */
-					if (ctx->tx_len > AM_HAL_IOM_MAX_OFFSETSIZE - 1) {
-						spi_context_complete(ctx, dev, 0);
-						return -ENOTSUP;
-					}
-
-					/* Put the remaining TX data in instruction. */
-					trans.ui32InstrLen += ctx->tx_len;
-					for (int i = 0; i < trans.ui32InstrLen - 1; i++) {
-#if defined(CONFIG_SOC_SERIES_APOLLO3X)
-						trans.ui32Instr =
-							(trans.ui32Instr << 8) | (*ctx->tx_buf);
-#else
-						trans.ui64Instr =
-							(trans.ui64Instr << 8) | (*ctx->tx_buf);
-#endif
-						spi_context_update_tx(ctx, 1, 1);
-					}
+			/* More instruction bytes to send */
+			if (ctx->tx_len > 0) {
+				/* The instruction length can only be 0~AM_HAL_IOM_MAX_OFFSETSIZE. */
+				if (ctx->tx_len > AM_HAL_IOM_MAX_OFFSETSIZE - 1) {
+					spi_context_complete(ctx, dev, 0);
+					return -ENOTSUP;
 				}
 
+				/* Put the remaining TX data in instruction. */
+				trans.ui32InstrLen += ctx->tx_len;
+				for (int i = 0; i < trans.ui32InstrLen - 1; i++) {
+#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+					trans.ui32Instr =
+						(trans.ui32Instr << 8) | (*ctx->tx_buf);
+#else
+					trans.ui64Instr =
+						(trans.ui64Instr << 8) | (*ctx->tx_buf);
+#endif
+					spi_context_update_tx(ctx, 1, 1);
+				}
+			}
+
+			/* There's data to Receive */
+			if (spi_context_rx_on(ctx)) {
 				/* Set RX direction and receive data. */
 				trans.eDirection = AM_HAL_IOM_RX;
 				trans.bContinue = bContinue;
@@ -241,24 +241,7 @@ static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *con
 #else
 				ret = am_hal_iom_blocking_transfer(data->IOMHandle, &trans);
 #endif
-			} else {
-                /* More instruction bytes to send */
-                /* The instruction length can only be 0~AM_HAL_IOM_MAX_OFFSETSIZE. */
-                if (ctx->tx_len > AM_HAL_IOM_MAX_OFFSETSIZE - 1) {
-                    spi_context_complete(ctx, dev, 0);
-                    return -ENOTSUP;
-                }
-
-                /* Put the remaining TX data in instruction. */
-                trans.ui32InstrLen += ctx->tx_len;
-                for (int i = 0; i < trans.ui32InstrLen - 1; i++) {
-#if defined(CONFIG_SOC_SERIES_APOLLO3X)
-                    trans.ui32Instr = (trans.ui32Instr << 8) | (*ctx->tx_buf);
-#else
-                    trans.ui64Instr = (trans.ui64Instr << 8) | (*ctx->tx_buf);
-#endif
-                    spi_context_update_tx(ctx, 1, 1);
-                }
+			} else { /* There's no data to Receive */
 				/* Set TX direction to send data. */
 				trans.eDirection = AM_HAL_IOM_TX;
 				trans.bContinue = bContinue;
@@ -280,7 +263,7 @@ static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *con
 #endif
 			}
 		}
-	} else {
+	} else { /* There's no data to send */
 		/* Set RX direction to receive data and release CS after transmission. */
 		trans.eDirection = AM_HAL_IOM_RX;
 		trans.bContinue = bContinue;
