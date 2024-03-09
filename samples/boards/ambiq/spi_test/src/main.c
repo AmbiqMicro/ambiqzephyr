@@ -119,36 +119,21 @@ static int ambiq_spi_read(const struct device *dev, off_t offset, void *buf, siz
 
 	if (bFd) {
 		spi_cfg.operation &= ~SPI_HALF_DUPLEX;
-		void *cmd_tx = NULL;
-		cmd_tx = k_malloc(len);
-		memset(cmd_tx, 0, len);
-		memcpy(cmd_tx, cmd, 3);
-		const struct spi_buf tx_buf = {
-			.buf = cmd_tx,
-			.len = len,
-		};
-		const struct spi_buf_set tx = {
-			.buffers = &tx_buf,
-			.count = 1,
-		};
-		err = spi_transceive(dev, &spi_cfg, &tx, &rx);
-		if (err < 0) {
-			return err;
-		}
 	} else {
 		spi_cfg.operation |= SPI_HALF_DUPLEX;
-		const struct spi_buf tx_buf = {
-			.buf = cmd,
-			.len = 3,
-		};
-		const struct spi_buf_set tx = {
-			.buffers = &tx_buf,
-			.count = 1,
-		};
-		err = spi_transceive(dev, &spi_cfg, &tx, &rx);
-		if (err < 0) {
-			return err;
-		}
+	}
+
+	const struct spi_buf tx_buf = {
+		.buf = cmd,
+		.len = 3,
+	};
+	const struct spi_buf_set tx = {
+		.buffers = &tx_buf,
+		.count = 1,
+	};
+	err = spi_transceive(dev, &spi_cfg, &tx, &rx);
+	if (err < 0) {
+		return err;
 	}
 
 	return err;
