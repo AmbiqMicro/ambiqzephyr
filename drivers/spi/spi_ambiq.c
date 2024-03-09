@@ -207,6 +207,7 @@ static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *con
 
 		/* There's data to Receive */
 		if (spi_context_rx_on(ctx)) {
+			spi_context_update_rx(ctx, 1, ctx->rx_len);
 			if (!(config->operation & SPI_HALF_DUPLEX)) {
 				uint8_t *tx_dummy = NULL;
 				tx_dummy = k_malloc(ctx->rx_len);
@@ -266,6 +267,7 @@ static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *con
 #endif
 		}
 	} else { /* There's no data to send */
+		spi_context_update_rx(ctx, 1, ctx->rx_len);
 		/* Set RX direction to receive data and release CS after transmission. */
 		trans.eDirection = AM_HAL_IOM_RX;
 		trans.bContinue = bContinue;
