@@ -1,0 +1,20 @@
+/*
+ *  Copyright (c) 2023 Antmicro <www.antmicro.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+	aliases {
+        spi0 = &aps6404l_test;
+	};
+};
+
+&spi4 {
+	aps6404l_test: aps6404l@0 {
+        compatible = "apm,aps6404l";
+        reg = <0>;
+        spi-max-frequency = <48000000>;
+        status = "okay";
+	};
+};
