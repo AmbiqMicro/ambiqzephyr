@@ -210,17 +210,17 @@ static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *con
 			spi_context_update_rx(ctx, 1, ctx->rx_len);
 			if (!(config->operation & SPI_HALF_DUPLEX)) {
 				uint8_t *tx_dummy = NULL;
-				tx_dummy = k_malloc(ctx->rx_len);
+				tx_dummy = k_malloc(ctx->rx_len + trans.ui32InstrLen);
 				if (tx_dummy == NULL) {
 					spi_context_complete(ctx, dev, 0);
 					return -ENOMEM;
 				}
-				memset(tx_dummy, 0, ctx->rx_len);
+				memset(tx_dummy, 0, ctx->rx_len + trans.ui32InstrLen);
 				trans.eDirection = AM_HAL_IOM_FULLDUPLEX;
 				trans.bContinue = false;
 				trans.pui32RxBuffer = (uint32_t *)ctx->rx_buf;
 				trans.pui32TxBuffer = (uint32_t *)tx_dummy;
-				trans.ui32NumBytes = ctx->rx_len;
+				trans.ui32NumBytes = ctx->rx_len + trans.ui32InstrLen;
 				trans.uPeerInfo.ui32SpiChipSelect = iom_nce;
 				ret = am_hal_iom_spi_blocking_fullduplex(data->IOMHandle, &trans);
 				k_free((void *)tx_dummy);
