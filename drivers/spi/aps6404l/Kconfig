@@ -1,0 +1,12 @@
+# APS6404L FLASH
+
+# Copyright (c) 2017 IpTronix S.r.l.
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig APS6404L
+	bool "APS6404L FLASH"
+	default y
+	depends on DT_HAS_APM_APS6404L_ENABLED
+	help
+	  Enable driver for FLASH
+

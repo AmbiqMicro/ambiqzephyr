@@ -207,8 +207,8 @@ static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *con
 
 		/* There's data to Receive */
 		if (spi_context_rx_on(ctx)) {
-			spi_context_update_rx(ctx, 1, ctx->rx_len);
 			if (!(config->operation & SPI_HALF_DUPLEX)) {
+				spi_context_update_rx(ctx, 1, trans.ui32InstrLen);
 				uint8_t *tx_dummy = NULL;
 				tx_dummy = k_malloc(ctx->rx_len + trans.ui32InstrLen);
 				if (tx_dummy == NULL) {
@@ -267,7 +267,9 @@ static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *con
 #endif
 		}
 	} else { /* There's no data to send */
-		spi_context_update_rx(ctx, 1, ctx->rx_len);
+		if (!(config->operation & SPI_HALF_DUPLEX)) {
+			spi_context_update_rx(ctx, 1, ctx->rx_len);
+		}
 		/* Set RX direction to receive data and release CS after transmission. */
 		trans.eDirection = AM_HAL_IOM_RX;
 		trans.bContinue = bContinue;
@@ -372,17 +374,22 @@ static int spi_ambiq_init(const struct device *dev)
 	int ret = 0;
 	void *buf = NULL;
 
-	if (AM_HAL_STATUS_SUCCESS !=
+	if (0 !=
 	    am_hal_iom_initialize((cfg->base - REG_IOM_BASEADDR) / cfg->size, &data->IOMHandle)) {
-		LOG_ERR("Fail to initialize SPI\n");
+		LOG_ERR("Error - Failed  to initialize SPI\n");
 		return -ENXIO;
 	}
 
-	cfg->pwr_func();
+	//cfg->pwr_func();
+    if (0 != am_hal_iom_power_ctrl(data->IOMHandle, AM_HAL_SYSCTRL_WAKE, false))
+    {
+        LOG_ERR("Error - Failed to power on MSPI.\n");
+        return -ENXIO;
+    }
 
 	ret = pinctrl_apply_state(cfg->pcfg, PINCTRL_STATE_DEFAULT);
 	if (ret < 0) {
-		LOG_ERR("Fail to config SPI pins\n");
+		LOG_ERR("Error - Failed  to config SPI pins\n");
 		goto end;
 	}
 
