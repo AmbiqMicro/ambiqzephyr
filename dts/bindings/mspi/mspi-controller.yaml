@@ -27,6 +27,11 @@ properties:
     description: |
       MSPI master or slave mode
 
+  dqs-support:
+    type: boolean
+    description: |
+      Whether the hardware supports DQS.
+
   ce-gpios:
     type: phandle-array
     required: true

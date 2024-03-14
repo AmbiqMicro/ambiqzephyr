@@ -78,6 +78,12 @@ properties:
     description: |
       MSPI CE polarity, in most cases, it is active low.
 
+  mspi-dqs-enable:
+    type: boolean
+    description: |
+      Enable DQS mode for a device which must support it. This will be checked against
+      dqs-support and configure the MSPI hardware if it supports DQS mode.
+
   mspi-hold-ce:
     type: boolean
     description: |
@@ -87,57 +93,41 @@ properties:
       where the first mspi transaction reads the length and the second mspi transaction
       reads length bytes.
 
-  mspi-enable-rx-dummy:
-    type: boolean
-    description: |
-      Enable RX dummy cycles
-
-  mspi-enable-tx-dummy:
-    type: boolean
-    description: |
-      Enable TX dummy cycles
-
-  mspi-enable-instr:
-    type: boolean
-    description: |
-      Enable command phase
-
-  mspi-enable-address:
-    type: boolean
-    description: |
-      Enable address phase
-
   rx-dummy:
     type: int
     description: |
-      The number of data or clock cycles between addr and data in RX direction
+      The number of data or clock cycles between addr and data in RX direction.
+      0 means the RX dummy phase is disabled.
 
   tx-dummy:
     type: int
     description: |
-      The number of data or clock cycles between addr and data in TX direction
+      The number of data or clock cycles between addr and data in TX direction.
+      0 means the TX dummy phase is disabled.
 
   read-instruction:
     type: int
     description: |
-      Read command to be sent in RX direction
+      Read command to be sent in RX direction.
 
   write-instruction:
     type: int
     description: |
-      Write command to be sent in RX direction
+      Write command to be sent in RX direction.
 
   instruction-length:
     type: string
     enum:
+      - "INSTR_DISABLED"
       - "INSTR_1_BYTE"
       - "INSTR_2_BYTE"
     description: |
-      Configure instruction length
+      Configure instruction length.
 
   address-length:
     type: string
     enum:
+      - "ADDR_DISABLED"
       - "ADDR_1_BYTE"
       - "ADDR_2_BYTE"
       - "ADDR_3_BYTE"
@@ -147,7 +137,7 @@ properties:
 
   xip-config:
     type: array
-    default: [0, 0, 0]
+    default: [0, 0, 0, 0]
     description: |
       Array of tuples to configure the xip feature
       default =

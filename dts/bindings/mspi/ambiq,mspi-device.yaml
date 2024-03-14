@@ -38,17 +38,25 @@ properties:
   address-length:
     required: true
 
-  timing-config:
+  ambiq,timing-config-mask:
+    type: int
+    required: true
+    description: |
+      It must be defined in the board DTS based on Soc series.
+
+  ambiq,timing-config:
     type: array
-    default: [0, 0, 0, 0, 0, 0]
+    default: [0, 0, 0, 0, 0, 0, 0, 0]
     description: |
       Array of tuples to configure the timing parameters
       default =
       <
-        .bSendInstr        = false;
-        .bSendAddr         = false;
-        .bWriteLatency     = false;
-        .bTurnaround       = false;
-        .ui8WriteLatency   = 0;
-        .ui8TurnAround     = 0;
+        .ui8WriteLatency   = 0,
+        .ui8TurnAround     = 0,
+        .bTxNeg            = false,
+        .bRxNeg            = false,
+        .bRxCap            = false,
+        .ui32TxDQSDelay    = 0,
+        .ui32RxDQSDelay    = 0,
+        .ui32RXDQSDelayEXT = 0,
       >

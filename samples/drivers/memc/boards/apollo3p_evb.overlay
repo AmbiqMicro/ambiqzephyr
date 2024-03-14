@@ -26,7 +26,7 @@
     cmdq-buffer-size = <256>;
 
     aps6404l: aps6404l@0 {
-        compatible = "ambiq,mspi-aps6404l";
+        compatible = "mspi-aps6404l";
         size = <DT_SIZE_M(64)>;
         reg = <0>;
         status = "okay";
@@ -34,21 +34,19 @@
         mspi-io-mode = "MSPI_IO_MODE_QUAD";
         mspi-data-rate = "MSPI_SINGLE_DATA_RATE";
         hardware-ce-num = <0>;
-        mspi-enable-instr;
         read-instruction = <0xEB>;
         write-instruction = <0x38>;
         instruction-length = "INSTR_1_BYTE";
-        mspi-enable-address;
         address-length = "ADDR_3_BYTE";
-        mspi-enable-rx-dummy;
         rx-dummy = <6>;
         tx-dummy = <0>;
         xip-config = <1 0 0 0>;
         ce-break-config = <0x6 30>;
-        timing-config = <1 1 0 1 0 6>;
+        ambiq,timing-config-mask = <3>;
+        ambiq,timing-config = <0 6 0 0 0 0 0 0>;
     };
-    aps6408l: aps6408l@1 {
-        compatible = "ambiq,mspi-aps6404l";
+    aps6408l: aps6408l@1 { /** dummy device */
+        compatible = "mspi-aps6404l";
         size = <DT_SIZE_M(64)>;
         reg = <1>;
         status = "disabled";
@@ -56,17 +54,16 @@
         mspi-io-mode = "MSPI_IO_MODE_OCTAL";
         mspi-data-rate = "MSPI_SINGLE_DATA_RATE";
         hardware-ce-num = <0>;
-        mspi-enable-instr;
         read-instruction = <0xEB>;
         write-instruction = <0x38>;
         instruction-length = "INSTR_1_BYTE";
-        mspi-enable-address;
         address-length = "ADDR_3_BYTE";
-        mspi-enable-rx-dummy;
         rx-dummy = <6>;
         tx-dummy = <0>;
         xip-config = <1 0 0 0>;
         ce-break-config = <0x6 30>;
+        ambiq,timing-config-mask = <3>;
+        ambiq,timing-config = <0 6 0 0 0 0 0 0>;
     };
 };
 

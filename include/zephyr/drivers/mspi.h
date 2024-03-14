@@ -75,8 +75,8 @@ enum mspi_io_mode {
  * @brief MSPI data rate capabilities
  */
 enum mspi_data_rate {
-    MSPI_SINGLE_DATA_RATE       = 0, //SDR
-    MSPI_DUAL_DATA_RATE         = 1, //DDR
+    MSPI_SINGLE_DATA_RATE       = 0,
+    MSPI_DUAL_DATA_RATE         = 1,
 };
 
 /**
@@ -244,8 +244,13 @@ struct mspi_ce_control {
 #define MSPI_CE_CONTROL_INIT_INST(inst, delay_)            \
         MSPI_CE_CONTROL_INIT(DT_DRV_INST(inst), delay_)
 
+/**
+ * @brief MSPI device ID
+ */
 struct mspi_dev_id {
+    /** @brief device gpio ce */
     struct gpio_dt_spec     ce;
+    /** @brief device index on DT */
     unsigned int            dev_idx;
 };
 
@@ -259,6 +264,8 @@ struct mspi_cfg {
     enum mspi_op_mode       eOPMode;
     /** @brief Configure duplex mode */
     enum mspi_duplex        eDuplex;
+    /** @brief DQS support flag */
+    bool                    bDQS;
     /** @brief GPIO chip-select line (optional) */
     struct gpio_dt_spec     *pCE;
     /** @brief Slave number from 0 to host controller slave limit. */
@@ -267,6 +274,39 @@ struct mspi_cfg {
     uint32_t                ui32MaxFreq;
     /** @brief Whether to re-initialize controller */
     bool                    bReinit;
+};
+
+/**
+ * @brief MSPI DT information
+ */
+struct mspi_dt_spec {
+	/** @brief MSPI bus */
+	const struct device     *bus;
+	/** @brief MSPI hardware specific configuration */
+	struct mspi_cfg         config;
+};
+
+/**
+ * @brief MSPI controller device specific configuration mask
+ */
+enum mspi_dev_cfg_mask {
+    MSPI_DEVICE_CONFIG_CE_NUM       = BIT(0),
+    MSPI_DEVICE_CONFIG_FREQUENCY    = BIT(1),
+    MSPI_DEVICE_CONFIG_IO_MODE      = BIT(2),
+    MSPI_DEVICE_CONFIG_DATA_RATE    = BIT(3),
+    MSPI_DEVICE_CONFIG_CPP          = BIT(4),
+    MSPI_DEVICE_CONFIG_ENDIAN       = BIT(5),
+    MSPI_DEVICE_CONFIG_CE_POL       = BIT(6),
+    MSPI_DEVICE_CONFIG_DQS          = BIT(7),
+    MSPI_DEVICE_CONFIG_RX_DUMMY     = BIT(8),
+    MSPI_DEVICE_CONFIG_TX_DUMMY     = BIT(9),
+    MSPI_DEVICE_CONFIG_READ_INSTR   = BIT(10),
+    MSPI_DEVICE_CONFIG_WRITE_INSTR  = BIT(11),
+    MSPI_DEVICE_CONFIG_INSTR_LEN    = BIT(12),
+    MSPI_DEVICE_CONFIG_ADDR_LEN     = BIT(13),
+    MSPI_DEVICE_CONFIG_MEM_BOUND    = BIT(14),
+    MSPI_DEVICE_CONFIG_BREAK_TIME   = BIT(15),
+    MSPI_DEVICE_CONFIG_ALL          = -1,
 };
 
 /**
@@ -287,6 +327,8 @@ struct mspi_dev_cfg {
     enum mspi_endian        eEndian;
     /** @brief Configure chip enable polarity */
     enum mspi_ce_polarity   eCEPolarity;
+    /** @brief Configure DQS mode */
+    bool                    bDQSEnable;
     /** @brief Configure number of clock cycles between
      * addr and data in RX direction
      */
@@ -309,75 +351,42 @@ struct mspi_dev_cfg {
     uint32_t                ui32BreakTimeLimit;
 };
 
+/**
+ * @brief MSPI XIP access permissions
+ */
 enum mspi_xip_permit {
     MSPI_XIP_READ_WRITE     = 0,
     MSPI_XIP_READ_ONLY      = 1,
 };
 
 /**
- * @brief MSPI XIP configuration
+ * @brief MSPI controller XIP configuration
  */
 struct mspi_xip_cfg {
+    /** @brief XIP enable */
     bool                    bEnable;
+    /** @brief XIP region start address =
+     * hardware default + address offset
+    */
     uint32_t                ui32AddrOffset;
+    /** @brief XIP region size */
     uint32_t                ui32Size;
+    /** @brief XIP access permission */
     enum mspi_xip_permit    ePermission;
 };
 
-struct mspi_scramble_cfg {
-    bool                    bEnable;
-    uint32_t                ui32AddrOffset;
-    uint32_t                ui32Size;
-};
-
-enum eTransMode{
-    MSPI_PIO,
-    MSPI_DMA,
-};
-
-enum eTransDirection{
-    MSPI_RX,
-    MSPI_TX,
-};
-
 /**
- * @brief MSPI peripheral xfer packet format
+ * @brief MSPI controller scramble configuration
  */
-struct mspi_xfer_packet {
-    /** @brief  Direction (Transmit/Receive) */
-    enum eTransDirection        eDirection;
-    /** @brief  Number of bytes to transfer  */
-    uint32_t                    ui32NumBytes;
-    /** @brief  Enable scrambling            */
-    bool                        bScrambling;
-    /** @brief  Send Device Address          */
-    bool                        bSendAddr;
-    /** @brief  Device Address               */
-    uint32_t                    ui32DeviceAddr;
-    /** @brief  Send Device Instruction      */
-    bool                        bSendInstr;
-    /** @brief  Device Instruction           */
-    uint16_t                    ui16DeviceInstr;
-    /** @brief  Enable RX Dummy Counter      */
-    bool                        bRXDummy;
-    /** @brief  Enable TX Dummy Counter      */
-    bool                        bTXDummy;
-    /** @brief  Hold CE active after xfer    */
-    bool                        bHoldCE;
-    /** @brief  Buffer                       */
-    uint32_t                    *pui32Buffer;
-    /** @brief  Transfer Mode                */
-    enum eTransMode                eMode;
-    /** @brief  Software CE control          */
-    struct mspi_ce_control      sCE;
-    /** @brief  Priority 0 = Low (best effort)
-     *                   1 = High (service immediately)
+struct mspi_scramble_cfg {
+    /** @brief scramble enable */
+    bool                    bEnable;
+    /** @brief scramble region start address =
+     * hardware default + address offset
     */
-    uint8_t                     ui8Priority;
-    /** @brief  Command Queue Transaction Gating */
-    uint32_t                    ui32PauseCondition;
-    /** @brief  Command Queue Post-Transaction status setting */
-    uint32_t                    ui32StatusSetClr;
+    uint32_t                ui32AddrOffset;
+    /** @brief scramble region size */
+    uint32_t                ui32Size;
 };
 
 /**
@@ -387,13 +396,92 @@ enum mspi_bus_event {
     MSPI_BUS_RESET                      = 0,
     MSPI_BUS_ERROR                      = 1,
     MSPI_BUS_XFER_COMPLETE              = 2,
+    MSPI_BUS_EVENT_MAX,
+};
+
+/**
+ * @brief MSPI bus event callback mask
+ */
+enum mspi_bus_event_cb_mask {
+    MSPI_BUS_NO_CB                      = 0,
+    MSPI_BUS_RESET_CB                   = BIT(0),
+    MSPI_BUS_ERROR_CB                   = BIT(1),
+    MSPI_BUS_XFER_COMPLETE_CB           = BIT(2),
+};
+
+/**
+ * @brief MSPI transfer modes
+ */
+enum eTransMode{
+    MSPI_PIO,
+    MSPI_DMA,
+};
+
+/**
+ * @brief MSPI transfer directions
+ */
+enum eTransDirection{
+    MSPI_RX,
+    MSPI_TX,
+};
+
+/**
+ * @brief MSPI transfer buffer
+ */
+struct mspi_buf {
+    /** @brief  Device Instruction           */
+    uint16_t                    ui16DeviceInstr;
+    /** @brief  Device Address               */
+    uint32_t                    ui32DeviceAddr;
+    /** @brief  Number of bytes to transfer  */
+    uint32_t                    ui32NumBytes;
+    /** @brief  Buffer                       */
+    uint32_t                    *pui32Buffer;
+};
+
+/**
+ * @brief MSPI peripheral xfer packet format
+ */
+struct mspi_xfer_packet {
+    /** @brief  Transfer Mode                */
+    enum eTransMode             eMode;
+    /** @brief  Direction (Transmit/Receive) */
+    enum eTransDirection        eDirection;
+    /** @brief  Enable scrambling            */
+    bool                        bScrambling;
+    /** @brief  Configure TX dummy cycles    */
+    uint32_t                    ui32TXDummy;
+    /** @brief  Configure RX dummy cycles    */
+    uint32_t                    ui32RXDummy;
+    /** @brief Configure instruction length  */
+    uint16_t                    ui16InstrLength;
+    /** @brief Configure address length      */
+    uint16_t                    ui16AddrLength;
+    /** @brief  Hold CE active after xfer    */
+    bool                        bHoldCE;
+    /** @brief  Software CE control          */
+    struct mspi_ce_control      sCE;
+    /** @brief  Priority 0 = Low (best effort)
+     *                   1 = High (service immediately)
+    */
+    uint8_t                     ui8Priority;
+    /** @brief  Transfer buffers             */
+    struct mspi_buf             *pPayload;
+    /** @brief  Number of transfer buffers   */
+    uint32_t                    ui32NumPayload;
+    /** @brief  Bus event callback masks     */
+    enum mspi_bus_event_cb_mask eCBMask;
 };
 
 /**
  * @brief MSPI event data
  */
 struct mspi_event_data {
+    /** @brief Pointer to the slave device ID */
+    const struct mspi_dev_id *dev_id;
+    /** @brief Pointer to the transfer packet */
     const struct mspi_xfer_packet *xfer;
+    /** @brief MSPI event status */
     uint32_t status;
 };
 
@@ -407,10 +495,18 @@ struct mspi_event {
     struct mspi_event_data  evt_data;
 };
 
+/**
+ * @brief MSPI callback context
+ */
 struct mspi_callback_context {
+    /** @brief MSPI event  */
     struct mspi_event mspi_evt;
+    /** @brief user defined context */
     void              *ctx;
 };
+
+struct mspi_timing_cfg;
+enum mspi_timing_param;
 
 /**
  * @typedef mspi_callback_handler_t
@@ -427,10 +523,11 @@ typedef void (*mspi_callback_handler_t) (const struct device *controller,
 /**
  * MSPI driver API definition and system call entry points
  */
-typedef int (*mspi_api_config)(const struct device *controller, const struct mspi_cfg *cfg);
+typedef int (*mspi_api_config)(const struct mspi_dt_spec *spec);
 
 typedef int (*mspi_api_dev_config)(const struct device *controller,
                     const struct mspi_dev_id *dev_id,
+                    const enum mspi_dev_cfg_mask param_mask,
                     const struct mspi_dev_cfg *cfg);
 
 typedef int (*mspi_api_get_channel_status)(const struct device *controller,
@@ -439,11 +536,16 @@ typedef int (*mspi_api_get_channel_status)(const struct device *controller,
 typedef int (*mspi_api_transceive)(const struct device *controller,
                     const struct mspi_dev_id *dev_id,
                     const struct mspi_xfer_packet *req);
+
 typedef int (*mspi_api_transceive_async)(const struct device *controller,
                     const struct mspi_dev_id *dev_id,
-                    const struct mspi_xfer_packet *req,
+                    const struct mspi_xfer_packet *req);
+
+typedef int (*mspi_api_register_callback)(const struct device *controller,
+                    const struct mspi_dev_id *dev_id,
+                    const enum mspi_bus_event evt_type,
                     mspi_callback_handler_t cb,
-                    struct mspi_callback_context   *ctx);
+                    struct mspi_callback_context *ctx);
 
 typedef int (*mspi_api_xip_config)(const struct device *controller,
                     const struct mspi_dev_id *dev_id,
@@ -455,6 +557,7 @@ typedef int (*mspi_api_scramble_config)(const struct device *controller,
 
 typedef int (*mspi_api_timing_config)(const struct device *controller,
                     const struct mspi_dev_id *dev_id,
+                    const uint32_t param_mask,
                     void *timing_cfg);
 
 __subsystem struct mspi_driver_api {
@@ -463,6 +566,7 @@ __subsystem struct mspi_driver_api {
     mspi_api_get_channel_status     get_channel_status;
     mspi_api_transceive             transceive;
     mspi_api_transceive_async       transceive_async;
+    mspi_api_register_callback      register_callback;
     mspi_api_xip_config             xip_config;
     mspi_api_scramble_config        scramble_config;
     mspi_api_timing_config          timing_config;
@@ -475,22 +579,21 @@ __subsystem struct mspi_driver_api {
  * capabilities.
  *
  * @param controller Pointer to the device structure for the driver instance.
- * @param cfg the controller configuration for MSPI.
+ * @param cfg The controller configuration for MSPI.
  *
  * @retval 0 If successful.
  * @retval -EIO General input / output error, failed to configure device.
  * @retval -EINVAL invalid capabilities, failed to configure device.
  * @retval -ENOTSUP capability not supported by MSPI slave.
  */
-__syscall int mspi_config(const struct device *controller, const struct mspi_cfg *cfg);
+__syscall int mspi_config(const struct mspi_dt_spec *spec);
 
-static inline int z_impl_mspi_config(const struct device *controller,
-                     const struct mspi_cfg *cfg)
+static inline int z_impl_mspi_config(const struct mspi_dt_spec *spec)
 {
     const struct mspi_driver_api *api =
-        (const struct mspi_driver_api *)controller->api;
+        (const struct mspi_driver_api *)spec->bus->api;
 
-    return api->config(controller, cfg);
+    return api->config(spec);
 }
 
 /**
@@ -500,7 +603,9 @@ static inline int z_impl_mspi_config(const struct device *controller,
  * capabilities.
  *
  * @param controller Pointer to the device structure for the driver instance.
- * @param cfg the device runtime configuration for the MSPI controller.
+ * @param dev_id Pointer to the device ID structure from a device.
+ * @param param_mask Macro definition of what to be configured in cfg.
+ * @param cfg The device runtime configuration for the MSPI controller.
  *
  * @retval 0 If successful.
  * @retval -EIO General input / output error, failed to configure device.
@@ -509,16 +614,18 @@ static inline int z_impl_mspi_config(const struct device *controller,
  */
 __syscall int mspi_dev_config(const struct device *controller,
                      const struct mspi_dev_id *dev_id,
+                     const enum mspi_dev_cfg_mask param_mask,
                      const struct mspi_dev_cfg *cfg);
 
 static inline int z_impl_mspi_dev_config(const struct device *controller,
                      const struct mspi_dev_id *dev_id,
+                     const enum mspi_dev_cfg_mask param_mask,
                      const struct mspi_dev_cfg *cfg)
 {
     const struct mspi_driver_api *api =
         (const struct mspi_driver_api *)controller->api;
 
-    return api->dev_config(controller, dev_id, cfg);
+    return api->dev_config(controller, dev_id, param_mask, cfg);
 }
 
 /**
@@ -550,7 +657,8 @@ static inline int z_impl_mspi_get_channel_status(const struct device *controller
  * This routines provides a generic interface to transfer a request synchronously.
  *
  * @param controller Pointer to the device structure for the driver instance.
- * @param req content of the request and request specific settings.
+ * @param dev_id Pointer to the device ID structure from a device.
+ * @param req Content of the request and request specific settings.
  *
  * @retval 0 If successful.
  * @retval -ENOTSUP
@@ -580,7 +688,9 @@ static inline int z_impl_mspi_transceive(const struct device *controller,
  * This routines provides a generic interface to transfer a request asynchronously.
  *
  * @param controller Pointer to the device structure for the driver instance.
- * @param req content of the request and request specific settings.
+ * @param dev_id Pointer to the device ID structure from a device.
+ * @param req Content of the request and request specific settings.
+ * @param
  *
  * @retval 0 If successful.
  * @retval -ENOTSUP
@@ -588,15 +698,11 @@ static inline int z_impl_mspi_transceive(const struct device *controller,
  */
 __syscall int mspi_transceive_async(const struct device *controller,
                         const struct mspi_dev_id *dev_id,
-                        const struct mspi_xfer_packet *req,
-                        mspi_callback_handler_t cb,
-                        struct mspi_callback_context   *ctx);
+                        const struct mspi_xfer_packet *req);
 
 static inline int z_impl_mspi_transceive_async(const struct device *controller,
                         const struct mspi_dev_id *dev_id,
-                        const struct mspi_xfer_packet *req,
-                        mspi_callback_handler_t cb,
-                        struct mspi_callback_context   *ctx)
+                        const struct mspi_xfer_packet *req)
 {
     const struct mspi_driver_api *api =
         (const struct mspi_driver_api *)controller->api;
@@ -605,7 +711,44 @@ static inline int z_impl_mspi_transceive_async(const struct device *controller,
         return -ENOTSUP;
     }
 
-    return api->transceive_async(controller, dev_id, req, cb, ctx);
+    return api->transceive_async(controller, dev_id, req);
+}
+
+/**
+ * @brief Register the mspi callback functions.
+ *
+ * This routines provides a generic interface to register mspi callback functions.
+ * In generall it should be called before mspi_transceive_async.
+ *
+ * @param controller Pointer to the device structure for the driver instance.
+ * @param dev_id Pointer to the device ID structure from a device.
+ * @param evt_type The event type associated the callback.
+ * @param cb Pointer to the user implemented callback function.
+ * @param ctx Pointer to the callback context.
+ *
+ * @retval 0 If successful.
+ * @retval -ENOTSUP
+ */
+__syscall int mspi_register_callback(const struct device *controller,
+                        const struct mspi_dev_id *dev_id,
+                        const enum mspi_bus_event evt_type,
+                        mspi_callback_handler_t cb,
+                        struct mspi_callback_context *ctx);
+
+static inline int z_impl_mspi_register_callback(const struct device *controller,
+                        const struct mspi_dev_id *dev_id,
+                        const enum mspi_bus_event evt_type,
+                        mspi_callback_handler_t cb,
+                        struct mspi_callback_context *ctx)
+{
+    const struct mspi_driver_api *api =
+        (const struct mspi_driver_api *)controller->api;
+
+    if (!api->register_callback) {
+        return -ENOTSUP;
+    }
+
+    return api->register_callback(controller, dev_id, evt_type, cb, ctx);
 }
 
 /**
@@ -615,7 +758,8 @@ static inline int z_impl_mspi_transceive_async(const struct device *controller,
  * capabilities.
  *
  * @param controller Pointer to the device structure for the driver instance.
- * @param cfg the controller configuration for MSPI.
+ * @param dev_id Pointer to the device ID structure from a device.
+ * @param cfg The controller XIP configuration for MSPI.
  *
  * @retval 0 If successful.
  * @retval -EIO General input / output error, failed to configure device.
@@ -643,7 +787,8 @@ static inline int z_impl_mspi_xip_config(const struct device *controller,
  * capabilities.
  *
  * @param controller Pointer to the device structure for the driver instance.
- * @param cfg the controller configuration for MSPI.
+ * @param dev_id Pointer to the device ID structure from a device.
+ * @param cfg The controller scramble configuration for MSPI.
  *
  * @retval 0 If successful.
  * @retval -EIO General input / output error, failed to configure device.
@@ -671,7 +816,9 @@ static inline int z_impl_mspi_scramble_config(const struct device *controller,
  * capabilities.
  *
  * @param controller Pointer to the device structure for the driver instance.
- * @param cfg the controller configuration for MSPI.
+ * @param dev_id Pointer to the device ID structure from a device.
+ * @param param_mask The macro defintion of what should be configured in cfg.
+ * @param cfg The controller timing configuration for MSPI.
  *
  * @retval 0 If successful.
  * @retval -EIO General input / output error, failed to configure device.
@@ -680,16 +827,18 @@ static inline int z_impl_mspi_scramble_config(const struct device *controller,
  */
 __syscall int mspi_timing_config(const struct device *controller,
                     const struct mspi_dev_id *dev_id,
+                    const uint32_t param_mask,
                     void *cfg);
 
 static inline int z_impl_mspi_timing_config(const struct device *controller,
                     const struct mspi_dev_id *dev_id,
+                    const uint32_t param_mask,
                     void *cfg)
 {
     const struct mspi_driver_api *api =
         (const struct mspi_driver_api *)controller->api;
 
-    return api->timing_config(controller, dev_id, cfg);
+    return api->timing_config(controller, dev_id, param_mask, cfg);
 }
 
 #ifdef __cplusplus
