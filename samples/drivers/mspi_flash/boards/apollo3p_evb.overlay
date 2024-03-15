@@ -22,11 +22,11 @@
     ce-gpios = <&gpio64_95 5 GPIO_ACTIVE_LOW>,
                <&gpio32_63 18 GPIO_ACTIVE_LOW>;
 
-    cmdq-buffer-location = "RAM";
+    cmdq-buffer-location = ".mspi_buff";
     cmdq-buffer-size = <256>;
 
     aps6404l: aps6404l@0 {
-        compatible = "ambiq,mspi-aps6404l";
+        compatible = "mspi-aps6404l";
         size = <DT_SIZE_M(64)>;
         reg = <0>;
         status = "disabled";
@@ -34,21 +34,19 @@
         mspi-io-mode = "MSPI_IO_MODE_QUAD";
         mspi-data-rate = "MSPI_SINGLE_DATA_RATE";
         hardware-ce-num = <0>;
-        mspi-enable-instr;
         read-instruction = <0xEB>;
         write-instruction = <0x38>;
         instruction-length = "INSTR_1_BYTE";
-        mspi-enable-address;
         address-length = "ADDR_3_BYTE";
-        mspi-enable-rx-dummy;
         rx-dummy = <6>;
         tx-dummy = <0>;
         xip-config = <1 0 0 0>;
         ce-break-config = <0x6 30>;
-        timing-config = <1 1 0 1 0 6>;
+        ambiq,timing-config-mask = <3>;
+        ambiq,timing-config = <0 6 0 0 0 0 0 0>;
     };
     atxp032: atxp032@1 {
-        compatible = "ambiq,mspi-atxp032";
+        compatible = "mspi-atxp032";
         size = <DT_SIZE_M(32)>;
         reg = <1>;
         status = "okay";
@@ -56,18 +54,16 @@
         mspi-io-mode = "MSPI_IO_MODE_OCTAL";
         mspi-data-rate = "MSPI_SINGLE_DATA_RATE";
         hardware-ce-num = <0>;
-        mspi-enable-instr;
         read-instruction = <0x0B>;
         write-instruction = <0x02>;
         instruction-length = "INSTR_1_BYTE";
-        mspi-enable-address;
         address-length = "ADDR_4_BYTE";
-        mspi-enable-rx-dummy;
         rx-dummy = <8>;
         tx-dummy = <0>;
         xip-config = <1 0 0 0>;
         ce-break-config = <0 0>;
-        timing-config = <1 1 0 1 0 8>;
+        ambiq,timing-config-mask = <3>;
+        ambiq,timing-config = <0 8 0 0 0 0 0 0>;
     };
 };
 

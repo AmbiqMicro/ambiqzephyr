@@ -333,7 +333,7 @@ static int mspi_xfer_config(const struct device *controller,
         return -EHOSTDOWN;
     }
 
-    if (xfer->ui16InstrLength > AM_HAL_MSPI_INSTR_2_BYTE) {
+    if (xfer->ui16InstrLength > AM_HAL_MSPI_INSTR_2_BYTE + 1) {
         LOG_INST_ERR(cfg->log, "%u, ui16InstrLength is too large.", __LINE__);
         return -ENOTSUP;
     }
@@ -344,7 +344,7 @@ static int mspi_xfer_config(const struct device *controller,
         hal_dev_cfg.eInstrCfg = xfer->ui16InstrLength - 1;
     }
 
-    if (xfer->ui16AddrLength > AM_HAL_MSPI_ADDR_4_BYTE) {
+    if (xfer->ui16AddrLength > AM_HAL_MSPI_ADDR_4_BYTE + 1) {
         LOG_INST_ERR(cfg->log, "%u, ui16AddrLength is too large.", __LINE__);
         return -ENOTSUP;
     }
@@ -556,7 +556,7 @@ static int mspi_ambiq_dev_config(const struct device *controller,
         }
 
         if (param_mask & MSPI_DEVICE_CONFIG_INSTR_LEN) {
-            if (dev_cfg->ui16InstrLength > AM_HAL_MSPI_INSTR_2_BYTE ||
+            if (dev_cfg->ui16InstrLength > AM_HAL_MSPI_INSTR_2_BYTE + 1 ||
                 dev_cfg->ui16InstrLength == 0) {
                 LOG_INST_ERR(cfg->log, "%u, invalid ui16InstrLength.", __LINE__);
                 ret = -ENOTSUP;
@@ -575,7 +575,7 @@ static int mspi_ambiq_dev_config(const struct device *controller,
         }
 
         if (param_mask & MSPI_DEVICE_CONFIG_ADDR_LEN) {
-            if (dev_cfg->ui16AddrLength > AM_HAL_MSPI_ADDR_4_BYTE ||
+            if (dev_cfg->ui16AddrLength > AM_HAL_MSPI_ADDR_4_BYTE + 1 ||
                 dev_cfg->ui16AddrLength == 0) {
                 LOG_INST_ERR(cfg->log, "%u, invalid ui16AddrLength.", __LINE__);
                 ret = -ENOTSUP;
@@ -634,7 +634,7 @@ static int mspi_ambiq_dev_config(const struct device *controller,
             goto e_return;
         }
 
-        if (dev_cfg->ui16InstrLength > AM_HAL_MSPI_INSTR_2_BYTE) {
+        if (dev_cfg->ui16InstrLength > AM_HAL_MSPI_INSTR_2_BYTE + 1) {
             LOG_INST_ERR(cfg->log, "%u, ui16InstrLength too large.", __LINE__);
             ret = -ENOTSUP;
             goto e_return;
@@ -646,7 +646,7 @@ static int mspi_ambiq_dev_config(const struct device *controller,
             hal_dev_cfg.eInstrCfg = dev_cfg->ui16InstrLength - 1;
         }
 
-        if (dev_cfg->ui16AddrLength > AM_HAL_MSPI_ADDR_4_BYTE) {
+        if (dev_cfg->ui16AddrLength > AM_HAL_MSPI_ADDR_4_BYTE + 1) {
             LOG_INST_ERR(cfg->log, "%u, ui16AddrLength too large.", __LINE__);
             ret = -ENOTSUP;
             goto e_return;
@@ -919,7 +919,7 @@ static int mspi_pio_prepare(const struct device *controller,
     trans->bQuadCmd            = false;
     trans->bContinue           = false;
 
-    if (xfer->ui16InstrLength > AM_HAL_MSPI_INSTR_2_BYTE) {
+    if (xfer->ui16InstrLength > AM_HAL_MSPI_INSTR_2_BYTE + 1) {
         LOG_INST_ERR(cfg->log, "%u, invalid ui16InstrLength.", __LINE__);
         return -ENOTSUP;
     }
@@ -936,14 +936,14 @@ static int mspi_pio_prepare(const struct device *controller,
     }
     data->dev_cfg.ui16InstrLength = xfer->ui16InstrLength;
 
-    if (xfer->ui16AddrLength > AM_HAL_MSPI_ADDR_4_BYTE) {
+    if (xfer->ui16AddrLength > AM_HAL_MSPI_ADDR_4_BYTE + 1) {
         LOG_INST_ERR(cfg->log, "%u, invalid ui16AddrLength.", __LINE__);
         return -ENOTSUP;
     }
     if (xfer->ui16AddrLength != 0) {
         am_hal_mspi_addr_e eAddrCfg = xfer->ui16AddrLength - 1;
         ret = am_hal_mspi_control(data->mspiHandle,
-                                        AM_HAL_MSPI_REQ_ISIZE_SET,
+                                        AM_HAL_MSPI_REQ_ASIZE_SET,
                                         &eAddrCfg);
         if (ret) {
             LOG_INST_ERR(cfg->log, "%u, failed to configure ui16AddrLength.", __LINE__);
@@ -1334,7 +1334,8 @@ static struct mspi_driver_api mspi_ambiq_driver_api = {
             mspi_ambiq_isr, DEVICE_DT_INST_GET(n), 0);                                      \
         irq_enable(DT_INST_IRQN(n));                                                        \
     }                                                                                       \
-    static uint32_t mspi_ambiq_cmdq##n[DT_INST_PROP_OR(n, cmdq_buffer_size, 1024) / 4];     \
+    static uint32_t mspi_ambiq_cmdq##n[DT_INST_PROP_OR(n, cmdq_buffer_size, 1024) / 4]      \
+    __attribute__((section(DT_INST_PROP_OR(n, cmdq_buffer_location, ".mspi_buff"))));       \
     static struct gpio_dt_spec ce_gpios##n[] = {                                            \
         COND_CODE_1(DT_NODE_HAS_PROP(DT_DRV_INST(n), ce_gpios),                             \
         (DT_INST_FOREACH_PROP_ELEM_SEP(n, ce_gpios, GPIO_DT_SPEC_GET_BY_IDX, (,))),         \

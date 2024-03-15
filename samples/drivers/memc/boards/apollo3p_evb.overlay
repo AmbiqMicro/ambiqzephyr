@@ -22,7 +22,7 @@
     ce-gpios = <&gpio64_95 5 GPIO_ACTIVE_LOW>,
                <&gpio32_63 18 GPIO_ACTIVE_LOW>;
 
-    cmdq-buffer-location = "RAM";
+    cmdq-buffer-location = ".mspi_buff";
     cmdq-buffer-size = <256>;
 
     aps6404l: aps6404l@0 {

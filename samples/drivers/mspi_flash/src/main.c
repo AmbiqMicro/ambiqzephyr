@@ -75,6 +75,7 @@ int single_sector_test(const struct device *flash_dev)
 			++wp;
 		}
 	}
+	return rc;
 }
 
 #if defined SPI_FLASH_MULTI_SECTOR_TEST
@@ -159,6 +160,7 @@ int multi_sector_test(const struct device *flash_dev)
 		}
 		offs += SPI_FLASH_SECTOR_SIZE;
 	}
+	return rc;
 }
 #endif
 
@@ -168,7 +170,7 @@ int main(void)
 
 	if (!device_is_ready(flash_dev)) {
 		printk("%s: device not ready.\n", flash_dev->name);
-		return 0;
+		return 1;
 	}
 
 	printf("\n%s SPI flash testing\n", flash_dev->name);

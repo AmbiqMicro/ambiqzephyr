@@ -3,6 +3,6 @@
 
 description: NOR Flash devices on Ambiq MSPI bus
 
-compatible: "ambiq,mspi-atxp032"
+compatible: "mspi-atxp032"
 
 include: ambiq,mspi-device.yaml

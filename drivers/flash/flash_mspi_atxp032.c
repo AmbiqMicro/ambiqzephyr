@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define DT_DRV_COMPAT	ambiq_mspi_atxp032
+#define DT_DRV_COMPAT	mspi_atxp032
 
 #include <zephyr/kernel.h>
 #include <zephyr/pm/device.h>
@@ -12,13 +12,21 @@
 #include <zephyr/sys/util.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/mspi.h>
-#if defined (CONFIG_SOC_SERIES_APOLLO3X)
-#include "mspi_ambiq_ap3.h"
+#if CONFIG_SOC_FAMILY_AMBIQ
+#include "mspi_ambiq.h"
+typedef struct mspi_ambiq_timing_cfg mspi_timing_cfg;
+typedef enum mspi_ambiq_timing_param mspi_timing_param;
+
+#else
+typedef struct mspi_timing_cfg mspi_timing_cfg;
+typedef enum mspi_timing_param mspi_timing_param;
+#define TIMING_CFG_GET_RX_DUMMY(cfg)
+#define TIMING_CFG_SET_RX_DUMMY(cfg, num)
 #endif
 
 #include <zephyr/drivers/flash.h>
 #include "spi_nor.h"
-LOG_MODULE_REGISTER(flash_ambiq_mspi_atxp032, CONFIG_FLASH_LOG_LEVEL);
+LOG_MODULE_REGISTER(flash_mspi_atxp032, CONFIG_FLASH_LOG_LEVEL);
 
 #define NOR_WRITE_SIZE	1
 #define NOR_ERASE_VALUE	0xff
@@ -48,19 +56,18 @@ struct flash_mspi_atxp032_config {
     struct mspi_dev_cfg                 tar_dev_cfg;
     struct mspi_xip_cfg                 tar_xip_cfg;
     struct mspi_scramble_cfg            tar_scramble_cfg;
-#if CONFIG_SOC_SERIES_APOLLO3X
-    struct mspi_ambiq_ap3_timing_cfg    tar_timing_cfg;
-#endif
+
+    mspi_timing_cfg                     tar_timing_cfg;
+    mspi_timing_param                   timing_cfg_mask;
 };
 
 struct flash_mspi_atxp032_data {
     struct mspi_dev_cfg                 dev_cfg;
     struct mspi_xip_cfg                 xip_cfg;
     struct mspi_scramble_cfg            scramble_cfg;
-#if CONFIG_SOC_SERIES_APOLLO3X
-    struct mspi_ambiq_ap3_timing_cfg    timing_cfg;
-#endif
+    mspi_timing_cfg                     timing_cfg;
     struct mspi_xfer_packet             trans;
+    struct mspi_buf                     payload;
 
     struct k_sem                        lock;
     uint32_t                            jedec_id;
@@ -100,24 +107,28 @@ static int atxp032_get_dummy_clk(uint8_t rxdummy, uint32_t *dummy_clk)
 }
 
 static int flash_mspi_atxp032_command_write(const struct device *flash,
-    uint8_t cmd, bool sendaddr, uint32_t addr, bool txdummy, uint8_t *wdata, uint32_t length)
+                                            uint8_t cmd, uint32_t addr,
+                                            uint16_t addr_len, uint32_t tx_dummy,
+                                            uint8_t *wdata, uint32_t length)
 {
     const struct flash_mspi_atxp032_config *cfg = flash->config;
     struct flash_mspi_atxp032_data *data = flash->data;
     int ret;
 
+    data->payload.ui16DeviceInstr   = cmd;
+    data->payload.ui32DeviceAddr    = addr;
+    data->payload.pui32Buffer       = (uint32_t *)wdata;
+    data->payload.ui32NumBytes      = length;
+
     data->trans.eMode               = MSPI_PIO;
     data->trans.eDirection          = MSPI_TX;
-    data->trans.pui32Buffer         = (uint32_t *)wdata;
-    data->trans.ui32NumBytes        = length;
-    data->trans.ui16DeviceInstr     = cmd;
-    data->trans.bSendInstr          = true;
-    data->trans.ui32DeviceAddr      = addr;
-    data->trans.bSendAddr           = sendaddr;
     data->trans.bScrambling         = false;
-    data->trans.bRXDummy            = false;
-    data->trans.bTXDummy            = txdummy;
+    data->trans.ui32TXDummy         = tx_dummy;
+    data->trans.ui16InstrLength     = 1;
+    data->trans.ui16AddrLength      = addr_len;
     data->trans.bHoldCE             = false;
+    data->trans.pPayload            = &data->payload;
+    data->trans.ui32NumPayload      = 1;
 
     ret = mspi_transceive(cfg->bus, &cfg->dev_id, (const struct mspi_xfer_packet *)&data->trans);
     if (ret) {
@@ -129,25 +140,29 @@ static int flash_mspi_atxp032_command_write(const struct device *flash,
 }
 
 static int flash_mspi_atxp032_command_read(const struct device *flash,
-    uint8_t cmd, bool sendaddr, uint32_t addr, bool rxdummy, uint8_t *rdata, uint32_t length)
+                                           uint8_t cmd, uint32_t addr,
+                                           uint16_t addr_len, uint32_t rx_dummy,
+                                           uint8_t *rdata, uint32_t length)
 {
     const struct flash_mspi_atxp032_config *cfg = flash->config;
     struct flash_mspi_atxp032_data *data = flash->data;
 
     int ret;
 
+    data->payload.ui16DeviceInstr   = cmd;
+    data->payload.ui32DeviceAddr    = addr;
+    data->payload.pui32Buffer       = (uint32_t *)rdata;
+    data->payload.ui32NumBytes      = length;
+
     data->trans.eMode               = MSPI_PIO;
     data->trans.eDirection          = MSPI_RX;
-    data->trans.pui32Buffer         = (uint32_t *)rdata;
-    data->trans.ui32NumBytes        = length;
-    data->trans.ui16DeviceInstr     = cmd;
-    data->trans.bSendInstr          = true;
-    data->trans.ui32DeviceAddr      = addr;
-    data->trans.bSendAddr           = sendaddr;
     data->trans.bScrambling         = false;
-    data->trans.bRXDummy            = rxdummy;
-    data->trans.bTXDummy            = false;
+    data->trans.ui32RXDummy         = rx_dummy;
+    data->trans.ui16InstrLength     = 1;
+    data->trans.ui16AddrLength      = addr_len;
     data->trans.bHoldCE             = false;
+    data->trans.pPayload            = &data->payload;
+    data->trans.ui32NumPayload      = 1;
 
     ret = mspi_transceive(cfg->bus, &cfg->dev_id, (const struct mspi_xfer_packet *)&data->trans);
     if (ret) {
@@ -164,7 +179,8 @@ static void acquire(const struct device *flash)
     struct flash_mspi_atxp032_data *data = flash->data;
 
     k_sem_take(&data->lock, K_FOREVER);
-    while (mspi_dev_config(cfg->bus, &cfg->dev_id, (const struct mspi_dev_cfg *)&data->dev_cfg));
+    while (mspi_dev_config(cfg->bus, &cfg->dev_id, MSPI_DEVICE_CONFIG_ALL,
+                                                   (const struct mspi_dev_cfg *)&data->dev_cfg));
 }
 
 static void release(const struct device *flash)
@@ -182,7 +198,7 @@ static int flash_mspi_atxp032_write_enable(const struct device *flash)
     int ret;
 
 	LOG_DBG("Enabling write");
-    ret = flash_mspi_atxp032_command_write(flash, SPI_NOR_CMD_WREN, false, 0, false, NULL, 0);
+    ret = flash_mspi_atxp032_command_write(flash, SPI_NOR_CMD_WREN, 0, 0, 0, NULL, 0);
 
     return ret;
 }
@@ -192,7 +208,7 @@ static int flash_mspi_atxp032_write_disable(const struct device *flash)
     int ret;
 
 	LOG_DBG("Disabling write");
-    ret = flash_mspi_atxp032_command_write(flash, SPI_NOR_CMD_WRDI, false, 0, false, NULL, 0);
+    ret = flash_mspi_atxp032_command_write(flash, SPI_NOR_CMD_WRDI, 0, 0, 0, NULL, 0);
 
     return ret;
 }
@@ -207,7 +223,7 @@ static int flash_mspi_atxp032_reset(const struct device *flash)
     }
 
     LOG_DBG("Return to SPI mode");
-    ret = flash_mspi_atxp032_command_write(flash, 0xFF, false, 0, false, NULL, 0);
+    ret = flash_mspi_atxp032_command_write(flash, 0xFF, 0, 0, 0, NULL, 0);
     if (ret) {
         return ret;
     }
@@ -233,7 +249,7 @@ static int flash_mspi_atxp032_get_vendor_id(const struct device *flash,
 
 	LOG_DBG("Reading id");
     //serial mode
-	ret = flash_mspi_atxp032_command_read(flash, SPI_NOR_CMD_RDID, false, 0, false, buffer, 11);
+	ret = flash_mspi_atxp032_command_read(flash, SPI_NOR_CMD_RDID, 0, 0, 0, buffer, 11);
 	*vendor_id = buffer[7];
 
     data->jedec_id = (buffer[7] << 16) | (buffer[8] << 8) | buffer[9];
@@ -248,7 +264,7 @@ static int flash_mspi_atxp032_unprotect_sector(const struct device *flash,
 
 	LOG_DBG("unprotect sector at 0x%08zx", (ssize_t) addr);
 
-    ret = flash_mspi_atxp032_command_write(flash, 0x39, true, addr, false, NULL, 0);
+    ret = flash_mspi_atxp032_command_write(flash, 0x39, addr, 4, 0, NULL, 0);
 
 	return ret;
 }
@@ -260,7 +276,7 @@ static int flash_mspi_atxp032_protect_sector(const struct device *flash,
 
 	LOG_DBG("protect sector at 0x%08zx", (ssize_t) addr);
 
-    ret = flash_mspi_atxp032_command_write(flash, 0x36, true, addr, false, NULL, 0);
+    ret = flash_mspi_atxp032_command_write(flash, 0x36, addr, 4, 0, NULL, 0);
 
 	return ret;
 }
@@ -272,7 +288,7 @@ static int flash_mspi_atxp032_erase_sector(const struct device *flash,
 
 	LOG_DBG("Erasing sector at 0x%08zx", (ssize_t) addr);
 
-    ret = flash_mspi_atxp032_command_write(flash, SPI_NOR_CMD_SE, true, addr, false, NULL, 0);
+    ret = flash_mspi_atxp032_command_write(flash, SPI_NOR_CMD_SE, addr, 4, 0, NULL, 0);
 
 	return ret;
 }
@@ -284,7 +300,7 @@ static int flash_mspi_atxp032_erase_block(const struct device *flash,
 
 	LOG_DBG("Erasing block at 0x%08zx", (ssize_t) addr);
 
-    ret = flash_mspi_atxp032_command_write(flash, SPI_NOR_CMD_BE, true, addr, false, NULL, 0);
+    ret = flash_mspi_atxp032_command_write(flash, SPI_NOR_CMD_BE, addr, 4, 0, NULL, 0);
 
 	return ret;
 }
@@ -295,7 +311,7 @@ static int flash_mspi_atxp032_erase_chip(const struct device *flash)
 
 	LOG_DBG("Erasing chip");
 
-    ret = flash_mspi_atxp032_command_write(flash, SPI_NOR_CMD_CE, false, 0, false, NULL, 0);
+    ret = flash_mspi_atxp032_command_write(flash, SPI_NOR_CMD_CE, 0, 0, 0, NULL, 0);
 
 	return ret;
 }
@@ -308,21 +324,21 @@ static int flash_mspi_atxp032_page_program(const struct device *flash,
 
     int ret;
 
+    data->payload.ui16DeviceInstr   = (uint16_t)data->dev_cfg.ui32WriteInstr;
+    data->payload.ui32DeviceAddr    = offset;
+    data->payload.pui32Buffer       = (uint32_t *)wdata;
+    data->payload.ui32NumBytes      = len;
+
     data->trans.eMode               = MSPI_DMA;
     data->trans.eDirection          = MSPI_TX;
-    data->trans.pui32Buffer         = (uint32_t *)wdata;
-    data->trans.ui32NumBytes        = len;
-    data->trans.ui16DeviceInstr     = (uint16_t)data->dev_cfg.ui32WriteInstr;
-    data->trans.bSendInstr          = true;
-    data->trans.ui32DeviceAddr      = offset;
-    data->trans.bSendAddr           = true;
     data->trans.bScrambling         = data->scramble_cfg.bEnable;
-    data->trans.bRXDummy            = false;
-    data->trans.bTXDummy            = false;
+    data->trans.ui32TXDummy         = data->dev_cfg.ui32TXDummy;
+    data->trans.ui16InstrLength     = data->dev_cfg.ui16InstrLength;
+    data->trans.ui16AddrLength      = data->dev_cfg.ui16AddrLength;
     data->trans.bHoldCE             = false;
     data->trans.ui8Priority         = 1;
-    data->trans.ui32PauseCondition  = 0;
-    data->trans.ui32StatusSetClr    = 0;
+    data->trans.pPayload            = &data->payload;
+    data->trans.ui32NumPayload      = 1;
 
     LOG_DBG("Page programming %d bytes to 0x%08zx", len, (ssize_t) offset);
 
@@ -339,20 +355,19 @@ static int flash_mspi_atxp032_busy_wait(const struct device *flash)
 {
     const struct flash_mspi_atxp032_config *cfg = flash->config;
     struct flash_mspi_atxp032_data *data = flash->data;
-#if CONFIG_SOC_SERIES_APOLLO3X
-    struct mspi_ambiq_ap3_timing_cfg bkp = data->timing_cfg;
-#endif
+    mspi_timing_cfg bkp = data->timing_cfg;
 
 	uint32_t status = 0;
-    bool bRxDummy;
+    uint32_t rx_dummy;
 	int ret;
 
     if (data->dev_cfg.eIOMode == MSPI_IO_MODE_SINGLE) {
-        bRxDummy = false;
+        rx_dummy = 0;
     } else {
-        bRxDummy = true;
-        data->timing_cfg.ui8TurnAround = 4;
-        if (mspi_timing_config(cfg->bus, &cfg->dev_id, (void *)&data->timing_cfg)) {
+        rx_dummy = 4;
+        TIMING_CFG_SET_RX_DUMMY(&data->timing_cfg, 4);
+        if (mspi_timing_config(cfg->bus, &cfg->dev_id,
+                               cfg->timing_cfg_mask, (void *)&data->timing_cfg)) {
             LOG_ERR("Failed to config mspi controller/%u", __LINE__);
             return -EIO;
         }
@@ -360,7 +375,8 @@ static int flash_mspi_atxp032_busy_wait(const struct device *flash)
 
 	do {
         LOG_DBG("Reading status register");
-        ret = flash_mspi_atxp032_command_read(flash, SPI_NOR_CMD_RDSR, false, 0, bRxDummy, (uint8_t *)&status, 1);
+        ret = flash_mspi_atxp032_command_read(flash, SPI_NOR_CMD_RDSR, 0, 0, rx_dummy,
+                                              (uint8_t *)&status, 1);
 		if (ret) {
 			LOG_ERR("Could not read status");
 			return ret;
@@ -370,7 +386,8 @@ static int flash_mspi_atxp032_busy_wait(const struct device *flash)
 
     if (data->dev_cfg.eIOMode != MSPI_IO_MODE_SINGLE) {
         data->timing_cfg = bkp;
-        if (mspi_timing_config(cfg->bus, &cfg->dev_id, (void *)&data->timing_cfg)) {
+        if (mspi_timing_config(cfg->bus, &cfg->dev_id,
+                               cfg->timing_cfg_mask, (void *)&data->timing_cfg)) {
             LOG_ERR("Failed to config mspi controller/%u", __LINE__);
             return -EIO;
         }
@@ -380,7 +397,7 @@ static int flash_mspi_atxp032_busy_wait(const struct device *flash)
 }
 
 static int flash_mspi_atxp032_read(const struct device *flash, off_t offset,
-		void *rdata, size_t len)
+		                           void *rdata, size_t len)
 {
     const struct flash_mspi_atxp032_config *cfg = flash->config;
     struct flash_mspi_atxp032_data *data = flash->data;
@@ -389,21 +406,21 @@ static int flash_mspi_atxp032_read(const struct device *flash, off_t offset,
 
     acquire(flash);
 
+    data->payload.ui16DeviceInstr   = (uint16_t)data->dev_cfg.ui32ReadInstr;
+    data->payload.ui32DeviceAddr    = offset;
+    data->payload.pui32Buffer       = (uint32_t *)rdata;
+    data->payload.ui32NumBytes      = len;
+
     data->trans.eMode               = MSPI_DMA;
     data->trans.eDirection          = MSPI_RX;
-    data->trans.pui32Buffer         = (uint32_t *)rdata;
-    data->trans.ui32NumBytes        = len;
-    data->trans.ui16DeviceInstr     = (uint16_t)data->dev_cfg.ui32ReadInstr;
-    data->trans.bSendInstr          = true;
-    data->trans.ui32DeviceAddr      = offset;
-    data->trans.bSendAddr           = true;
     data->trans.bScrambling         = data->scramble_cfg.bEnable;
-    data->trans.bRXDummy            = true;
-    data->trans.bTXDummy            = false;
+    data->trans.ui32RXDummy         = data->dev_cfg.ui32RXDummy;
+    data->trans.ui16InstrLength     = data->dev_cfg.ui16InstrLength;
+    data->trans.ui16AddrLength      = data->dev_cfg.ui16AddrLength;
     data->trans.bHoldCE             = false;
     data->trans.ui8Priority         = 1;
-    data->trans.ui32PauseCondition  = 0;
-    data->trans.ui32StatusSetClr    = 0;
+    data->trans.pPayload            = &data->payload;
+    data->trans.ui32NumPayload      = 1;
 
     LOG_DBG("Read %d bytes from 0x%08zx", len, (ssize_t) offset);
 
@@ -420,7 +437,7 @@ static int flash_mspi_atxp032_read(const struct device *flash, off_t offset,
 }
 
 static int flash_mspi_atxp032_write(const struct device *flash, off_t offset,
-		const void *wdata, size_t len)
+		                            const void *wdata, size_t len)
 {
     int ret;
 	uint8_t *src = (uint8_t *)wdata;
@@ -614,7 +631,8 @@ static int flash_mspi_atxp032_init(const struct device *flash)
         return -EIO;
     }
 
-    if (mspi_dev_config(cfg->bus, &cfg->dev_id, &cfg->serial_cfg)) {
+    if (mspi_dev_config(cfg->bus, &cfg->dev_id, MSPI_DEVICE_CONFIG_ALL,
+                                                &cfg->serial_cfg)) {
         LOG_ERR("Failed to config mspi controller/%u", __LINE__);
         return -EIO;
     }
@@ -636,7 +654,7 @@ static int flash_mspi_atxp032_init(const struct device *flash)
             __LINE__);
     }
 
-    if (atxp032_get_dummy_clk(cfg->tar_timing_cfg.ui8TurnAround, &CRB3))
+    if (atxp032_get_dummy_clk((TIMING_CFG_GET_RX_DUMMY(&cfg->tar_timing_cfg)), &CRB3))
     {
         return -ENOTSUP;
     }
@@ -644,9 +662,8 @@ static int flash_mspi_atxp032_init(const struct device *flash)
     if (flash_mspi_atxp032_write_enable(flash)) {
         return -EIO;
     }
-    /** Send addr along with data to avoid changing instruction length */
-    CRB3 = (CRB3 << 8) | 0x3;
-    if (flash_mspi_atxp032_command_write(flash, 0x71, false, 0, false, (uint8_t *)&CRB3, 2)) {
+
+    if (flash_mspi_atxp032_command_write(flash, 0x71, 0x3, 1, 0, (uint8_t *)&CRB3, 1)) {
         return -EIO;
     }
 
@@ -662,17 +679,19 @@ static int flash_mspi_atxp032_init(const struct device *flash)
     if (flash_mspi_atxp032_write_enable(flash)) {
         return -EIO;
     }
-    if (flash_mspi_atxp032_command_write(flash, cmd, false, 0, false, NULL, 0)) {
+    if (flash_mspi_atxp032_command_write(flash, cmd, 0, 0, 0, NULL, 0)) {
         return -EIO;
     }
 
-    if (mspi_dev_config(cfg->bus, &cfg->dev_id, &cfg->tar_dev_cfg)) {
+    if (mspi_dev_config(cfg->bus, &cfg->dev_id, MSPI_DEVICE_CONFIG_ALL,
+                                                &cfg->tar_dev_cfg)) {
         LOG_ERR("Failed to config mspi controller/%u", __LINE__);
         return -EIO;
     }
     data->dev_cfg = cfg->tar_dev_cfg;
 
-    if (mspi_timing_config(cfg->bus, &cfg->dev_id, (void *)&cfg->tar_timing_cfg)) {
+    if (mspi_timing_config(cfg->bus, &cfg->dev_id,
+                           cfg->timing_cfg_mask, (void *)&cfg->tar_timing_cfg)) {
         LOG_ERR("Failed to config mspi timing/%u", __LINE__);
         return -EIO;
     }
@@ -704,34 +723,29 @@ static int flash_mspi_atxp032_read_sfdp(const struct device *flash, off_t addr, 
 {
     const struct flash_mspi_atxp032_config *cfg = flash->config;
     struct flash_mspi_atxp032_data *data = flash->data;
-    struct mspi_dev_cfg bkp = data->dev_cfg;
     int ret;
 
     acquire(flash);
-    data->dev_cfg.ui16AddrLength    = AM_HAL_MSPI_ADDR_3_BYTE;
-    data->dev_cfg.ui32RXDummy       = 8;
+
+    data->payload.ui16DeviceInstr   = 0x5A;
+    data->payload.ui32DeviceAddr    = addr;
+    data->payload.pui32Buffer       = (uint32_t *)rdata;
+    data->payload.ui32NumBytes      = size;
 
     data->trans.eMode               = MSPI_DMA;
     data->trans.eDirection          = MSPI_RX;
-    data->trans.pui32Buffer         = (uint32_t *)rdata;
-    data->trans.ui32NumBytes        = size;
-    data->trans.ui16DeviceInstr     = 0x5A;
-    data->trans.bSendInstr          = true;
-    data->trans.ui32DeviceAddr      = addr;
-    data->trans.bSendAddr           = true;
-    data->trans.bScrambling         = data->scramble_cfg.bEnable;
-    data->trans.bRXDummy            = true;
-    data->trans.bTXDummy            = false;
+    data->trans.bScrambling         = false;
+    data->trans.ui32RXDummy         = 8;
+    data->trans.ui16InstrLength     = 1;
+    data->trans.ui16AddrLength      = 3;
     data->trans.bHoldCE             = false;
     data->trans.ui8Priority         = 1;
-    data->trans.ui32PauseCondition  = 0;
-    data->trans.ui32StatusSetClr    = 0;
+    data->trans.pPayload            = &data->payload;
+    data->trans.ui32NumPayload      = 1;
 
     LOG_DBG("Read %d bytes from 0x%08zx", size, (ssize_t)addr);
 
     ret = mspi_transceive(cfg->bus, &cfg->dev_id, (const struct mspi_xfer_packet *)&data->trans);
-
-    data->dev_cfg = bkp;
 
     if (ret) {
         LOG_ERR("MSPI read transaction failed with code: %d/%u",
@@ -751,7 +765,7 @@ static int flash_mspi_atxp032_read_jedec_id(const struct device *flash, uint8_t 
 #endif /* CONFIG_FLASH_JESD216_API */
 
 #if defined(CONFIG_PM_DEVICE)
-static int flash_ambiq_mspi_atxp032_pm_action(const struct device *flash,
+static int flash_mspi_atxp032_pm_action(const struct device *flash,
                                               enum pm_device_action action)
 {
     switch (action) {
@@ -798,12 +812,13 @@ static const struct flash_driver_api flash_mspi_atxp032_api = {
         .eCPP               = MSPI_CPP_MODE_0,                                                    \
         .eEndian            = MSPI_XFER_LITTLE_ENDIAN,                                            \
         .eCEPolarity        = MSPI_CE_ACTIVE_LOW,                                                 \
+        .bDQSEnable         = false,                                                              \
         .ui32RXDummy        = 8,                                                                  \
         .ui32TXDummy        = 0,                                                                  \
         .ui32ReadInstr      = SPI_NOR_CMD_READ_FAST,                                              \
         .ui32WriteInstr     = SPI_NOR_CMD_PP,                                                     \
-        .ui16InstrLength    = 0,                                                                  \
-        .ui16AddrLength     = 3,                                                                  \
+        .ui16InstrLength    = 1,                                                                  \
+        .ui16AddrLength     = 4,                                                                  \
         .ui32MemBoundary    = 0,                                                                  \
         .ui32BreakTimeLimit = 0,                                                                  \
     }
@@ -817,6 +832,7 @@ static const struct flash_driver_api flash_mspi_atxp032_api = {
         .eCPP               = DT_INST_ENUM_IDX_OR(n, mspi_cpp_mode, MSPI_CPP_MODE_0),             \
         .eEndian            = DT_INST_ENUM_IDX_OR(n, mspi_endian, MSPI_XFER_LITTLE_ENDIAN),       \
         .eCEPolarity        = DT_INST_ENUM_IDX_OR(n, mspi_ce_polarity, MSPI_CE_ACTIVE_LOW),       \
+        .bDQSEnable         = DT_INST_PROP(n, mspi_dqs_enable),                                   \
         .ui32RXDummy        = DT_INST_PROP(n, rx_dummy),                                          \
         .ui32TXDummy        = DT_INST_PROP(n, tx_dummy),                                          \
         .ui32ReadInstr      = DT_INST_PROP(n, read_instruction),                                  \
@@ -842,15 +858,23 @@ static const struct flash_driver_api flash_mspi_atxp032_api = {
         .ui32Size           = DT_INST_PROP_BY_IDX(n, scramble_config, 2),                         \
     }
 
+#if CONFIG_SOC_FAMILY_AMBIQ
 #define MSPI_TIMING_CONFIG(n)                                                                     \
     {                                                                                             \
-        .bSendInstr         = DT_INST_PROP_BY_IDX(n, timing_config, 0),                           \
-        .bSendAddr          = DT_INST_PROP_BY_IDX(n, timing_config, 1),                           \
-        .bWriteLatency      = DT_INST_PROP_BY_IDX(n, timing_config, 2),                           \
-        .bTurnaround        = DT_INST_PROP_BY_IDX(n, timing_config, 3),                           \
-        .ui8WriteLatency    = DT_INST_PROP_BY_IDX(n, timing_config, 4),                           \
-        .ui8TurnAround      = DT_INST_PROP_BY_IDX(n, timing_config, 5),                           \
+        .ui8WriteLatency    = DT_INST_PROP_BY_IDX(n, ambiq_timing_config, 0),                     \
+        .ui8TurnAround      = DT_INST_PROP_BY_IDX(n, ambiq_timing_config, 1),                     \
+        .bTxNeg             = DT_INST_PROP_BY_IDX(n, ambiq_timing_config, 2),                     \
+        .bRxNeg             = DT_INST_PROP_BY_IDX(n, ambiq_timing_config, 3),                     \
+        .bRxCap             = DT_INST_PROP_BY_IDX(n, ambiq_timing_config, 4),                     \
+        .ui32TxDQSDelay     = DT_INST_PROP_BY_IDX(n, ambiq_timing_config, 5),                     \
+        .ui32RxDQSDelay     = DT_INST_PROP_BY_IDX(n, ambiq_timing_config, 6),                     \
+        .ui32RXDQSDelayEXT  = DT_INST_PROP_BY_IDX(n, ambiq_timing_config, 7),                     \
     }
+#define MSPI_TIMING_CONFIG_MASK(n) DT_INST_PROP(n, ambiq_timing_config_mask)
+#else
+#define MSPI_TIMING_CONFIG(n)
+#define MSPI_TIMING_CONFIG_MASK(n)
+#endif
 
 #define MSPI_DEVICE_ID(n)                                                                         \
     {                                                                                             \
@@ -860,7 +884,7 @@ static const struct flash_driver_api flash_mspi_atxp032_api = {
         .dev_idx            = DT_INST_REG_ADDR(n),                                                \
     }
 
-#define FLASH_AMBIQ_MSPI_ATXP032(n)                                                               \
+#define FLASH_MSPI_ATXP032(n)                                                               \
     static const struct flash_mspi_atxp032_config                                                 \
         flash_mspi_atxp032_config_##n = {                                                         \
         .port               = (DT_REG_ADDR(DT_INST_BUS(n)) - MSPI_REG_BASEADDR) /                 \
@@ -881,12 +905,13 @@ static const struct flash_driver_api flash_mspi_atxp032_api = {
         .tar_xip_cfg        = MSPI_XIP_CONFIG(n),                                                 \
         .tar_scramble_cfg   = MSPI_SCRAMBLE_CONFIG(n),                                            \
         .tar_timing_cfg     = MSPI_TIMING_CONFIG(n),                                              \
+        .timing_cfg_mask    = MSPI_TIMING_CONFIG_MASK(n),                                         \
     };                                                                                            \
     static struct flash_mspi_atxp032_data                                                         \
         flash_mspi_atxp032_data_##n = {                                                           \
         .lock = Z_SEM_INITIALIZER(flash_mspi_atxp032_data_##n.lock, 0, 1),                        \
     };                                                                                            \
-    PM_DEVICE_DT_INST_DEFINE(n, flash_ambiq_mspi_atxp032_pm_action);                              \
+    PM_DEVICE_DT_INST_DEFINE(n, flash_mspi_atxp032_pm_action);                              \
     DEVICE_DT_INST_DEFINE(n,                                                                      \
                           flash_mspi_atxp032_init,                                                \
                           PM_DEVICE_DT_INST_GET(n),                                               \
@@ -896,4 +921,4 @@ static const struct flash_driver_api flash_mspi_atxp032_api = {
                           CONFIG_FLASH_INIT_PRIORITY,                                             \
                           &flash_mspi_atxp032_api);
 
-DT_INST_FOREACH_STATUS_OKAY(FLASH_AMBIQ_MSPI_ATXP032)
+DT_INST_FOREACH_STATUS_OKAY(FLASH_MSPI_ATXP032)

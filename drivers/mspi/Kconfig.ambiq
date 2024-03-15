@@ -13,3 +13,11 @@ config MSPI_AMBIQ_AP3
 	select AMBIQ_HAL_USE_MSPI
 	help
 	  Enable driver for Ambiq MSPI.
+
+DT_CHOSEN_Z_SRAM := zephyr,sram
+
+config MSPI_BUFF_RAM_LOCATION
+	hex "byte offset to SRAM_BASE_ADDRESS"
+	default 0x50000
+	help
+	  This option specifies the mspi buffer/heap start address

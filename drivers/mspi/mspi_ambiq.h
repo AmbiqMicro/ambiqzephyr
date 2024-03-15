@@ -11,6 +11,22 @@
 
 #define MSPI_REG_BASEADDR   (0x50014000UL)
 
+/* Hand-calculated minimum heap sizes needed to return a successful
+ * 1-byte allocation.  See details in lib/os/heap.[ch]
+ */
+#define MSPI_AMBIQ_HEAP_MIN_SIZE (sizeof(void *) > 4 ? 56 : 44)
+
+#define MSPI_AMBIQ_HEAP_DEFINE(name, bytes)                         \
+    char __attribute__((section(".mspi_buff")))                     \
+         __aligned(8) /* CHUNK_UNIT */                              \
+         kheap_##name[MAX(bytes, MSPI_AMBIQ_HEAP_MIN_SIZE)];        \
+    STRUCT_SECTION_ITERABLE(k_heap, name) = {                       \
+        .heap = {                                                   \
+            .init_mem = kheap_##name,                               \
+            .init_bytes = MAX(bytes, MSPI_AMBIQ_HEAP_MIN_SIZE),     \
+         },                                                         \
+    }
+
 struct mspi_ambiq_timing_cfg {
     uint8_t     ui8WriteLatency;
     uint8_t     ui8TurnAround;
@@ -32,5 +48,16 @@ enum mspi_ambiq_timing_param {
     MSPI_AMBIQ_SET_RXDQSDLY     = BIT(6),
     MSPI_AMBIQ_SET_RXDQSDLYEXT  = BIT(7),
 };
+
+#define TIMING_CFG_GET_RX_DUMMY(cfg)                      \
+{                                                         \
+    mspi_timing_cfg *timing = (mspi_timing_cfg *)cfg;     \
+    timing->ui8TurnAround;                                \
+}
+#define TIMING_CFG_SET_RX_DUMMY(cfg, num)                 \
+{                                                         \
+    mspi_timing_cfg *timing = (mspi_timing_cfg *)cfg;     \
+    timing->ui8TurnAround = num;                          \
+}
 
 #endif
