@@ -437,6 +437,8 @@ struct mspi_buf {
     uint32_t                    ui32NumBytes;
     /** @brief  Buffer                       */
     uint32_t                    *pui32Buffer;
+    /** @brief  Bus event callback masks     */
+    enum mspi_bus_event_cb_mask eCBMask;
 };
 
 /**
@@ -447,8 +449,6 @@ struct mspi_xfer_packet {
     enum eTransMode             eMode;
     /** @brief  Direction (Transmit/Receive) */
     enum eTransDirection        eDirection;
-    /** @brief  Enable scrambling            */
-    bool                        bScrambling;
     /** @brief  Configure TX dummy cycles    */
     uint32_t                    ui32TXDummy;
     /** @brief  Configure RX dummy cycles    */
@@ -469,20 +469,22 @@ struct mspi_xfer_packet {
     struct mspi_buf             *pPayload;
     /** @brief  Number of transfer buffers   */
     uint32_t                    ui32NumPayload;
-    /** @brief  Bus event callback masks     */
-    enum mspi_bus_event_cb_mask eCBMask;
 };
 
 /**
  * @brief MSPI event data
  */
 struct mspi_event_data {
+    /** @brief Pointer to the bus controller */
+    const struct device *controller;
     /** @brief Pointer to the slave device ID */
     const struct mspi_dev_id *dev_id;
     /** @brief Pointer to the transfer packet */
     const struct mspi_xfer_packet *xfer;
     /** @brief MSPI event status */
     uint32_t status;
+    /** @breif Payload index */
+    uint32_t payload_idx;
 };
 
 /**
@@ -517,8 +519,7 @@ enum mspi_timing_param;
  * @param mspi_evt event details that trigger the callback handler.
  *
  */
-typedef void (*mspi_callback_handler_t) (const struct device *controller,
-                     struct mspi_callback_context *mspi_cb_ctx);
+typedef void (*mspi_callback_handler_t) (struct mspi_callback_context *mspi_cb_ctx, ...);
 
 /**
  * MSPI driver API definition and system call entry points

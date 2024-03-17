@@ -78,7 +78,6 @@ static int memc_mspi_aps6404l_command_write(const struct device *psram,
 
     data->trans.eMode               = MSPI_PIO;
     data->trans.eDirection          = MSPI_TX;
-    data->trans.bScrambling         = false;
     data->trans.ui32TXDummy         = 0;
     data->trans.ui16InstrLength     = 1;
     data->trans.ui16AddrLength      = 0;
@@ -115,7 +114,6 @@ static int memc_mspi_aps6404l_command_read(const struct device *psram,
 
     data->trans.eMode               = MSPI_PIO;
     data->trans.eDirection          = MSPI_RX;
-    data->trans.bScrambling         = false;
     data->trans.ui32RXDummy         = 0;
     data->trans.ui16InstrLength     = 1;
     data->trans.ui16AddrLength      = 3;

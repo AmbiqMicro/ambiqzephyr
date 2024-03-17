@@ -182,7 +182,7 @@ static inline void mspi_context_unlock_unconditionally(struct mspi_context *ctx)
     }
 }
 
-static inline void mspi_context_lock(struct mspi_context *ctx,
+static inline int mspi_context_lock(struct mspi_context *ctx,
                                      const struct mspi_dev_id *req,
                                      const struct mspi_xfer_packet *xfer,
                                      bool asynchronous,
@@ -190,21 +190,36 @@ static inline void mspi_context_lock(struct mspi_context *ctx,
                                      struct mspi_callback_context *callback_ctx,
                                      bool lockon)
 {
+    int ret = 1;
     if ((k_sem_count_get(&ctx->lock) == 0) && !lockon &&
         (ctx->owner == req)) {
-            return;
+            return 0;
     }
 
     k_sem_take(&ctx->lock, K_FOREVER);
+    if (ctx->callback && ctx->callback_ctx) {
+        if ((xfer->ui32TXDummy == ctx->callback_ctx->mspi_evt.evt_data.xfer->ui32TXDummy) &&
+            (xfer->ui32RXDummy == ctx->callback_ctx->mspi_evt.evt_data.xfer->ui32RXDummy) &&
+            (xfer->ui16InstrLength == ctx->callback_ctx->mspi_evt.evt_data.xfer->ui16InstrLength) &&
+            (xfer->ui16AddrLength == ctx->callback_ctx->mspi_evt.evt_data.xfer->ui16AddrLength)) {
+            ret = 0;
+        } else if (ctx->callback_ctx->mspi_evt.evt_data.status == 0 &&
+                   ctx->callback_ctx->mspi_evt.evt_data.payload_idx ==
+                   ctx->callback_ctx->mspi_evt.evt_data.xfer->ui32NumPayload - 1) {
+            ret = 1;
+        }
+        else {
+            ret = 0; /** Todo ret should be 1 and wait here until last one completes */
+        }
+    }
     ctx->owner = req;
     ctx->xfer = xfer;
     ctx->payload_done = 0;
     ctx->payload_left = xfer->ui32NumPayload;
     ctx->asynchronous = asynchronous;
-    if (callback) {
-        ctx->callback = callback;
-        ctx->callback_ctx = callback_ctx;
-    }
+    ctx->callback = callback;
+    ctx->callback_ctx = callback_ctx;
+    return ret;
 }
 
 static inline void mspi_context_release(struct mspi_context *ctx)
@@ -313,7 +328,7 @@ static int mspi_xfer_config(const struct device *controller,
     am_hal_mspi_request_e eRequest;
     int ret = 0;
 
-    if (xfer->bScrambling) {
+    if (data->scramble_cfg.bEnable) {
         eRequest = AM_HAL_MSPI_REQ_SCRAMB_EN;
     } else {
         eRequest = AM_HAL_MSPI_REQ_SCRAMB_DIS;
@@ -329,7 +344,7 @@ static int mspi_xfer_config(const struct device *controller,
     ret = am_hal_mspi_control(data->mspiHandle, eRequest, NULL);
     if (ret) {
         LOG_INST_ERR(cfg->log, "%u,Unable to complete scramble config:%d.",
-                    __LINE__, xfer->bScrambling);
+                    __LINE__, data->scramble_cfg.bEnable);
         return -EHOSTDOWN;
     }
 
@@ -380,7 +395,6 @@ static int mspi_xfer_config(const struct device *controller,
     }
 
     data->hal_dev_cfg = hal_dev_cfg;
-    data->scramble_cfg.bEnable = xfer->bScrambling;
     return ret;
 }
 
@@ -883,22 +897,12 @@ static void mspi_ambiq_isr(const struct device *dev)
     am_hal_mspi_interrupt_service(data->mspiHandle, ui32Status);
 }
 
+/** Manage sync dma transceive */
 static void hal_mspi_callback(void *pCallbackCtxt, uint32_t status)
 {
     const struct device *controller = pCallbackCtxt;
     struct mspi_ambiq_data *data = controller->data;
     data->ctx.payload_done++;
-    if (data->ctx.asynchronous) {
-        if (data->ctx.payload_done == data->ctx.xfer->ui32NumPayload &&
-            data->ctx.callback != NULL) {
-            data->ctx.callback_ctx->mspi_evt.evt_type = MSPI_BUS_XFER_COMPLETE;
-            data->ctx.callback_ctx->mspi_evt.evt_data.dev_id = data->ctx.owner;
-            data->ctx.callback_ctx->mspi_evt.evt_data.xfer = data->ctx.xfer;
-            data->ctx.callback_ctx->mspi_evt.evt_data.status = status;
-            data->ctx.callback(controller, data->ctx.callback_ctx);
-            mspi_context_release(&data->ctx);
-        }
-    }
 }
 
 static int mspi_pio_prepare(const struct device *controller,
@@ -910,7 +914,7 @@ static int mspi_pio_prepare(const struct device *controller,
     int ret = 0;
 
     trans->eDirection          = xfer->eDirection;
-    trans->bScrambling         = xfer->bScrambling;
+    trans->bScrambling         = false;
     trans->bSendAddr           = (xfer->ui16AddrLength != 0);
     trans->bSendInstr          = (xfer->ui16InstrLength != 0);
     trans->bTurnaround         = (xfer->ui32RXDummy != 0);
@@ -968,19 +972,26 @@ static int mspi_pio_transceive(const struct device *controller,
     struct mspi_buf *buf;
     am_hal_mspi_pio_transfer_t trans;
     int ret = 0;
+    int cfg_flag = 0;
 
     if (xfer->ui32NumPayload == 0 || !xfer->pPayload) {
         return -EFAULT;
     }
 
-    if (!asynchronous) {
-        mspi_context_lock(ctx, data->dev_id, xfer, asynchronous,
-                          NULL, NULL, true);
+    cfg_flag = mspi_context_lock(ctx, data->dev_id, xfer, asynchronous,
+                                 cb, cb_context, true);
 
+    /** user must make sure when cfg_flag = 0 the dummy and instr addr lengh)
+     * in mspi_xfer_packet of the two calls are the same if the first one has not finished yet.
+     */
+    if (cfg_flag) {
         ret = mspi_pio_prepare(controller, &trans);
         if (ret) {
-            return ret;
+            goto pio_err;
         }
+    }
+
+    if (!ctx->asynchronous) {
 
         while(ctx->payload_left > 0) {
             buf = &ctx->xfer->pPayload[ctx->xfer->ui32NumPayload - ctx->payload_left];
@@ -991,45 +1002,60 @@ static int mspi_pio_transceive(const struct device *controller,
 
             ret = am_hal_mspi_blocking_transfer(data->mspiHandle, &trans, MSPI_TIMEOUT_US);
             ctx->payload_left--;
+            if (ret) {
+                ret = -EIO;
+                goto pio_err;
+            }
         }
-        mspi_context_release(ctx);
 
     } else {
-        mspi_context_lock(ctx, data->dev_id, xfer, asynchronous,
-                          cb, cb_context, true);
-
-        ret = mspi_pio_prepare(controller, &trans);
-        if (ret) {
-            return ret;
-        }
 
         ret = am_hal_mspi_interrupt_enable(data->mspiHandle, AM_HAL_MSPI_INT_DMACMP);
         if (ret) {
             LOG_INST_ERR(cfg->log, "%u, failed to enable interrupt.", __LINE__);
-            return -EHOSTDOWN;
+            ret = -EHOSTDOWN;
+            goto pio_err;
         }
 
         while(ctx->payload_left > 0) {
-            buf = &ctx->xfer->pPayload[ctx->xfer->ui32NumPayload - ctx->payload_left];
+            uint32_t payload_idx = ctx->xfer->ui32NumPayload - ctx->payload_left;
+            buf = &ctx->xfer->pPayload[payload_idx];
             trans.ui16DeviceInstr = buf->ui16DeviceInstr;
             trans.ui32DeviceAddr  = buf->ui32DeviceAddr;
             trans.ui32NumBytes    = buf->ui32NumBytes;
             trans.pui32Buffer     = buf->pui32Buffer;
 
-            ret = am_hal_mspi_nonblocking_transfer(data->mspiHandle, &trans, MSPI_PIO,
-                                                   hal_mspi_callback, (void *)controller);
-            if (ret == AM_HAL_STATUS_OUT_OF_RANGE) {
-                return -ENOMEM;
+            if (ctx->callback && buf->eCBMask == MSPI_BUS_XFER_COMPLETE_CB) {
+                ctx->callback_ctx->mspi_evt.evt_type = MSPI_BUS_XFER_COMPLETE;
+                ctx->callback_ctx->mspi_evt.evt_data.controller = controller;
+                ctx->callback_ctx->mspi_evt.evt_data.dev_id = data->ctx.owner;
+                ctx->callback_ctx->mspi_evt.evt_data.xfer = data->ctx.xfer;
+                ctx->callback_ctx->mspi_evt.evt_data.payload_idx = payload_idx;
+                ctx->callback_ctx->mspi_evt.evt_data.status = ~0;
             }
+
+            am_hal_mspi_callback_t callback = NULL;
+            if (buf->eCBMask == MSPI_BUS_XFER_COMPLETE_CB) {
+                callback = (am_hal_mspi_callback_t)ctx->callback;
+            }
+
+            ret = am_hal_mspi_nonblocking_transfer(data->mspiHandle, &trans, MSPI_PIO,
+                                                   callback,
+                                                   (void *)ctx->callback_ctx);
             ctx->payload_left--;
+            if (ret) {
+                if (ret == AM_HAL_STATUS_OUT_OF_RANGE) {
+                    ret = -ENOMEM;
+                } else {
+                    ret = -EIO;
+                }
+                goto pio_err;
+            }
         }
     }
 
-    if (ret)
-    {
-        return -EIO;
-    }
-
+pio_err:
+    mspi_context_release(ctx);
     return ret;
 }
 
@@ -1045,38 +1071,34 @@ static int mspi_dma_transceive(const struct device *controller,
     struct mspi_buf *buf;
     am_hal_mspi_dma_transfer_t trans;
     int ret = 0;
+    int cfg_flag = 0;
 
     if (xfer->ui32NumPayload == 0 || !xfer->pPayload) {
         return -EFAULT;
     }
 
-    if(!asynchronous) {
-        cb = NULL;
-        cb_context = NULL;
-        ret = am_hal_mspi_interrupt_disable(data->mspiHandle, AM_HAL_MSPI_INT_DMACMP);
+    cfg_flag = mspi_context_lock(ctx, data->dev_id, xfer, asynchronous,
+                                 cb, cb_context, true);
+    /** user must make sure when cfg_flag = 0 the dummy and instr addr lengh)
+     * in mspi_xfer_packet of the two calls are the same if the first one has not finished yet.
+     */
+    if (cfg_flag) {
+        ret = mspi_xfer_config(controller, xfer);
         if (ret) {
-            LOG_INST_ERR(cfg->log, "%u, failed to disable interrupt.", __LINE__);
-            return -EHOSTDOWN;
-        }
-    } else {
-        ret = am_hal_mspi_interrupt_enable(data->mspiHandle, AM_HAL_MSPI_INT_DMACMP);
-        if (ret) {
-            LOG_INST_ERR(cfg->log, "%u, failed to enable interrupt.", __LINE__);
-            return -EHOSTDOWN;
+            goto dma_err;
         }
     }
 
-    mspi_context_lock(ctx, data->dev_id, xfer, asynchronous,
-                        cb, cb_context, true);
-    /** For transfers with ui32NumPayload > 1,
-     * the instruction must be the same
-     */
-    ret = mspi_xfer_config(controller, xfer);
+    ret = am_hal_mspi_interrupt_enable(data->mspiHandle, AM_HAL_MSPI_INT_DMACMP);
     if (ret) {
-        return ret;
+        LOG_INST_ERR(cfg->log, "%u, failed to enable interrupt.", __LINE__);
+        ret = -EHOSTDOWN;
+        goto dma_err;
     }
+
     while(ctx->payload_left > 0) {
-        buf = &ctx->xfer->pPayload[ctx->xfer->ui32NumPayload - ctx->payload_left];
+        uint32_t payload_idx = ctx->xfer->ui32NumPayload - ctx->payload_left;
+        buf = &ctx->xfer->pPayload[payload_idx];
         trans.ui8Priority           = ctx->xfer->ui8Priority;
         trans.eDirection            = ctx->xfer->eDirection;
         trans.ui32TransferCount     = buf->ui32NumBytes;
@@ -1085,30 +1107,48 @@ static int mspi_dma_transceive(const struct device *controller,
         trans.ui32PauseCondition    = 0;
         trans.ui32StatusSetClr      = 0;
 
-        ret = am_hal_mspi_nonblocking_transfer(data->mspiHandle,
-                    &trans, MSPI_DMA, hal_mspi_callback, (void *)controller);
-        if (ret == AM_HAL_STATUS_OUT_OF_RANGE) {
-            return -ENOMEM;
+        if (ctx->asynchronous) {
+
+            if (ctx->callback && buf->eCBMask == MSPI_BUS_XFER_COMPLETE_CB) {
+                ctx->callback_ctx->mspi_evt.evt_type = MSPI_BUS_XFER_COMPLETE;
+                ctx->callback_ctx->mspi_evt.evt_data.controller = controller;
+                ctx->callback_ctx->mspi_evt.evt_data.dev_id = data->ctx.owner;
+                ctx->callback_ctx->mspi_evt.evt_data.xfer = data->ctx.xfer;
+                ctx->callback_ctx->mspi_evt.evt_data.payload_idx = payload_idx;
+                ctx->callback_ctx->mspi_evt.evt_data.status = ~0;
+            }
+
+            am_hal_mspi_callback_t callback = NULL;
+            if (buf->eCBMask == MSPI_BUS_XFER_COMPLETE_CB) {
+                callback = (am_hal_mspi_callback_t)ctx->callback;
+            }
+
+            ret = am_hal_mspi_nonblocking_transfer(data->mspiHandle, &trans, MSPI_DMA,
+                                                   callback,
+                                                   (void *)ctx->callback_ctx);
+        } else {
+            ret = am_hal_mspi_nonblocking_transfer(data->mspiHandle, &trans, MSPI_DMA,
+                                                   hal_mspi_callback, (void *)controller);
         }
         ctx->payload_left--;
+        if (ret) {
+            if (ret == AM_HAL_STATUS_OUT_OF_RANGE) {
+                ret = -ENOMEM;
+            } else {
+                ret = -EIO;
+            }
+            goto dma_err;
+        }
     }
 
-    if(!asynchronous) {
+    if(!ctx->asynchronous) {
         while (ctx->payload_done < ctx->xfer->ui32NumPayload) {
-            uint32_t      ui32Status;
-            am_hal_mspi_interrupt_status_get(data->mspiHandle, &ui32Status, false);
-            am_hal_mspi_interrupt_clear(data->mspiHandle, ui32Status);
-            am_hal_mspi_interrupt_service(data->mspiHandle, ui32Status);
             k_busy_wait(10);
         }
-        mspi_context_release(ctx);
     }
 
-    if (ret)
-    {
-        return -EIO;
-    }
-
+dma_err:
+    mspi_context_release(ctx);
     return ret;
 }
 
@@ -1150,19 +1190,8 @@ static int mspi_ambiq_transceive_async(const struct device *controller,
         return -ESTALE;
     }
 
-    switch (xfer->eCBMask) {
-        case MSPI_BUS_NO_CB:
-            cb = NULL;
-            cb_context = NULL;
-            break;
-        case MSPI_BUS_XFER_COMPLETE_CB:
-            cb = data->cbs[MSPI_BUS_XFER_COMPLETE];
-            cb_context =data->cb_ctxs[MSPI_BUS_XFER_COMPLETE];
-            break;
-        default:
-            LOG_INST_ERR(cfg->log, "%u, callback types not supported.", __LINE__);
-            return -ENOTSUP;
-    }
+    cb = data->cbs[MSPI_BUS_XFER_COMPLETE];
+    cb_context =data->cb_ctxs[MSPI_BUS_XFER_COMPLETE];
 
     if (xfer->eMode == MSPI_PIO) {
         return mspi_pio_transceive(controller, xfer, true, cb, cb_context);
@@ -1353,6 +1382,8 @@ static struct mspi_driver_api mspi_ambiq_driver_api = {
         .cbs                   = {0},                                                       \
         .cb_ctxs               = {0},                                                       \
         .ctx.lock              = Z_SEM_INITIALIZER(mspi_ambiq_data##n.ctx.lock, 0, 1),      \
+        .ctx.callback          = 0,                                                         \
+        .ctx.callback_ctx      = 0,                                                         \
     };                                                                                      \
     static const struct mspi_ambiq_config mspi_ambiq_config##n = {                          \
         .reg_base              = DT_INST_REG_ADDR(n),                                       \

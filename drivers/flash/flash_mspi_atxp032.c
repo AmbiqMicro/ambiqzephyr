@@ -122,7 +122,6 @@ static int flash_mspi_atxp032_command_write(const struct device *flash,
 
     data->trans.eMode               = MSPI_PIO;
     data->trans.eDirection          = MSPI_TX;
-    data->trans.bScrambling         = false;
     data->trans.ui32TXDummy         = tx_dummy;
     data->trans.ui16InstrLength     = 1;
     data->trans.ui16AddrLength      = addr_len;
@@ -156,7 +155,6 @@ static int flash_mspi_atxp032_command_read(const struct device *flash,
 
     data->trans.eMode               = MSPI_PIO;
     data->trans.eDirection          = MSPI_RX;
-    data->trans.bScrambling         = false;
     data->trans.ui32RXDummy         = rx_dummy;
     data->trans.ui16InstrLength     = 1;
     data->trans.ui16AddrLength      = addr_len;
@@ -331,7 +329,6 @@ static int flash_mspi_atxp032_page_program(const struct device *flash,
 
     data->trans.eMode               = MSPI_DMA;
     data->trans.eDirection          = MSPI_TX;
-    data->trans.bScrambling         = data->scramble_cfg.bEnable;
     data->trans.ui32TXDummy         = data->dev_cfg.ui32TXDummy;
     data->trans.ui16InstrLength     = data->dev_cfg.ui16InstrLength;
     data->trans.ui16AddrLength      = data->dev_cfg.ui16AddrLength;
@@ -413,7 +410,6 @@ static int flash_mspi_atxp032_read(const struct device *flash, off_t offset,
 
     data->trans.eMode               = MSPI_DMA;
     data->trans.eDirection          = MSPI_RX;
-    data->trans.bScrambling         = data->scramble_cfg.bEnable;
     data->trans.ui32RXDummy         = data->dev_cfg.ui32RXDummy;
     data->trans.ui16InstrLength     = data->dev_cfg.ui16InstrLength;
     data->trans.ui16AddrLength      = data->dev_cfg.ui16AddrLength;
@@ -734,7 +730,6 @@ static int flash_mspi_atxp032_read_sfdp(const struct device *flash, off_t addr, 
 
     data->trans.eMode               = MSPI_DMA;
     data->trans.eDirection          = MSPI_RX;
-    data->trans.bScrambling         = false;
     data->trans.ui32RXDummy         = 8;
     data->trans.ui16InstrLength     = 1;
     data->trans.ui16AddrLength      = 3;
