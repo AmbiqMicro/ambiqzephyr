@@ -1,0 +1,183 @@
+# Copyright (c) 2024, Ambiq Micro Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# Common fields for MSPI devices
+
+include: [base.yaml, power.yaml]
+
+on-bus: mspi
+
+properties:
+  reg:
+    required: true
+
+  mspi-max-frequency:
+    type: int
+    required: true
+    description: Maximum clock frequency of device to configure in Hz
+
+  duplex:
+    type: string
+    enum:
+      - "MSPI_HALF_DUPLEX"
+      - "MSPI_FULL_DUPLEX"
+    description: |
+      Duplex mode, full or half.
+
+  mspi-io-mode:
+    type: string
+    enum:
+      - "MSPI_IO_MODE_SINGLE"
+      - "MSPI_IO_MODE_DUAL"
+      - "MSPI_IO_MODE_DUAL_1_1_2"
+      - "MSPI_IO_MODE_DUAL_1_2_2"
+      - "MSPI_IO_MODE_QUAD"
+      - "MSPI_IO_MODE_QUAD_1_1_4"
+      - "MSPI_IO_MODE_QUAD_1_4_4"
+      - "MSPI_IO_MODE_OCTAL"
+      - "MSPI_IO_MODE_OCTAL_1_1_8"
+      - "MSPI_IO_MODE_OCTAL_1_8_8"
+      - "MSPI_IO_MODE_HEX"
+    description: |
+      MSPI I/O mode capabilities
+
+  mspi-data-rate:
+    type: string
+    enum:
+      - "MSPI_SINGLE_DATA_RATE"
+      - "MSPI_DUAL_DATA_RATE"
+    description:
+      MSPI data rate capabilities
+
+  mspi-cpp-mode:
+    type: string
+    enum:
+      - "MSPI_CPP_MODE_0"
+      - "MSPI_CPP_MODE_1"
+      - "MSPI_CPP_MODE_2"
+      - "MSPI_CPP_MODE_3"
+    description: |
+      MSPI_CPP_MODE_0: CPOL=0, CPHA=0
+      MSPI_CPP_MODE_1: CPOL=0, CPHA=1
+      MSPI_CPP_MODE_2: CPOL=1, CPHA=0
+      MSPI_CPP_MODE_3: CPOL=1, CPHA=1
+
+  mspi-endian:
+    type: string
+    enum:
+      - "MSPI_LITTLE_ENDIAN"
+      - "MSPI_BIG_ENDIAN"
+    description: |
+      MSPI transfer MSB or LSB first
+
+  mspi-ce-polarity:
+    type: string
+    enum:
+      - "MSPI_CE_ACTIVE_LOW"
+      - "MSPI_CE_ACTIVE_HIGH"
+    description: |
+      MSPI CE polarity, in most cases, it is active low.
+
+  mspi-dqs-enable:
+    type: boolean
+    description: |
+      Enable DQS mode for a device which must support it. This will be checked against
+      dqs-support and configure the MSPI hardware if it supports DQS mode.
+
+  mspi-hold-ce:
+    type: boolean
+    description: |
+      In some cases, it is necessary for the master to manage MSPI chip enable
+      (under software control), so that multiple mspi transactions can be performed
+      without releasing it. A typical use case is variable length MSPI packets
+      where the first mspi transaction reads the length and the second mspi transaction
+      reads length bytes.
+
+  rx-dummy:
+    type: int
+    description: |
+      The number of data or clock cycles between addr and data in RX direction.
+      0 means the RX dummy phase is disabled.
+
+  tx-dummy:
+    type: int
+    description: |
+      The number of data or clock cycles between addr and data in TX direction.
+      0 means the TX dummy phase is disabled.
+
+  read-instruction:
+    type: int
+    description: |
+      Read command to be sent in RX direction.
+
+  write-instruction:
+    type: int
+    description: |
+      Write command to be sent in RX direction.
+
+  instruction-length:
+    type: string
+    enum:
+      - "INSTR_DISABLED"
+      - "INSTR_1_BYTE"
+      - "INSTR_2_BYTE"
+    description: |
+      Configure instruction length.
+
+  address-length:
+    type: string
+    enum:
+      - "ADDR_DISABLED"
+      - "ADDR_1_BYTE"
+      - "ADDR_2_BYTE"
+      - "ADDR_3_BYTE"
+      - "ADDR_4_BYTE"
+    description: |
+      Configure address length
+
+  xip-config:
+    type: array
+    default: [0, 0, 0, 0]
+    description: |
+      Array of tuples to configure the xip feature
+      default =
+      <
+        .bEnable        = false;
+        .ui32AddOffset  = 0;
+        .ui32Size       = 0;
+        .ePermission    = 0;
+      >
+
+  scramble-config:
+    type: array
+    default: [0, 0, 0]
+    description: |
+      Array of tuples to configure the scrambling feature
+      default =
+      <
+        .bEnable        = false;
+        .ui32AddOffset  = 0;
+        .ui32Size       = 0;
+      >
+
+  ce-break-config:
+    type: array
+    default: [0, 0]
+    description: |
+      Array of tuples to configure the scrambling feature
+      default =
+      <
+        .ui32MemBoundary          = 0;
+                                    NONE = 0x0 - Disable DMA address boundary breaks
+                                    BREAK32 = 0x1 - Break at 32 byte boundary (0x20 increments)
+                                    BREAK64 = 0x2 - Break at 64 byte boundary (0x40 increments)
+                                    BREAK128 = 0x3 - Break at 128 byte boundary (0x80 increments)
+                                    BREAK256 = 0x4 - Break at 256 byte boundary (0x100 increments)
+                                    BREAK512 = 0x5 - Break at 512 byte boundary (0x200 increments)
+                                    BREAK1K = 0x6 - Break at 1KB boundary (0x400 increments)
+                                    BREAK2K = 0x7 - Break at 2KB boundary (0x800 increments)
+                                    BREAK4K = 0x8 - Break at 4KB boundary (0x1000 increments)
+                                    BREAK8K = 0x9 - Break at 8KB boundary (0x2000 increments)
+                                    BREAK16K = 0xA - Break at 16KB boundary (0x4000 increments)
+        .ui32BreakTimeLimit       = 0; can be in us/ms
+      >
