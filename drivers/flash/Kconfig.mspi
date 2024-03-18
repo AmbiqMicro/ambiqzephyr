@@ -1,0 +1,40 @@
+# Copyright (c) 2023 Ambiq Micro Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# SPDX-License-Identifier: Apache-2.0
+
+config MSPI_FLASH
+	bool "MSPI flash drivers"
+	default y
+	depends on FLASH
+	select FLASH_HAS_DRIVER_ENABLED
+	select FLASH_HAS_PAGE_LAYOUT
+	select FLASH_JESD216
+	select FLASH_HAS_EX_OP
+	select MSPI
+
+if MSPI_FLASH
+
+menu "MSPI flash driver"
+
+config FLASH_MSPI_ATXP032
+	bool "MSPI ATXP032 driver"
+	default y
+	depends on DT_HAS_MSPI_ATXP032_ENABLED
+	select FLASH_HAS_PAGE_LAYOUT
+	select FLASH_HAS_DRIVER_ENABLED
+    select GPIO
+	select MSPI_AMBIQ_AP3 if SOC_SERIES_APOLLO3X
+
+config FLASH_MSPI_NAND
+	bool "MSPI NAND driver"
+	default y
+	depends on DT_HAS_MSPI_NAND_ENABLED
+	select FLASH_HAS_PAGE_LAYOUT
+	select FLASH_HAS_DRIVER_ENABLED
+    select GPIO
+	select MSPI_AMBIQ_AP3 if SOC_SERIES_APOLLO3X
+
+endmenu
+
+endif # MSPI_FLASH
