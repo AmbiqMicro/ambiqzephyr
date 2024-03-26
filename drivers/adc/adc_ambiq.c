@@ -197,7 +197,7 @@ static int adc_ambiq_start_read(const struct device *dev, const struct adc_seque
 static int adc_ambiq_read(const struct device *dev, const struct adc_sequence *sequence)
 {
 	struct adc_ambiq_data *data = dev->data;
-	int error;
+	int error = 0;
 
 #if defined(CONFIG_PM_DEVICE_RUNTIME)
 	error = pm_device_runtime_get(dev);
@@ -211,10 +211,12 @@ static int adc_ambiq_read(const struct device *dev, const struct adc_sequence *s
 	adc_context_release(&data->ctx, error);
 
 #if defined(CONFIG_PM_DEVICE_RUNTIME)
+	int ret = error;
 	error = pm_device_runtime_put(dev);
 	if (error < 0) {
 		LOG_ERR("pm_device_runtime_put failed: %d", error);
 	}
+	error = ret;
 #endif
 	return error;
 }
