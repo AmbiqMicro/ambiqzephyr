@@ -37,3 +37,9 @@
 &wdt0 {
 	status = "okay";
 };
+
+&sdio0 {
+	pinctrl-0 = <&sdio0_default>;
+	pinctrl-names = "default";
+	status = "okay";
+};

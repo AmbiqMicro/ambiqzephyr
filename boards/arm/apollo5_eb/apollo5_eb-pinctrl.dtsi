@@ -21,4 +21,18 @@
 			pinmux = <SWO_P28>;
 		};
 	};
+	sdio0_default: sdio0_default {
+		group0 {
+			pinmux = <SDIF0_CMD_P160>,
+				 <SDIF0_DAT0_P84>,
+				 <SDIF0_DAT1_P85>,
+				 <SDIF0_DAT2_P86>,
+				 <SDIF0_DAT3_P87>,
+				 <SDIF0_DAT4_P156>,
+				 <SDIF0_DAT5_P157>,
+				 <SDIF0_DAT6_P158>,
+				 <SDIF0_DAT7_P159>,
+				 <SDIF0_CLKOUT_P88>;
+		};
+	};
 };

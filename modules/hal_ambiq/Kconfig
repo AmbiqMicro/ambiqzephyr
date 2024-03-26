@@ -60,4 +60,9 @@ config AMBIQ_HAL_USE_MSPI
 	help
 	  Use the MSPI driver from Ambiq HAL
 
+config AMBIQ_HAL_USE_SDIO
+	bool
+	help
+	  Use the SDIO driver from Ambiq HAL
+
 endif # AMBIQ_HAL

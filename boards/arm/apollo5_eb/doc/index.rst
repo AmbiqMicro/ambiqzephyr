@@ -58,7 +58,7 @@ The Apollo5 EB board configuration supports the following hardware features:
 +-----------+------------+-------------------------------------+
 | MSPI(M)   | on-chip    | mspi, x16/8/4 psram, x8/4/1 flash   |
 +-----------+------------+-------------------------------------+
-| SDIF(M)   | on-chip    | sdio, eMMC, WIFI                    |
+| SDIO(M)   | on-chip    | sdio, eMMC, WIFI                    |
 +-----------+------------+-------------------------------------+
 
 The default configuration can be found in the defconfig file:
