@@ -247,6 +247,7 @@
 			status = "disabled";
 			#io-channel-cells = <1>;
 			ambiq,pwrcfg = <&pwrcfg 0x4 0x2000>;
+			zephyr,pm-device-runtime-auto;
 		};
 
 		mspi0: spi@40060000 {
