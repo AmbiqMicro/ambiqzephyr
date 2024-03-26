@@ -52,3 +52,8 @@ tests:
     platform_allow: stm32h747i_disco_m7
     extra_args:
       - OVERLAY_CONFIG=boards/stm32h747i_disco_m7.conf
+  sample.filesystem.fat_fs.apollo5_eb_sdmmc:
+    build_only: true
+    platform_allow: apollo5_eb
+    extra_args:
+      - OVERLAY_CONFIG=boards/apollo5_eb.conf
