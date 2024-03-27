@@ -86,7 +86,7 @@ static int adc_ambiq_slot_config(const struct device *dev, const struct adc_sequ
 	ADCSlotConfig.ui32TrkCyc = AM_HAL_ADC_MIN_TRKCYC;
 #endif
 	if (AM_HAL_STATUS_SUCCESS !=
-	    am_hal_adc_configure_slot(data->adcHandle, ui32SlotNumber, &ADCSlotConfig)) {
+		am_hal_adc_configure_slot(data->adcHandle, ui32SlotNumber, &ADCSlotConfig)) {
 		LOG_ERR("configuring ADC Slot 0 failed.\n");
 		return -ENODEV;
 	}
@@ -165,6 +165,13 @@ static int adc_ambiq_start_read(const struct device *dev, const struct adc_seque
 	if (active_channels > AMBIQ_ADC_SLOT_BUMBER) {
 		LOG_ERR("Too many channels for sequencer. Max: %d", AMBIQ_ADC_SLOT_BUMBER);
 		return -ENOTSUP;
+	}
+
+	if (sequence->options) {
+		if (sequence->options->interval_us) {
+			LOG_ERR("Interval between samplings not supported");
+			return -ENOTSUP;
+		}
 	}
 
 	channels = sequence->channels;
@@ -281,7 +288,7 @@ static int adc_ambiq_init(const struct device *dev)
 
 	/* Initialize the ADC and get the handle*/
 	if (0 !=
-	    am_hal_adc_initialize((cfg->base - REG_ADC_BASEADDR) / (cfg->size * 4),
+		am_hal_adc_initialize((cfg->base - REG_ADC_BASEADDR) / (cfg->size * 4),
 				  &data->adcHandle)) {
 		ret = -ENODEV;
 		LOG_ERR("Faile to initialize ADC, code:%d", ret);
@@ -289,7 +296,7 @@ static int adc_ambiq_init(const struct device *dev)
 	}
 
 	/* power on ADC*/
-ret = am_hal_adc_power_control(data->adcHandle, AM_HAL_SYSCTRL_WAKE, false);
+	ret = am_hal_adc_power_control(data->adcHandle, AM_HAL_SYSCTRL_WAKE, false);
 
 	/* Set up the ADC configuration parameters. These settings are reasonable
 	 *  for accurate measurements at a low sample rate.
@@ -302,11 +309,11 @@ ret = am_hal_adc_power_control(data->adcHandle, AM_HAL_SYSCTRL_WAKE, false);
 #endif
 	ADCConfig.ePolarity = AM_HAL_ADC_TRIGPOL_RISING;
 	ADCConfig.eTrigger = AM_HAL_ADC_TRIGSEL_SOFTWARE;
-	ADCConfig.eRepeatTrigger     = AM_HAL_ADC_RPTTRIGSEL_INT,
+	ADCConfig.eRepeatTrigger = AM_HAL_ADC_RPTTRIGSEL_INT,
 	ADCConfig.eClockMode = AM_HAL_ADC_CLKMODE_LOW_POWER;
 	ADCConfig.ePowerMode = AM_HAL_ADC_LPMODE1;
 	ADCConfig.eRepeat = AM_HAL_ADC_SINGLE_SCAN;
-	if (AM_HAL_STATUS_SUCCESS != am_hal_adc_configure(data->adcHandle, &ADCConfig)) {
+	if (0 != am_hal_adc_configure(data->adcHandle, &ADCConfig)) {
 		ret = -ENODEV;
 		LOG_ERR("Configuring ADC failed, code:%d", ret);
 		return ret;
