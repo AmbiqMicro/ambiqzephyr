@@ -50,9 +50,9 @@
     };
 
     /* MRAM region */
-    flash0: flash@400000 {
+    flash0: flash@410000 {
         compatible = "soc-nv-flash";
-        reg = <0x00400000 0x3F0000>;
+        reg = <0x00410000 0x3F0000>;
     };
 
     /* TCM */
