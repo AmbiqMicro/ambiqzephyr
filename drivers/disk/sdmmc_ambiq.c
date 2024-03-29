@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define DT_DRV_COMPAT ambiq_sdmmc
+#define DT_DRV_COMPAT ambiq_sdio
 
 #include <zephyr/types.h>
 #include <zephyr/drivers/disk.h>
@@ -18,7 +18,7 @@
 
 #include "am_mcu_apollo.h"
 
-LOG_MODULE_REGISTER(apollo_sdmmc, CONFIG_SDMMC_LOG_LEVEL);
+LOG_MODULE_REGISTER(ambiq_sdio, CONFIG_SDMMC_LOG_LEVEL);
 
 typedef void (*irq_config_func_t)(const struct device *port);
 
@@ -195,11 +195,6 @@ static int disk_apollo_sdmmc_init(const struct device *dev)
 	/* Configure dt provided device signals when available */
 	err = pinctrl_apply_state(cfg->pcfg, PINCTRL_STATE_DEFAULT);
 	if (err < 0) {
-		return err;
-	}
-
-	err = gpio_pin_configure_dt(&cfg->reset, GPIO_OUTPUT_ACTIVE);
-	if (err) {
 		return err;
 	}
 
