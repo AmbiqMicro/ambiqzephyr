@@ -48,7 +48,7 @@ static struct fs_mount_t mp = {
 
 #endif
 
-LOG_MODULE_REGISTER(main);
+LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 
 #define MAX_PATH 128
 #define SOME_FILE_NAME "some.dat"
@@ -100,6 +100,7 @@ static const char *disk_mount_pt = DISK_MOUNT_PT;
 
 int main(void)
 {
+	LOG_DBG("Ambiq SDIO FatFs Example! %s\n", CONFIG_BOARD);
 	/* raw disk i/o */
 	do {
 		static const char *disk_pdrv = DISK_DRIVE_NAME;
@@ -206,6 +207,7 @@ static int lsdir(const char *path)
 	if (res == 0) {
 		res = count;
 	}
+	printk(" Ambiq SDIO FatFs Example Complete!\n");
 
 	return res;
 }
