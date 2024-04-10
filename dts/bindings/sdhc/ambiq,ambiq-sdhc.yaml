@@ -1,0 +1,8 @@
+# Copyright 2024, Ambiq Micro Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: Ambiq SDIO host controller
+
+compatible: "ambiq,sdio"
+
+include: [sdhc.yaml, pinctrl-device.yaml]
