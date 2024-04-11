@@ -24,6 +24,9 @@ manifest:
     - name: babblesim
       url-base: https://github.com/BabbleSim
 
+    - name: ambiq_sh
+      url-base: git@192.168.10.10:zephyr
+
   group-filter: [-babblesim, -optional]
 
   #
@@ -142,8 +145,10 @@ manifest:
       groups:
         - hal
     - name: hal_ambiq
-      revision: ff4ca358d730536addf336c40c3faa4ebf1df00a
+      revision: 1884bd62ead48be7ea16955bacac3ece5ea0589b
       path: modules/hal/ambiq
+      remote: ambiq_sh
+      repo-path: hal_ambiq.git
       groups:
         - hal
     - name: hal_atmel
