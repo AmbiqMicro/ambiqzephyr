@@ -42,4 +42,8 @@
 	pinctrl-0 = <&sdio0_default>;
 	pinctrl-names = "default";
 	status = "okay";
+	sdmmc {
+		compatible = "zephyr,sdmmc-disk";
+		status = "okay";
+	};
 };
