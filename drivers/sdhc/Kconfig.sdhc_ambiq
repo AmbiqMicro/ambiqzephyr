@@ -1,0 +1,14 @@
+ # Copyright (c) 2024 Ambiq Micro Inc.
+ # SPDX-License-Identifier: Apache-2.0
+
+config AMBIQ_SDHC
+	bool "Ambiq SDHC driver"
+	default y
+	depends on DT_HAS_AMBIQ_SDIO_ENABLED
+	select AMBIQ_HAL
+	select AMBIQ_HAL_USE_SDIO
+	select PINCTRL
+	select SDHC_SUPPORTS_NATIVE_MODE
+	help
+	  This option enables the SDHC driver for Ambiq Apollo family.
+
