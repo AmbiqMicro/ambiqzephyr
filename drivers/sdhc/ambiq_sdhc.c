@@ -318,8 +318,8 @@ static const struct sdhc_driver_api ambiq_sdio_api = {
 	DEVICE_DT_INST_DEFINE(n,						\
 		&ambiq_sdio_init,						\
 		NULL,								\
-		&ambiq_sdio_config_##n,               \
-		&ambiq_sdio_data_##n,                  \
+		&ambiq_sdio_data_##n,               \
+		&ambiq_sdio_config_##n,                  \
 		POST_KERNEL,							\
 		CONFIG_SDHC_INIT_PRIORITY,					\
 		&ambiq_sdio_api);
