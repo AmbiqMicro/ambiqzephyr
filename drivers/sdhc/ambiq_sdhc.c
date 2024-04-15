@@ -69,7 +69,9 @@ static int ambiq_sdio_get_host_props(const struct device *dev,
 	props->power_delay = 500;
 	props->host_caps.high_spd_support = true;
 	props->host_caps.suspend_res_support = true;
-	props->host_caps.vol_330_support = true;
+	props->host_caps.vol_330_support = false;
+	props->host_caps.vol_300_support = false;
+	props->host_caps.vol_180_support = true;
 	props->host_caps.bus_8_bit_support = true;
 	props->max_current_330 = 1024;
 	return 0;
@@ -268,7 +270,7 @@ static int ambiq_sdio_request(const struct device *dev,
 	ui32Status = dev_data->host->ops->execute_cmd(&dev_data->host->pHandle, &sdio_cmd, &cmd_data);
 	if (ui32Status != AM_HAL_STATUS_SUCCESS)
 	{
-		LOG_ERR("Failed to send command");
+		LOG_ERR("Failed to send CMD%d, ui32Status = 0x%x", sdio_cmd.ui8Idx, ui32Status);
 		return -EBUSY;
 	}
 
