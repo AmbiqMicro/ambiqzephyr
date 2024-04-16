@@ -216,7 +216,7 @@ static int ambiq_sdio_request(const struct device *dev,
 			struct sdhc_command *cmd,
 			struct sdhc_data *data)
 {
-	int ret;
+	int ret = 0;
 	struct ambiq_sdio_data *dev_data = dev->data;
     uint32_t ui32Status = 0;
 
@@ -241,25 +241,26 @@ static int ambiq_sdio_request(const struct device *dev,
 		cmd_data.ui32BlkCnt = data->blocks;
 		cmd_data.ui32BlkSize = data->block_size;
 		cmd_data.pui8Buf = data->data;
+		if (cmd_data.ui32BlkCnt > 1)
+		{
+			sdio_cmd.bAutoCMD12 = true;
+		}
+
+		if (sdio_cmd.ui8Idx == MMC_CMD_WRITE_SINGLE_BLOCK || sdio_cmd.ui8Idx == MMC_CMD_WRITE_MULTIPLE_BLOCK )
+		{
+			cmd_data.dir = AM_HAL_DATA_DIR_WRITE;
+		}
+		else if ( (sdio_cmd.ui8Idx == SDIO_CMD_IO_RW_EXTENDED) && (sdio_cmd.ui32Arg & BIT(SDIO_CMD_ARG_RW_SHIFT)))
+		{
+			cmd_data.dir = AM_HAL_DATA_DIR_WRITE;
+		}
+		else
+		{
+			cmd_data.dir = AM_HAL_DATA_DIR_READ;
+		}
 	}
 
-	if (cmd_data.ui32BlkCnt > 1)
-	{
-		sdio_cmd.bAutoCMD12 = true;
-	}
-
-	if (sdio_cmd.ui8Idx == MMC_CMD_WRITE_SINGLE_BLOCK || sdio_cmd.ui8Idx == MMC_CMD_WRITE_MULTIPLE_BLOCK )
-	{
-		cmd_data.dir = AM_HAL_DATA_DIR_WRITE;
-	}
-	else if ( (sdio_cmd.ui8Idx == SDIO_CMD_IO_RW_EXTENDED) && (sdio_cmd.ui32Arg & BIT(SDIO_CMD_ARG_RW_SHIFT)))
-	{
-		cmd_data.dir = AM_HAL_DATA_DIR_WRITE;
-	}
-	else
-	{
-		cmd_data.dir = AM_HAL_DATA_DIR_READ;
-	}
+	LOG_DBG("Send SDIO CMD%d", sdio_cmd.ui8Idx);
 
 	ret = k_mutex_lock(&dev_data->access_mutex, K_MSEC(cmd->timeout_ms));
 	if (ret) {
@@ -267,7 +268,14 @@ static int ambiq_sdio_request(const struct device *dev,
 		return -EBUSY;
 	}
 
-	ui32Status = dev_data->host->ops->execute_cmd(&dev_data->host->pHandle, &sdio_cmd, &cmd_data);
+	if ( data )
+	{
+		ui32Status = dev_data->card.pHost->ops->execute_cmd(dev_data->card.pHost->pHandle, &sdio_cmd, &cmd_data);
+	}
+	else
+	{
+		ui32Status = dev_data->card.pHost->ops->execute_cmd(dev_data->card.pHost->pHandle, &sdio_cmd, NULL);
+	}
 	if (ui32Status != AM_HAL_STATUS_SUCCESS)
 	{
 		LOG_ERR("Failed to send CMD%d, ui32Status = 0x%x", sdio_cmd.ui8Idx, ui32Status);
