@@ -133,17 +133,17 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 		return -ENOTSUP;
 	}
 
-    if ( am_hal_card_set_speed(&data->card, data->card.cfg.ui32Clock) != AM_HAL_STATUS_SUCCESS )
-    {
-        LOG_ERR("Failed to change SDIO bus speed\n");
-        return -ENOTSUP;
-    }
+    // if ( am_hal_card_set_speed(&data->card, data->card.cfg.ui32Clock) != AM_HAL_STATUS_SUCCESS )
+    // {
+    //     LOG_ERR("Failed to change SDIO bus speed\n");
+    //     return -ENOTSUP;
+    // }
 
-    if ( am_hal_card_set_bus_width(&data->card, data->card.cfg.eBusWidth) != AM_HAL_STATUS_SUCCESS )
-    {
-        LOG_ERR("Failed to change SDIO bus width\n");
-        return -ENOTSUP;
-    }
+    // if ( am_hal_card_set_bus_width(&data->card, data->card.cfg.eBusWidth) != AM_HAL_STATUS_SUCCESS )
+    // {
+    //     LOG_ERR("Failed to change SDIO bus width\n");
+    //     return -ENOTSUP;
+    // }
 
 	return 0;
 }
@@ -175,18 +175,18 @@ static int ambiq_sdio_init(const struct device *dev)
 		LOG_ERR("Checking if card is available again\n");
 	}
 
-	while (am_hal_card_init(&data->card, NULL,
-				AM_HAL_CARD_PWR_CTRL_NONE) != AM_HAL_STATUS_SUCCESS) {
-		k_sleep(K_MSEC(1000));
-		LOG_ERR("card init failed, try again\n");
-	}
+	// while (am_hal_card_init(&data->card, NULL,
+	// 			AM_HAL_CARD_PWR_CTRL_NONE) != AM_HAL_STATUS_SUCCESS) {
+	// 	k_sleep(K_MSEC(1000));
+	// 	LOG_ERR("card init failed, try again\n");
+	// }
 
-	while (am_hal_card_cfg_set(&data->card, AM_HAL_CARD_TYPE_EMMC,
-				AM_HAL_HOST_BUS_WIDTH_4, 48000000, AM_HAL_HOST_BUS_VOLTAGE_1_8,
-				AM_HAL_HOST_UHS_SDR50) != AM_HAL_STATUS_SUCCESS) {
-		k_sleep(K_MSEC(100));
-		LOG_ERR("setting card cfg failed\n");
-	}
+	// while (am_hal_card_cfg_set(&data->card, AM_HAL_CARD_TYPE_EMMC,
+	// 			AM_HAL_HOST_BUS_WIDTH_4, 48000000, AM_HAL_HOST_BUS_VOLTAGE_1_8,
+	// 			AM_HAL_HOST_UHS_SDR50) != AM_HAL_STATUS_SUCCESS) {
+	// 	k_sleep(K_MSEC(100));
+	// 	LOG_ERR("setting card cfg failed\n");
+	// }
 
 	k_mutex_init(&data->access_mutex);
 	k_sem_init(&data->transfer_sem, 0, 1);
@@ -261,12 +261,21 @@ static int ambiq_sdio_request(const struct device *dev,
 	}
 
 	LOG_DBG("Send SDIO CMD%d", sdio_cmd.ui8Idx);
+	LOG_DBG("CMD->Arg = 0x%x CMD->RespType = 0x%x", sdio_cmd.ui32Arg, sdio_cmd.ui32RespType);
 
-	ret = k_mutex_lock(&dev_data->access_mutex, K_MSEC(cmd->timeout_ms));
-	if (ret) {
-		LOG_ERR("Could not access card");
-		return -EBUSY;
+	if (sdio_cmd.ui8Idx == 1)
+	{
+		LOG_DBG("Conifg CMD1 Arg & RespType");
+		sdio_cmd.ui32Arg = 0x40000000 | 0xff8080;
+		sdio_cmd.ui32RespType = MMC_RSP_R3;
 	}
+
+	// ret = k_mutex_lock(&dev_data->access_mutex, K_MSEC(cmd->timeout_ms));
+	// if (ret) {
+	// 	LOG_ERR("Could not access card");
+	// 	return -EBUSY;
+	// }
+
 
 	if ( data )
 	{
@@ -276,13 +285,21 @@ static int ambiq_sdio_request(const struct device *dev,
 	{
 		ui32Status = dev_data->card.pHost->ops->execute_cmd(dev_data->card.pHost->pHandle, &sdio_cmd, NULL);
 	}
-	if (ui32Status != AM_HAL_STATUS_SUCCESS)
+	if ((ui32Status & 0xFFFF) != AM_HAL_STATUS_SUCCESS)
 	{
-		LOG_ERR("Failed to send CMD%d, ui32Status = 0x%x", sdio_cmd.ui8Idx, ui32Status);
-		return -EBUSY;
+		if ((ui32Status & 0xFFFF) == AM_HAL_STATUS_TIMEOUT)
+		{
+			LOG_DBG("CMD%d Timeout!", sdio_cmd.ui8Idx);
+			ret = -ETIMEDOUT;
+		}
+		else
+		{
+			LOG_DBG("Failed to send CMD%d, ui32Status = 0x%x", sdio_cmd.ui8Idx, ui32Status);
+			ret = -EIO;
+		}
 	}
 
-	k_mutex_unlock(&dev_data->access_mutex);
+	// k_mutex_unlock(&dev_data->access_mutex);
 
 	memcpy(cmd->response, sdio_cmd.ui32Resp, sizeof(cmd->response));
 
