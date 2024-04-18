@@ -251,6 +251,12 @@ static int ambiq_sdio_request(const struct device *dev,
 		sdio_cmd.ui32RespType = MMC_RSP_R3;
 	}
 
+	if (sdio_cmd.ui8Idx == MMC_CMD_SWITCH || sdio_cmd.ui8Idx == MMC_CMD_ERASE || sdio_cmd.ui8Idx == MMC_CMD_SLEEP_AWAKE)
+	{
+		LOG_DBG("Set CheckBusyCmd");
+		sdio_cmd.bCheckBusyCmd = true;
+	}
+
 	// ret = k_mutex_lock(&dev_data->access_mutex, K_MSEC(cmd->timeout_ms));
 	// if (ret) {
 	// 	LOG_ERR("Could not access card");
