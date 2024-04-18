@@ -50,6 +50,7 @@ static int ambiq_sdio_reset(const struct device *dev)
 	const struct ambiq_sdio_config *config = dev->config;
 	uint32_t ui32Status = 0;
 
+	LOG_DBG("SDHC Software Reset");
 	ui32Status = am_hal_sdhc_software_reset(config->pSDHC, AM_HAL_SDHC_SW_RESET_ALL);
 	if ( ui32Status )
 	{
@@ -63,6 +64,7 @@ static int ambiq_sdio_reset(const struct device *dev)
 static int ambiq_sdio_get_host_props(const struct device *dev,
 	struct sdhc_host_props *props)
 {
+	LOG_DBG("SDHC get host props");
 	memset(props, 0, sizeof(*props));
 	props->f_max = AMBIQ_SDIO_FREQ_MAX;
 	props->f_min = AMBIQ_SDIO_FREQ_MIN;
@@ -155,6 +157,8 @@ static int ambiq_sdio_init(const struct device *dev)
 
 	int ret;
 
+	LOG_DBG("Ambiq SDIO Init");
+
 	ret = pinctrl_apply_state(config->pincfg, PINCTRL_STATE_DEFAULT);
 	if (ret) {
 		return ret;
@@ -197,7 +201,9 @@ static int ambiq_sdio_get_card_present(const struct device *dev)
 {
 	struct ambiq_sdio_data *data = dev->data;
 
-	return am_hal_sdhc_get_cd(data->host->pHandle);
+	LOG_DBG("Get card present status");
+
+	return am_hal_sdhc_get_cd(data->card.pHost->pHandle);
 }
 
 
@@ -206,7 +212,8 @@ static int ambiq_sdio_card_busy(const struct device *dev)
 	struct ambiq_sdio_data *data = dev->data;
 	uint32_t ui32Status;
 
-	ui32Status = data->host->ops->card_busy(data->host, DEFAULT_GET_STATUS_TIMEOUT_MS);
+	ui32Status = data->card.pHost->ops->card_busy(data->card.pHost->pHandle, DEFAULT_GET_STATUS_TIMEOUT_MS);
+	LOG_DBG("Check card busy status");
 
 	return (ui32Status != AM_HAL_STATUS_SUCCESS) ? 1 : 0;
 }
