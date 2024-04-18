@@ -31,7 +31,6 @@ struct ambiq_sdio_config {
 struct ambiq_sdio_data {
 	am_hal_card_t card;
 	am_hal_card_host_t *host;
-	struct k_sem transfer_sem;
 	struct k_mutex access_mutex;
 };
 
@@ -83,7 +82,7 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 {
 	struct ambiq_sdio_data *data = dev->data;
 
-	LOG_DBG("%s(clock=%d, bus_width=%d, timing=%d, mode=%d)", __func__, ios->clock,
+	LOG_DBG("%s(SDIO clock_freq=%d, bus_width=%d, timing=%d, mode=%d)", __func__, ios->clock,
 		ios->bus_width, ios->timing, ios->bus_mode);
 
 	if (ios->clock != 0 && (ios->clock <= AMBIQ_SDIO_FREQ_MAX) && (ios->clock >= AMBIQ_SDIO_FREQ_MIN))
@@ -135,18 +134,6 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 		return -ENOTSUP;
 	}
 
-    // if ( am_hal_card_set_speed(&data->card, data->card.cfg.ui32Clock) != AM_HAL_STATUS_SUCCESS )
-    // {
-    //     LOG_ERR("Failed to change SDIO bus speed\n");
-    //     return -ENOTSUP;
-    // }
-
-    // if ( am_hal_card_set_bus_width(&data->card, data->card.cfg.eBusWidth) != AM_HAL_STATUS_SUCCESS )
-    // {
-    //     LOG_ERR("Failed to change SDIO bus width\n");
-    //     return -ENOTSUP;
-    // }
-
 	return 0;
 }
 
@@ -179,21 +166,8 @@ static int ambiq_sdio_init(const struct device *dev)
 		LOG_ERR("Checking if card is available again\n");
 	}
 
-	// while (am_hal_card_init(&data->card, NULL,
-	// 			AM_HAL_CARD_PWR_CTRL_NONE) != AM_HAL_STATUS_SUCCESS) {
-	// 	k_sleep(K_MSEC(1000));
-	// 	LOG_ERR("card init failed, try again\n");
-	// }
-
-	// while (am_hal_card_cfg_set(&data->card, AM_HAL_CARD_TYPE_EMMC,
-	// 			AM_HAL_HOST_BUS_WIDTH_4, 48000000, AM_HAL_HOST_BUS_VOLTAGE_1_8,
-	// 			AM_HAL_HOST_UHS_SDR50) != AM_HAL_STATUS_SUCCESS) {
-	// 	k_sleep(K_MSEC(100));
-	// 	LOG_ERR("setting card cfg failed\n");
-	// }
-
 	k_mutex_init(&data->access_mutex);
-	k_sem_init(&data->transfer_sem, 0, 1);
+
 	return 0;
 }
 
