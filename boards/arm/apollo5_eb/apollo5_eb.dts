@@ -19,6 +19,7 @@
 
 	aliases {
 		watchdog0 = &wdt0;
+		sdhc0 = &sdio0;
 	};
 };
 
