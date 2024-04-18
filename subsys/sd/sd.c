@@ -208,7 +208,7 @@ static int sd_command_init(struct sd_card *card)
 		return 0;
 	}
 #endif /* CONFIG_SDIO_STACK */
-#ifdef CONFIG_SDMMC_STACK
+#if (defined(CONFIG_SDMMC_STACK) && !defined(CONFIG_MMC_STACK))
 	/* Attempt to initialize SDMMC card */
 	if (!sdmmc_card_init(card)) {
 		return 0;
