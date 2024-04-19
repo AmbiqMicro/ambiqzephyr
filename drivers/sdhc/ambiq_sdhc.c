@@ -251,7 +251,19 @@ static int ambiq_sdio_request(const struct device *dev,
 		sdio_cmd.ui32RespType = MMC_RSP_R3;
 	}
 
-	if (sdio_cmd.ui8Idx == MMC_CMD_SWITCH || sdio_cmd.ui8Idx == MMC_CMD_ERASE || sdio_cmd.ui8Idx == MMC_CMD_SLEEP_AWAKE)
+	if (sdio_cmd.ui8Idx == 3)
+	{
+		LOG_DBG("Conifg CMD3 RespType");
+		sdio_cmd.ui32RespType = MMC_RSP_R6;
+	}
+
+	if ((sdio_cmd.ui8Idx == 52) || (sdio_cmd.ui8Idx == 53))
+	{
+		LOG_DBG("Conifg CMD%d RespType", sdio_cmd.ui8Idx);
+		sdio_cmd.ui32RespType = MMC_RSP_R5;
+	}
+
+	if (sdio_cmd.ui8Idx == MMC_CMD_SWITCH || sdio_cmd.ui8Idx == MMC_CMD_ERASE)
 	{
 		LOG_DBG("Set CheckBusyCmd");
 		sdio_cmd.bCheckBusyCmd = true;
