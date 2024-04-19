@@ -40,6 +40,9 @@ static int arm_apollo5_init(void)
     /* Enable SIMOBUCK for the apollo5 Family */
     am_hal_pwrctrl_control(AM_HAL_PWRCTRL_CONTROL_SIMOBUCK_INIT, NULL);
 
+    /*  Disable Dcache. Cache needs to be managed in Application code. */
+    am_hal_cachectrl_dcache_disable();
+
     return 0;
 }
 
