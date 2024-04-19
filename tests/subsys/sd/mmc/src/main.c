@@ -148,7 +148,6 @@ ZTEST(sd_stack, test_rw)
 	memset(buf, 0, BUF_SIZE);
 	ret = mmc_read_blocks(&card, buf, block_addr, SECTOR_COUNT);
 	zassert_equal(ret, 0, "Read from card failed");
-	/* Check data error */
 	zassert_mem_equal(buf, check_buf, BUF_SIZE, "Read of written area was not correct");
 
 	block_addr = (sector_count / 3);

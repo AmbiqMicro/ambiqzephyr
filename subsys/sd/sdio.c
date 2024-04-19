@@ -59,7 +59,7 @@ static int sdio_send_ocr(struct sd_card *card, uint32_t ocr)
 				return -ENOTSUP;
 			}
 
-			/* Save OCR */
+			/* Save OCR value from CMD5 response */
 			card->ocr = cmd.response[0U];
 
 			/* Card has IO present, return zero to
@@ -564,8 +564,13 @@ int sdio_card_init(struct sd_card *card)
 	if (card->host_props.host_caps.vol_300_support) {
 		ocr_arg |= SD_OCR_VDD29_30FLAG;
 	}
-
-	/* Send CMD5 again */
+	ocr_arg |= (SD_OCR_VDD32_33FLAG | SD_OCR_VDD33_34FLAG);
+	if (IS_ENABLED(CONFIG_SDHC_SUPPORTS_NATIVE_MODE) &&
+		card->host_props.host_caps.vol_180_support) {
+		/* See if the card also supports 1.8V */
+		ocr_arg |= SD_OCR_SWITCH_18_REQ_FLAG;
+	}
+	/* Set OCR_ARG based on OCR value */
 	ocr_arg = card->ocr & 0x01FFFF00;
 
 	ret = sdio_send_ocr(card, ocr_arg);
