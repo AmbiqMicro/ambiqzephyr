@@ -266,12 +266,11 @@ static int ambiq_sdio_request(const struct device *dev,
 		sdio_cmd.bCheckBusyCmd = true;
 	}
 
-	// ret = k_mutex_lock(&dev_data->access_mutex, K_MSEC(cmd->timeout_ms));
-	// if (ret) {
-	// 	LOG_ERR("Could not access card");
-	// 	return -EBUSY;
-	// }
-
+	ret = k_mutex_lock(&dev_data->access_mutex, K_MSEC(cmd->timeout_ms));
+	if (ret) {
+		LOG_ERR("Could not access card");
+		return -EBUSY;
+	}
 
 	if ( data )
 	{
@@ -295,7 +294,7 @@ static int ambiq_sdio_request(const struct device *dev,
 		}
 	}
 
-	// k_mutex_unlock(&dev_data->access_mutex);
+	k_mutex_unlock(&dev_data->access_mutex);
 
 	memcpy(cmd->response, sdio_cmd.ui32Resp, sizeof(cmd->response));
 
