@@ -55,6 +55,8 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 #define SOME_DIR_NAME "some"
 #define SOME_REQUIRED_LEN MAX(sizeof(SOME_FILE_NAME), sizeof(SOME_DIR_NAME))
 
+static void check_if_rwbuf_match(uint8_t *rdbuf, uint8_t *wrbuf, uint32_t len);
+static int file_write_read(void);
 static int lsdir(const char *path);
 #ifdef CONFIG_FS_SAMPLE_CREATE_SOME_ENTRIES
 static bool create_some_entries(const char *base_path)
@@ -141,6 +143,12 @@ int main(void)
 	if (res == 0) {
 #endif
 		printk("Disk mounted.\n");
+
+		if (file_write_read() != 0)
+		{
+			printk("File write read test failed.\n");
+		}
+
 		if (lsdir(disk_mount_pt) == 0) {
 #ifdef CONFIG_FS_SAMPLE_CREATE_SOME_ENTRIES
 			if (create_some_entries(disk_mount_pt)) {
@@ -153,6 +161,8 @@ int main(void)
 	}
 
 	fs_unmount(&mp);
+
+	printk(" Ambiq SDIO FatFs Example Complete!\n");
 
 	while (1) {
 		k_sleep(K_MSEC(1000));
@@ -207,7 +217,85 @@ static int lsdir(const char *path)
 	if (res == 0) {
 		res = count;
 	}
-	printk(" Ambiq SDIO FatFs Example Complete!\n");
 
 	return res;
+}
+
+static int file_write_read(void)
+{
+	uint8_t read_buf[256]; /* buffer for file read */
+	uint8_t write_buf[256] = "This is the content insided the TXT\nApollo5 eMMC File System Example!!!\n"; /* buffer for file write */
+	FRESULT res;      /* File function return code */
+	struct fs_file_t fp;
+
+	printk("Test File write and read\n");
+
+    res = fs_open(&fp, DISK_MOUNT_PT"/FatFs.TXT", FS_O_CREATE | FS_O_RDWR);
+    if ( res == 0 )
+    {
+        printk("File FatFs.TXT is opened for write\n");
+        res = fs_write(&fp, write_buf, sizeof(write_buf));
+        if (res != 0 )
+        {
+            printk("File Write Error!\n");
+        }
+        else
+        {
+            res = fs_close(&fp); //close the file to flush data into device
+            if ( res == 0 )
+            {
+                printk("File is closed\n");
+            }
+            else
+            {
+                printk("Fail to close file\n");
+            }
+            res = fs_open(&fp, DISK_MOUNT_PT"/FatFs.TXT", FS_O_READ);
+            if ( res == 0 )
+            {
+                printk("File FatFs.TXT is opened for read\n");
+                res = fs_read(&fp, read_buf, sizeof(read_buf));
+                if ( res != 0 )
+                {
+                    printk("File Read Error!\n");
+                }
+                else
+                {
+                    res = fs_close(&fp);
+                    if ( res != 0 )
+                    {
+                        printk("Fail to close file\n");
+                    }
+                    //
+                    // Check whether read data match with write data.
+                    //
+                    check_if_rwbuf_match(read_buf, write_buf, sizeof(write_buf));
+                }
+            }
+            else
+            {
+                printk("Fail to open file for read\n");
+            }
+        }
+    }
+
+	return res;
+}
+
+static void check_if_rwbuf_match(uint8_t *rdbuf, uint8_t *wrbuf, uint32_t len)
+{
+    int i;
+    for ( i = 0; i < len; i++ )
+    {
+        if (*(wrbuf + i) != *(rdbuf + i) )
+        {
+            printk("Test Fail: read and write buffer does not match from %d\n", i);
+            break;
+        }
+    }
+
+    if (i == len)
+    {
+        printk("\nFile read write data matched!\n");
+    }
 }

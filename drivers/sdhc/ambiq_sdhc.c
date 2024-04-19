@@ -144,7 +144,7 @@ static int ambiq_sdio_init(const struct device *dev)
 
 	int ret;
 
-	LOG_DBG("Ambiq SDIO Init");
+	LOG_DBG("Ambiq SDIO Initialize Host #%d", config->inst);
 
 	ret = pinctrl_apply_state(config->pincfg, PINCTRL_STATE_DEFAULT);
 	if (ret) {
