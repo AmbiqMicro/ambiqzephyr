@@ -101,6 +101,10 @@ static int ambiq_rtc_set_time(const struct device *dev,
 	/* Convertn to Ambiq Time */
 	rtc_time_to_ambiq_time_set(timeptr, &ambiq_time);
 
+	if ((ambiq_time.ui32Year == 99) && (ambiq_time.ui32CenturyEnable == 1)) {
+		return -EINVAL;
+	}
+
 	err = am_hal_rtc_time_set(&ambiq_time);
 	if (err) {
 		LOG_WRN("Set Timer returned an error - %d!", err);
