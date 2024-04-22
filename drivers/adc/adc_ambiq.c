@@ -161,6 +161,7 @@ static int adc_ambiq_start_read(const struct device *dev, const struct adc_seque
 		LOG_ERR("No channel selected");
 		return -EINVAL;
 	}
+
 	active_channels = POPCOUNT(sequence->channels);
 	if (active_channels > AMBIQ_ADC_SLOT_BUMBER) {
 		LOG_ERR("Too many channels for sequencer. Max: %d", AMBIQ_ADC_SLOT_BUMBER);
@@ -218,10 +219,13 @@ static int adc_ambiq_read(const struct device *dev, const struct adc_sequence *s
 	adc_context_release(&data->ctx, error);
 
 #if defined(CONFIG_PM_DEVICE_RUNTIME)
+	int ret = error;
+
 	error = pm_device_runtime_put(dev);
 	if (error < 0) {
 		LOG_ERR("pm_device_runtime_put failed: %d", error);
 	}
+	error = ret;
 #endif
 	return error;
 }
