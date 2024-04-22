@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2023 Linumiz
+# Author: Sri Surya  <srisurya@linumiz.com>
+
+config RTC_AMBIQ
+	bool "AMBIQ RTC driver"
+	default y
+	depends on DT_HAS_AMBIQ_RTC_ENABLED
+	select AMBIQ_HAL
+	select AMBIQ_HAL_USE_RTC
+	help
+	  Enable the AMBIQ RTC driver.
+
+config RTC_ALARM
+	default y if RTC_AMBIQ
