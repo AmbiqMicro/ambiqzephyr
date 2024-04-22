@@ -167,39 +167,40 @@ static int uart_ambiq_pm_action(const struct device *dev, enum pm_device_action 
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
 #define DEVPWRSTATUS_OFFSET 0x10
 #define HCPA_MASK           0x4
-#define AMBIQ_UART_DEFINE(n)                                                                 \
-	PM_DEVICE_DT_INST_DEFINE(n, uart_ambiq_pm_action);                                          \
-	static int pwr_on_ambiq_uart_##n(void)                                                     \
-	{                                                                                          \
-		uint32_t addr = DT_REG_ADDR(DT_INST_PHANDLE(n, ambiq_pwrcfg)) +                    \
+#define AMBIQ_UART_DEFINE(n)                                                            \
+	PM_DEVICE_DT_INST_DEFINE(n, uart_ambiq_pm_action);                                  \
+	static int pwr_on_ambiq_uart_##n(void)                                              \
+	{                                                                                   \
+		uint32_t addr = DT_REG_ADDR(DT_INST_PHANDLE(n, ambiq_pwrcfg)) +                 \
 				DT_INST_PHA(n, ambiq_pwrcfg, offset);                              \
-		uint32_t pwr_status_addr = addr + DEVPWRSTATUS_OFFSET;                             \
-		sys_write32((sys_read32(addr) | DT_INST_PHA(n, ambiq_pwrcfg, mask)), addr);        \
-		while (!(sys_read32(pwr_status_addr) & HCPA_MASK)) {                               \
-		};                                                                                 \
-		return 0;                                                                          \
-	}                                                                                          \
-	static inline int clk_enable_ambiq_uart_##n(const struct device *dev, uint32_t clk)        \
-	{                                                                                          \
-		return clk_enable_ambiq_uart(dev, clk);                                            \
+		uint32_t pwr_status_addr = addr + DEVPWRSTATUS_OFFSET;                          \
+		sys_write32((sys_read32(addr) | DT_INST_PHA(n, ambiq_pwrcfg, mask)), addr);     \
+		while (!(sys_read32(pwr_status_addr) & HCPA_MASK)) {                            \
+		};                                                                              \
+		return 0;                                                                       \
+	}                                                                                   \
+	static inline int clk_enable_ambiq_uart_##n(const struct device *dev, uint32_t clk) \
+	{                                                                                   \
+		return clk_enable_ambiq_uart(dev, clk);                                         \
 	}
 #else
 #define DEVPWRSTATUS_OFFSET 0x4
-#define AMBIQ_UART_DEFINE(n)                                                                       \
-	static int pwr_on_ambiq_uart_##n(void)                                                     \
-	{                                                                                          \
-		uint32_t addr = DT_REG_ADDR(DT_INST_PHANDLE(n, ambiq_pwrcfg)) +                    \
+#define AMBIQ_UART_DEFINE(n)                                                            \
+	PM_DEVICE_DT_INST_DEFINE(n, uart_ambiq_pm_action);                                  \
+	static int pwr_on_ambiq_uart_##n(void)                                              \
+	{                                                                                   \
+		uint32_t addr = DT_REG_ADDR(DT_INST_PHANDLE(n, ambiq_pwrcfg)) +                 \
 				DT_INST_PHA(n, ambiq_pwrcfg, offset);                              \
-		uint32_t pwr_status_addr = addr + DEVPWRSTATUS_OFFSET;                             \
-		sys_write32((sys_read32(addr) | DT_INST_PHA(n, ambiq_pwrcfg, mask)), addr);        \
-		while ((sys_read32(pwr_status_addr) & DT_INST_PHA(n, ambiq_pwrcfg, mask)) !=       \
-		       DT_INST_PHA(n, ambiq_pwrcfg, mask)) {                                       \
-		};                                                                                 \
-		return 0;                                                                          \
-	}                                                                                          \
-	static inline int clk_enable_ambiq_uart_##n(const struct device *dev, uint32_t clk)        \
-	{                                                                                          \
-		return clk_enable_ambiq_uart(dev, clk);                                            \
+		uint32_t pwr_status_addr = addr + DEVPWRSTATUS_OFFSET;                          \
+		sys_write32((sys_read32(addr) | DT_INST_PHA(n, ambiq_pwrcfg, mask)), addr);     \
+		while ((sys_read32(pwr_status_addr) & DT_INST_PHA(n, ambiq_pwrcfg, mask)) !=    \
+		       DT_INST_PHA(n, ambiq_pwrcfg, mask)) {                                    \
+		};                                                                              \
+		return 0;                                                                       \
+	}                                                                                   \
+	static inline int clk_enable_ambiq_uart_##n(const struct device *dev, uint32_t clk) \
+	{                                                                                   \
+		return clk_enable_ambiq_uart(dev, clk);                                         \
 	}
 #endif
 
