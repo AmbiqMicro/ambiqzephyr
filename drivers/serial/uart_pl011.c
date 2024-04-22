@@ -643,7 +643,7 @@ void pl011_isr(const struct device *dev)
 			.data_bits = UART_CFG_DATA_BITS_8,		\
 			.flow_ctrl = UART_CFG_FLOW_CTRL_NONE,		\
 		},							\
-		.clk_freq = COND_CODE_1(                                                \
+		.clk_freq = COND_CODE_1(                                          \
 			DT_NODE_HAS_COMPAT(DT_INST_CLOCKS_CTLR(n), fixed_clock),        \
 			(DT_INST_PROP_BY_PHANDLE(n, clocks, clock_frequency)), (0)),    \
 	};							\
