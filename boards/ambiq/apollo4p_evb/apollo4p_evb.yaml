@@ -15,6 +15,7 @@ supported:
   - spi
   - i2c
   - adc
+  - hwinfo
 testing:
   ignore_tags:
     - net
