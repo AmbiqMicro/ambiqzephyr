@@ -35,4 +35,18 @@
 				 <SDIF0_CLKOUT_P88>;
 		};
 	};
+	sdio1_default: sdio1_default {
+		group0 {
+			pinmux = <SDIF1_CMD_P134>,
+				 <SDIF1_DAT0_P125>,
+				 <SDIF1_DAT1_P126>,
+				 <SDIF1_DAT2_P127>,
+				 <SDIF1_DAT3_P128>,
+				 <SDIF1_DAT4_P130>,
+				 <SDIF1_DAT5_P131>,
+				 <SDIF1_DAT6_P132>,
+				 <SDIF1_DAT7_P133>,
+				 <SDIF1_CLKOUT_P129>;
+		};
+	};
 };

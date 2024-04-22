@@ -20,6 +20,7 @@
 	aliases {
 		watchdog0 = &wdt0;
 		sdhc0 = &sdio0;
+		sdhc1 = &sdio1;
 	};
 };
 
@@ -41,6 +42,16 @@
 
 &sdio0 {
 	pinctrl-0 = <&sdio0_default>;
+	pinctrl-names = "default";
+	status = "okay";
+	sdmmc {
+		compatible = "zephyr,sdmmc-disk";
+		status = "okay";
+	};
+};
+
+&sdio1 {
+	pinctrl-0 = <&sdio1_default>;
 	pinctrl-names = "default";
 	status = "okay";
 	sdmmc {
