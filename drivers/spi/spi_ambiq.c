@@ -391,6 +391,7 @@ static int spi_ambiq_init(const struct device *dev)
 	ret = pinctrl_apply_state(cfg->pcfg, PINCTRL_STATE_DEFAULT);
 	if (ret < 0) {
 		LOG_ERR("Error - Failed  to config SPI pins\n");
+
 		goto end;
 	}
 
