@@ -48,7 +48,7 @@ static am_hal_ctimer_config_t g_sContTimer = {
 #else
 /* AM_HAL_TIMER_CLOCK_HFRC_DIV16 */
 #define COUNTER_FREQ 6000000
-#define COUNTER_BASE (REG_TIMER_BASEADDR + 0x200)
+#define COUNTER_BASE (REG_TIMER_BASEADDR)
 #endif
 
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)

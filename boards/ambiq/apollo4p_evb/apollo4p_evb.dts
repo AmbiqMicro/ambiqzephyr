@@ -73,6 +73,10 @@ compatible = "ambiq,adc";
 	status = "okay";
 };
 
+&counter1 {
+	status = "disabled";
+};
+
 &rtc0 {
 	status = "okay";
 	alarms-count = <1>;
