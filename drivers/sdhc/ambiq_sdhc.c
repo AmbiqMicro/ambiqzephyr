@@ -32,7 +32,50 @@ struct ambiq_sdio_data {
 	am_hal_card_t card;
 	am_hal_card_host_t *host;
 	struct k_mutex access_mutex;
+#ifdef CONFIG_AMBIQ_SDIO_ASYNC
+	struct k_sem *async_sem;
+#endif
 };
+
+#ifdef CONFIG_AMBIQ_SDIO_ASYNC
+static K_SEM_DEFINE(sdio_async_sem_0, 0, 1);
+static void ambiq_sdio_event_cb_0(am_hal_host_evt_t *pEvt)
+{
+    am_hal_card_host_t *pHost = (am_hal_card_host_t *)pEvt->pCtx;
+
+    if (AM_HAL_EVT_XFER_COMPLETE == pEvt->eType &&
+        pHost->AsyncCmdData.dir == AM_HAL_DATA_DIR_READ)
+    {
+        LOG_DBG("Last Read Xfered block %d\n", pEvt->ui32BlkCnt);
+		k_sem_give(&sdio_async_sem_0);
+    }
+	else if (AM_HAL_EVT_XFER_COMPLETE == pEvt->eType &&
+        pHost->AsyncCmdData.dir == AM_HAL_DATA_DIR_WRITE)
+    {
+        LOG_DBG("Last Write Xfered block %d\n", pEvt->ui32BlkCnt);
+		k_sem_give(&sdio_async_sem_0);
+    }
+}
+
+static K_SEM_DEFINE(sdio_async_sem_1, 0, 1);
+static void ambiq_sdio_event_cb_1(am_hal_host_evt_t *pEvt)
+{
+    am_hal_card_host_t *pHost = (am_hal_card_host_t *)pEvt->pCtx;
+
+    if (AM_HAL_EVT_XFER_COMPLETE == pEvt->eType &&
+        pHost->AsyncCmdData.dir == AM_HAL_DATA_DIR_READ)
+    {
+        LOG_DBG("Last Read Xfered block %d\n", pEvt->ui32BlkCnt);
+		k_sem_give(&sdio_async_sem_1);
+    }
+    else if (AM_HAL_EVT_XFER_COMPLETE == pEvt->eType &&
+        pHost->AsyncCmdData.dir == AM_HAL_DATA_DIR_WRITE)
+    {
+        LOG_DBG("Last Write Xfered block %d\n", pEvt->ui32BlkCnt);
+		k_sem_give(&sdio_async_sem_1);
+    }
+}
+#endif
 
 static void ambiq_sdio_isr(const struct device *dev)
 {
@@ -166,6 +209,23 @@ static int ambiq_sdio_init(const struct device *dev)
 		LOG_ERR("Checking if card is available again\n");
 	}
 
+#ifdef CONFIG_AMBIQ_SDIO_ASYNC
+	if (config->inst == 0)
+	{
+		data->async_sem = &sdio_async_sem_0;
+		am_hal_card_register_evt_callback(&data->card, ambiq_sdio_event_cb_0);
+	}
+	else if (config->inst == 1)
+	{
+		data->async_sem = &sdio_async_sem_1;
+		am_hal_card_register_evt_callback(&data->card, ambiq_sdio_event_cb_1);
+	}
+	else
+	{
+		return -ENODEV;
+	}
+#endif
+
 	k_mutex_init(&data->access_mutex);
 
 	return 0;
@@ -222,6 +282,11 @@ static int ambiq_sdio_request(const struct device *dev,
 		cmd_data.ui32BlkCnt = data->blocks;
 		cmd_data.ui32BlkSize = data->block_size;
 		cmd_data.pui8Buf = data->data;
+#ifdef CONFIG_AMBIQ_SDIO_ASYNC
+		sdio_cmd.bASync = true;
+		dev_data->card.pHost->AsyncCmd = sdio_cmd;
+		dev_data->card.pHost->AsyncCmdData = cmd_data;
+#endif
 		if (cmd_data.ui32BlkCnt > 1)
 		{
 			sdio_cmd.bAutoCMD12 = true;
@@ -274,7 +339,19 @@ static int ambiq_sdio_request(const struct device *dev,
 
 	if ( data )
 	{
+#ifdef CONFIG_AMBIQ_SDIO_ASYNC
+		k_sem_reset(dev_data->async_sem);
+#endif
 		ui32Status = dev_data->card.pHost->ops->execute_cmd(dev_data->card.pHost->pHandle, &sdio_cmd, &cmd_data);
+#ifdef CONFIG_AMBIQ_SDIO_ASYNC
+		if ((ui32Status & 0xFFFF) == AM_HAL_STATUS_SUCCESS)
+		{
+			if (k_sem_take(dev_data->async_sem, K_MSEC(data->timeout_ms)))
+			{
+				return -ETIMEDOUT;
+			}
+		}
+#endif
 	}
 	else
 	{

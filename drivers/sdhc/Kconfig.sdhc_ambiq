@@ -12,3 +12,11 @@ config AMBIQ_SDHC
 	help
 	  This option enables the SDHC driver for Ambiq Apollo family.
 
+#if AMBIQ_SDHC
+config AMBIQ_SDIO_ASYNC
+	bool "Ambiq SDIO Async Mode"
+	default y
+	depends on DT_HAS_AMBIQ_SDIO_ENABLED
+	help
+	  This option enables Ambiq SDIO Async Mode.
+#endif
