@@ -25,12 +25,11 @@ void pm_state_set(enum pm_state state, uint8_t substate_id)
 	__set_BASEPRI(0);
 
 	switch (state) {
-	case PM_STATE_SUSPEND_TO_IDLE: {
+	case PM_STATE_SUSPEND_TO_IDLE:
 		/* Put ARM core to normal sleep. */
 		am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_NORMAL);
 		break;
-	}
-	case PM_STATE_SUSPEND_TO_RAM: {
+	case PM_STATE_SUSPEND_TO_RAM:
 		/* Put ARM core to deep sleep. */
 		/* Cotex-m: power down, register value preserve.*/
 		/* Cache: power down*/
@@ -38,34 +37,29 @@ void pm_state_set(enum pm_state state, uint8_t substate_id)
 		/* Sram: retention*/
 		am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_DEEP);
 		break;
-	}
-	default: {
+	default:
 		LOG_DBG("Unsupported power state %u", state);
 		break;
 	}
-	}
 }
 
+/**
+ * @brief PM State Exit Post Operations
+ *
+ * For PM_STATE_SUSPEND_TO_IDLE:
+ *   Nothing is needed after soc woken up.
+ *
+ * For PM_STATE_SUSPEND_TO_RAM:
+ *   Flash, cache, sram automatically switch
+ *   to active state on wake up
+ *
+ * @param state PM State
+ * @param substate_id Unused
+ *
+ */
 void pm_state_exit_post_ops(enum pm_state state, uint8_t substate_id)
 {
 	ARG_UNUSED(substate_id);
-
-	switch (state) {
-	case PM_STATE_SUSPEND_TO_IDLE: {
-		/* Nothing is needed after soc is wake up.*/
-		break;
-	}
-	case PM_STATE_SUSPEND_TO_RAM: {
-		/* Flash, cache, sram automatically switch to active state on wake up,
-		 * Nothing needed for software.
-		 */
-		break;
-	}
-	default: {
-		LOG_DBG("Unsupported power substate-id %u", state);
-		break;
-	}
-	}
 
 	__enable_irq();
 	irq_unlock(0);

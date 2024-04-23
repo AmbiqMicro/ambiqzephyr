@@ -6,15 +6,6 @@ if SOC_SERIES_APOLLO4X
 
 rsource "Kconfig.defconfig.apollo4*"
 
-config PM
-	default y
-
-config PM_DEVICE
-	default y if PM
-
-config PM_DEVICE_RUNTIME
-	default y if PM_DEVICE
-
 config HWINFO_AMBIQ
 	default HWINFO
 
