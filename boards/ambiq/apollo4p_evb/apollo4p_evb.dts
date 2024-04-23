@@ -99,7 +99,8 @@ compatible = "ambiq,adc";
 	compatible = "ambiq,spi";
 	pinctrl-0 = <&spi1_default>;
 	pinctrl-names = "default";
-	clock-frequency = <1000000>;
+	cs-gpios = <&gpio64_95 90 GPIO_ACTIVE_LOW>;
+	clock-frequency = <DT_FREQ_M(1)>;
 	status = "okay";
 };
 

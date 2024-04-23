@@ -208,21 +208,22 @@ static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *con
 		/* There's data to Receive */
 		if (spi_context_rx_on(ctx)) {
 			if (!(config->operation & SPI_HALF_DUPLEX)) {
+				spi_context_update_rx(ctx, 1, trans.ui32InstrLen);
 				uint8_t *tx_dummy = NULL;
-				tx_dummy = malloc(ctx->rx_len);
+				tx_dummy = k_malloc(ctx->rx_len + trans.ui32InstrLen);
 				if (tx_dummy == NULL) {
 					spi_context_complete(ctx, dev, 0);
 					return -ENOMEM;
 				}
-				memset(tx_dummy, 0, ctx->rx_len);
+				memset(tx_dummy, 0, ctx->rx_len + trans.ui32InstrLen);
 				trans.eDirection = AM_HAL_IOM_FULLDUPLEX;
 				trans.bContinue = false;
 				trans.pui32RxBuffer = (uint32_t *)ctx->rx_buf;
 				trans.pui32TxBuffer = (uint32_t *)tx_dummy;
-				trans.ui32NumBytes = ctx->rx_len;
+				trans.ui32NumBytes = ctx->rx_len + trans.ui32InstrLen;
 				trans.uPeerInfo.ui32SpiChipSelect = iom_nce;
 				ret = am_hal_iom_spi_blocking_fullduplex(data->IOMHandle, &trans);
-				free((void *)tx_dummy);
+				k_free((void *)tx_dummy);
 				spi_context_complete(ctx, dev, 0);
 			} else {
 				/* Set RX direction and receive data. */
@@ -266,6 +267,10 @@ static int spi_ambiq_xfer(const struct device *dev, const struct spi_config *con
 #endif
 		}
 	} else { /* There's no data to send */
+		if (!(config->operation & SPI_HALF_DUPLEX)) {
+			spi_context_update_rx(ctx, 1, ctx->rx_len);
+		}
+
 		/* Set RX direction to receive data and release CS after transmission. */
 		trans.eDirection = AM_HAL_IOM_RX;
 		trans.bContinue = bContinue;
@@ -326,13 +331,16 @@ static int spi_ambiq_transceive(const struct device *dev, const struct spi_confi
 	spi_context_release(&data->ctx, ret);
 
 #if defined(CONFIG_PM_DEVICE_RUNTIME)
-	/* Use async put to avoid useless device suspension/resumption
-	 * when doing consecutive transmission.
-	 */
-	ret = pm_device_runtime_put_async(dev, K_MSEC(2));
+	/* Do not power off if need to hold the CS */
+	if (!(config->operation & SPI_HOLD_ON_CS)) {
+		/* Use async put to avoid useless device suspension/resumption
+		 * when doing consecutive transmission.
+		 */
+		ret = pm_device_runtime_put_async(dev, K_MSEC(2));
 
-	if (ret < 0) {
-		LOG_ERR("pm_device_runtime_put failed: %d", ret);
+		if (ret < 0) {
+			LOG_ERR("pm_device_runtime_put failed: %d", ret);
+		}
 	}
 #endif
 
@@ -367,17 +375,22 @@ static int spi_ambiq_init(const struct device *dev)
 	int ret = 0;
 	void *buf = NULL;
 
-	if (AM_HAL_STATUS_SUCCESS !=
+	if (0 !=
 	    am_hal_iom_initialize((cfg->base - REG_IOM_BASEADDR) / cfg->size, &data->IOMHandle)) {
-		LOG_ERR("Fail to initialize SPI\n");
+		LOG_ERR("Error - Failed  to initialize SPI\n");
 		return -ENXIO;
 	}
 
-	cfg->pwr_func();
+	//cfg->pwr_func();
+    if (0 != am_hal_iom_power_ctrl(data->IOMHandle, AM_HAL_SYSCTRL_WAKE, false))
+    {
+        LOG_ERR("Error - Failed to power on MSPI.\n");
+        return -ENXIO;
+    }
 
 	ret = pinctrl_apply_state(cfg->pcfg, PINCTRL_STATE_DEFAULT);
 	if (ret < 0) {
-		LOG_ERR("Fail to config SPI pins\n");
+		LOG_ERR("Error - Failed  to config SPI pins\n");
 		goto end;
 	}
 
