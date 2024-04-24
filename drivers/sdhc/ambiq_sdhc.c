@@ -112,15 +112,22 @@ static int ambiq_sdio_get_host_props(const struct device *dev,
 	memset(props, 0, sizeof(*props));
 	props->f_max = AMBIQ_SDIO_FREQ_MAX;
 	props->f_min = AMBIQ_SDIO_FREQ_MIN;
-	props->power_delay = 500;
-	props->host_caps.high_spd_support = true;
+	props->power_delay = 50;
 	props->host_caps.suspend_res_support = true;
-	props->host_caps.vol_330_support = false;
-	props->host_caps.vol_300_support = false;
+	props->host_caps.adma_2_support = true;
+	props->host_caps.sdio_async_interrupt_support = true;
 	props->host_caps.vol_180_support = true;
 	props->host_caps.bus_4_bit_support = true;
 	props->host_caps.bus_8_bit_support = true;
-	props->max_current_330 = 1024;
+	props->host_caps.high_spd_support = true;
+	props->host_caps.sdr50_support = true;
+	props->host_caps.sdr104_support = true;
+	props->host_caps.ddr50_support = true;
+	props->host_caps.hs200_support = true;
+	props->max_current_330 = 1020;
+	props->max_current_300 = 1020;
+	props->max_current_180 = 1020;
+	props->is_spi = false;
 	return 0;
 }
 
