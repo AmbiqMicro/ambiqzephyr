@@ -201,6 +201,12 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 		}
 	}
 
+	ui32Status = data->card.pHost->ops->set_bus_clock(data->card.pHost->pHandle, data->card.cfg.ui32Clock);
+	if (ui32Status != AM_HAL_STATUS_SUCCESS)
+	{
+		return -ENOTSUP;
+	}
+
 	return 0;
 }
 
