@@ -145,6 +145,10 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 	{
 		data->card.cfg.ui32Clock = ios->clock;
 	}
+	else if (ios->clock != 0 && (ios->clock > AMBIQ_SDIO_FREQ_MAX) && (ios->clock <= MMC_CLOCK_HS200))
+	{
+		data->card.cfg.ui32Clock = AMBIQ_SDIO_FREQ_MAX;
+	}
 	else if (ios->clock != 0)
 	{
 		return -ENOTSUP;
@@ -266,6 +270,16 @@ static int ambiq_sdio_init(const struct device *dev)
 #endif
 
 	k_mutex_init(&data->access_mutex);
+
+	return 0;
+}
+
+static int ambiq_sdio_execute_tuning(const struct device *dev)
+{
+	struct ambiq_sdio_data *data = dev->data;
+	uint8_t ui8TxRxDelays[2] = {0};
+
+	am_hal_card_host_set_txrx_delay(data->host,ui8TxRxDelays);
 
 	return 0;
 }
@@ -471,6 +485,7 @@ static const struct sdhc_driver_api ambiq_sdio_api = {
 	.request = ambiq_sdio_request,
 	.set_io = ambiq_sdio_set_io,
 	.get_card_present = ambiq_sdio_get_card_present,
+	.execute_tuning = ambiq_sdio_execute_tuning,
 	.card_busy = ambiq_sdio_card_busy,
 	.get_host_props = ambiq_sdio_get_host_props,
 	.enable_interrupt  = ambiq_sdio_card_interrupt_enable,
