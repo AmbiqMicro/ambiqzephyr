@@ -31,6 +31,8 @@ struct ambiq_sdio_config {
 struct ambiq_sdio_data {
 	am_hal_card_t card;
 	am_hal_card_host_t *host;
+	sdhc_interrupt_cb_t sdio_cb;
+	void *sdio_cb_user_data;
 	struct k_mutex access_mutex;
 #ifdef CONFIG_AMBIQ_SDIO_ASYNC
 	struct k_sem *async_sem;
@@ -416,13 +418,56 @@ static int ambiq_sdio_request(const struct device *dev,
 	return ret;
 }
 
+static int ambiq_sdio_card_interrupt_enable(const struct device *dev, sdhc_interrupt_cb_t callback,
+					  int sources, void *user_data)
+{
+	struct ambiq_sdio_data *data = dev->data;
+	uint32_t ui32Status = 0;
+
+	data->sdio_cb = callback;
+	data->sdio_cb_user_data = user_data;
+
+	if (sources & SDHC_INT_SDIO)
+	{
+		ui32Status = am_hal_sdio_card_func_interrupt_enable(&data->card, data->card.ui32FuncNum);
+		if (ui32Status != AM_HAL_STATUS_SUCCESS)
+		{
+			return -EIO;
+		}
+	}
+
+	return 0;
+}
+
+static int ambiq_sdio_card_interrupt_disable(const struct device *dev, int sources)
+{
+	struct ambiq_sdio_data *data = dev->data;
+	uint32_t ui32Status = 0;
+
+	if (sources & SDHC_INT_SDIO)
+	{
+		ui32Status = am_hal_sdio_card_func_interrupt_disable(&data->card, data->card.ui32FuncNum);
+		if (ui32Status != AM_HAL_STATUS_SUCCESS)
+		{
+			return -EIO;
+		}
+	}
+
+	data->sdio_cb = NULL;
+	data->sdio_cb_user_data = NULL;
+
+	return 0;
+}
+
 static const struct sdhc_driver_api ambiq_sdio_api = {
 	.reset = ambiq_sdio_reset,
-	.get_host_props = ambiq_sdio_get_host_props,
+	.request = ambiq_sdio_request,
 	.set_io = ambiq_sdio_set_io,
 	.get_card_present = ambiq_sdio_get_card_present,
-	.request = ambiq_sdio_request,
 	.card_busy = ambiq_sdio_card_busy,
+	.get_host_props = ambiq_sdio_get_host_props,
+	.enable_interrupt  = ambiq_sdio_card_interrupt_enable,
+	.disable_interrupt  = ambiq_sdio_card_interrupt_disable,
 };
 
 
