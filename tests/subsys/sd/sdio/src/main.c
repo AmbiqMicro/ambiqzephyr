@@ -10,7 +10,7 @@
 #include <zephyr/ztest.h>
 
 
-static const struct device *sdhc_dev = DEVICE_DT_GET(DT_ALIAS(sdhc0));
+static const struct device *sdhc_dev = DEVICE_DT_GET(DT_ALIAS(sdhc1));
 static struct sd_card card;
 
 /*
@@ -26,6 +26,7 @@ ZTEST(sd_stack, test_0_init)
 	ret = sd_is_card_present(sdhc_dev);
 	zassert_equal(ret, 1, "SD card not present in slot");
 
+	card.switch_caps.bus_speed = UHS_SDR50_BUS_SPEED | HIGH_SPEED_BUS_SPEED | UHS_SDR12_BUS_SPEED;
 	ret = sd_init(sdhc_dev, &card);
 	zassert_equal(ret, 0, "Card initialization failed");
 }
