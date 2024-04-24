@@ -116,6 +116,7 @@ static int ambiq_sdio_get_host_props(const struct device *dev,
 	props->host_caps.vol_330_support = false;
 	props->host_caps.vol_300_support = false;
 	props->host_caps.vol_180_support = true;
+	props->host_caps.bus_4_bit_support = true;
 	props->host_caps.bus_8_bit_support = true;
 	props->max_current_330 = 1024;
 	return 0;
@@ -124,6 +125,9 @@ static int ambiq_sdio_get_host_props(const struct device *dev,
 static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 {
 	struct ambiq_sdio_data *data = dev->data;
+	am_hal_host_bus_voltage_e eBusVoltage;
+	am_hal_host_bus_width_e eBusWidth;
+	uint32_t ui32Status = 0;
 
 	LOG_DBG("%s(SDIO clock_freq=%d, bus_width=%d, timing=%d, mode=%d)", __func__, ios->clock,
 		ios->bus_width, ios->timing, ios->bus_mode);
@@ -145,13 +149,13 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 	switch (ios->bus_width)
 	{
 		case SDHC_BUS_WIDTH1BIT:
-			data->card.cfg.eBusWidth = AM_HAL_HOST_BUS_WIDTH_1;
+			eBusWidth = AM_HAL_HOST_BUS_WIDTH_1;
 			break;
 		case SDHC_BUS_WIDTH4BIT:
-			data->card.cfg.eBusWidth = AM_HAL_HOST_BUS_WIDTH_4;
+			eBusWidth = AM_HAL_HOST_BUS_WIDTH_4;
 			break;
 		case SDHC_BUS_WIDTH8BIT:
-			data->card.cfg.eBusWidth = AM_HAL_HOST_BUS_WIDTH_8;
+			eBusWidth = AM_HAL_HOST_BUS_WIDTH_8;
 			break;
 		default:
 			return -ENOTSUP;
@@ -160,13 +164,13 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 	switch (ios->signal_voltage)
 	{
 		case SD_VOL_3_3_V:
-			data->card.cfg.eIoVoltage = AM_HAL_HOST_BUS_VOLTAGE_3_3;
+			eBusVoltage = AM_HAL_HOST_BUS_VOLTAGE_3_3;
 			break;
 		case SD_VOL_3_0_V:
-			data->card.cfg.eIoVoltage = AM_HAL_HOST_BUS_VOLTAGE_3_0;
+			eBusVoltage = AM_HAL_HOST_BUS_VOLTAGE_3_0;
 			break;
 		case SD_VOL_1_8_V:
-			data->card.cfg.eIoVoltage = AM_HAL_HOST_BUS_VOLTAGE_1_8;
+			eBusVoltage = AM_HAL_HOST_BUS_VOLTAGE_1_8;
 			break;
 		default:
 			return -ENOTSUP;
@@ -175,6 +179,26 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 	if (ios->signal_voltage != SD_VOL_1_8_V)
 	{
 		return -ENOTSUP;
+	}
+
+	if (eBusVoltage != data->card.cfg.eIoVoltage)
+	{
+		data->card.cfg.eIoVoltage = eBusVoltage;
+		ui32Status = data->card.pHost->ops->set_bus_voltage(data->card.pHost->pHandle, eBusVoltage);
+		if (ui32Status != AM_HAL_STATUS_SUCCESS)
+		{
+			return -ENOTSUP;
+		}
+	}
+
+	if (eBusWidth != data->card.cfg.eBusWidth)
+	{
+		data->card.cfg.eBusWidth = eBusWidth;
+		ui32Status = data->card.pHost->ops->set_bus_width(data->card.pHost->pHandle, eBusWidth);
+		if (ui32Status != AM_HAL_STATUS_SUCCESS)
+		{
+			return -ENOTSUP;
+		}
 	}
 
 	return 0;
