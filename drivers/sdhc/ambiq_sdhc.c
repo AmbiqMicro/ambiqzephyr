@@ -269,7 +269,7 @@ static int ambiq_sdio_get_card_present(const struct device *dev)
 
 	LOG_DBG("Get card present status");
 
-	return am_hal_sdhc_get_cd(data->card.pHost->pHandle);
+	return data->card.pHost->ops->get_cd(data->card.pHost->pHandle);
 }
 
 
