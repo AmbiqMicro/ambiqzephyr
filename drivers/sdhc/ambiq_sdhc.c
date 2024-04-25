@@ -26,6 +26,8 @@ struct ambiq_sdio_config {
 	const struct pinctrl_dev_config *pincfg;
 	void (*irq_config_func)(const struct device *dev);
 	uint32_t inst;
+	uint8_t  tx_delay;
+	uint8_t  rx_delay;
 };
 
 struct ambiq_sdio_data {
@@ -276,10 +278,32 @@ static int ambiq_sdio_init(const struct device *dev)
 
 static int ambiq_sdio_execute_tuning(const struct device *dev)
 {
+	const struct ambiq_sdio_config *config = dev->config;
 	struct ambiq_sdio_data *data = dev->data;
 	uint8_t ui8TxRxDelays[2] = {0};
 
-	am_hal_card_host_set_txrx_delay(data->host,ui8TxRxDelays);
+	if ( config->tx_delay <  16 )
+	{
+		ui8TxRxDelays[0] = config->tx_delay;
+	}
+	else
+	{
+		return -EINVAL;
+	}
+
+	if ( config->rx_delay <  32 )
+	{
+		ui8TxRxDelays[1] = config->rx_delay;
+	}
+	else
+	{
+		return -EINVAL;
+	}
+
+	if (ui8TxRxDelays[0] != 0 || ui8TxRxDelays[1] != 0)
+	{
+		am_hal_card_host_set_txrx_delay(data->host,ui8TxRxDelays);
+	}
 
 	return 0;
 }
@@ -508,6 +532,8 @@ static const struct sdhc_driver_api ambiq_sdio_api = {
 		.pincfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),			\
 		.irq_config_func = sdio_##n##_irq_config_func,			\
 		.inst = n,                                              \
+		.tx_delay = DT_INST_PROP(n, txdelay),            \
+		.rx_delay = DT_INST_PROP(n, rxdelay),            \
 	};									\
 										\
 	static struct ambiq_sdio_data ambiq_sdio_data_##n;          \
