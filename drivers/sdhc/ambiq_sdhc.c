@@ -366,7 +366,7 @@ static int ambiq_sdio_request(const struct device *dev,
 #endif
 		if (cmd_data.ui32BlkCnt > 1)
 		{
-			sdio_cmd.bAutoCMD12 = true;
+			sdio_cmd.bAutoCMD23 = true;
 		}
 
 		if (sdio_cmd.ui8Idx == MMC_CMD_WRITE_SINGLE_BLOCK || sdio_cmd.ui8Idx == MMC_CMD_WRITE_MULTIPLE_BLOCK )
