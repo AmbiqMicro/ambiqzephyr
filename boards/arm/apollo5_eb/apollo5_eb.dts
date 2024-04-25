@@ -55,11 +55,7 @@
 &sdio1 {
 	pinctrl-0 = <&sdio1_default>;
 	pinctrl-names = "default";
-	txdelay = <0>;
-	rxdelay = <0>;
+	txdelay = <9>;
+	rxdelay = <11>;
 	status = "okay";
-	sdmmc {
-		compatible = "zephyr,sdmmc-disk";
-		status = "okay";
-	};
 };
