@@ -467,19 +467,9 @@ static int ambiq_sdio_card_interrupt_enable(const struct device *dev, sdhc_inter
 					  int sources, void *user_data)
 {
 	struct ambiq_sdio_data *data = dev->data;
-	uint32_t ui32Status = 0;
 
 	data->sdio_cb = callback;
 	data->sdio_cb_user_data = user_data;
-
-	if (sources & SDHC_INT_SDIO)
-	{
-		ui32Status = am_hal_sdio_card_func_interrupt_enable(&data->card, data->card.ui32FuncNum);
-		if (ui32Status != AM_HAL_STATUS_SUCCESS)
-		{
-			return -EIO;
-		}
-	}
 
 	return 0;
 }
@@ -487,16 +477,6 @@ static int ambiq_sdio_card_interrupt_enable(const struct device *dev, sdhc_inter
 static int ambiq_sdio_card_interrupt_disable(const struct device *dev, int sources)
 {
 	struct ambiq_sdio_data *data = dev->data;
-	uint32_t ui32Status = 0;
-
-	if (sources & SDHC_INT_SDIO)
-	{
-		ui32Status = am_hal_sdio_card_func_interrupt_disable(&data->card, data->card.ui32FuncNum);
-		if (ui32Status != AM_HAL_STATUS_SUCCESS)
-		{
-			return -EIO;
-		}
-	}
 
 	data->sdio_cb = NULL;
 	data->sdio_cb_user_data = NULL;
