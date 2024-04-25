@@ -359,11 +359,7 @@ static int ambiq_sdio_request(const struct device *dev,
 		cmd_data.ui32BlkCnt = data->blocks;
 		cmd_data.ui32BlkSize = data->block_size;
 		cmd_data.pui8Buf = data->data;
-#ifdef CONFIG_AMBIQ_SDIO_ASYNC
-		sdio_cmd.bASync = true;
-		dev_data->card.pHost->AsyncCmd = sdio_cmd;
-		dev_data->card.pHost->AsyncCmdData = cmd_data;
-#endif
+
 		if (sdio_cmd.ui8Idx == MMC_CMD_READ_MULTIPLE_BLOCK || sdio_cmd.ui8Idx == MMC_CMD_WRITE_MULTIPLE_BLOCK)
 		{
 			sdio_cmd.bAutoCMD23 = true;
@@ -407,6 +403,15 @@ static int ambiq_sdio_request(const struct device *dev,
 		LOG_DBG("Set CheckBusyCmd");
 		sdio_cmd.bCheckBusyCmd = true;
 	}
+
+#ifdef CONFIG_AMBIQ_SDIO_ASYNC
+	if (data)
+	{
+		sdio_cmd.bASync = true;
+		dev_data->card.pHost->AsyncCmd = sdio_cmd;
+		dev_data->card.pHost->AsyncCmdData = cmd_data;
+	}
+#endif
 
 	ret = k_mutex_lock(&dev_data->access_mutex, K_MSEC(cmd->timeout_ms));
 	if (ret) {
