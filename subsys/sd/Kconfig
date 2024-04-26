@@ -28,6 +28,16 @@ config SD_STACK
 	help
 	  Enable SD card support.
 
+if MMC_STACK
+
+config MMC_DDR50
+	bool "MMC DDR50 mode support"
+	default n
+	help
+		Enable MMC DDR50 mode.
+
+endif # MMC_STACK
+
 if SD_STACK
 
 module = SD

@@ -138,6 +138,7 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 	struct ambiq_sdio_data *data = dev->data;
 	am_hal_host_bus_voltage_e eBusVoltage;
 	am_hal_host_bus_width_e eBusWidth;
+	am_hal_host_uhs_mode_e eUHSMode = AM_HAL_HOST_UHS_SDR50;
 	uint32_t ui32Status = 0;
 
 	LOG_DBG("%s(SDIO clock_freq=%d, bus_width=%d, timing=%d, mode=%d)", __func__, ios->clock,
@@ -150,6 +151,7 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 	else if (ios->clock != 0 && (ios->clock > AMBIQ_SDIO_FREQ_MAX) && (ios->clock <= MMC_CLOCK_HS200))
 	{
 		data->card.cfg.ui32Clock = AMBIQ_SDIO_FREQ_MAX;
+		eUHSMode = AM_HAL_HOST_UHS_SDR104;
 	}
 	else if (ios->clock != 0)
 	{
@@ -220,6 +222,21 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 	if (ui32Status != AM_HAL_STATUS_SUCCESS)
 	{
 		return -ENOTSUP;
+	}
+
+	if (ios->timing == SDHC_TIMING_DDR52 )
+	{
+		eUHSMode = AM_HAL_HOST_UHS_DDR50;
+	}
+
+	if (eUHSMode != data->card.cfg.eUHSMode)
+	{
+		data->card.cfg.eUHSMode = eUHSMode;
+		ui32Status = data->card.pHost->ops->set_uhs_mode(data->card.pHost->pHandle, eUHSMode);
+		if (ui32Status != AM_HAL_STATUS_SUCCESS)
+		{
+			return -ENOTSUP;
+		}
 	}
 
 	return 0;
