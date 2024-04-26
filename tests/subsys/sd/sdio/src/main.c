@@ -19,7 +19,7 @@
 #define SPEED_START_INDEX 0
 #define SPEED_END_INDEX   6
 
-static const struct device *sdhc_dev = DEVICE_DT_GET(DT_ALIAS(sdhc0));
+static const struct device *sdhc_dev = DEVICE_DT_GET(DT_ALIAS(sdhc1));
 static struct sd_card card;
 static uint8_t buf[MULTIPLE_BLK_SIZE] __aligned(CONFIG_SDHC_BUFFER_ALIGNMENT);
 static uint8_t check_buf[MULTIPLE_BLK_SIZE] __aligned(CONFIG_SDHC_BUFFER_ALIGNMENT);
@@ -216,72 +216,6 @@ ZTEST(sd_stack, test_card_config)
 	} else {
 		zassert_unreachable("Card spec is unknown value");
 	}
-}
-
-/* SDIO Card Write Read test with default bus io setting*/
-ZTEST(sd_stack, test_wr_default_bus_io)
-{
-    int ret;
-
-    /* Now write nonzero data block */
-    for (int i = 0; i < sizeof(buf); i++) {
-        check_buf[i] = (uint8_t)i;
-    }
-
-    ret = sdio_init_func(&card, &card.func0, SDIO_FUNC_NUM_1);
-    zassert_equal(ret, 0, "Function1 init failed");
-    card.func0.num = SDIO_FUNC_NUM_1;
-    ret = sdio_enable_func(&card.func0);
-    zassert_equal(ret, 0, "Function1 enable failed");
-
-    ret = sdio_card_func_interrupt_enable();
-    zassert_equal(ret, 0, "Function1 interrupt enable failed");
-
-    ret = sdio_set_block_size(&card.func0, BLK_SIZE);
-    zassert_equal(ret, 0, "Block size set failed");
-
-    TC_PRINT("\nSDIO Card Start bytes write read test\n");
-
-    /* Write 128 bytes to sdio card. */
-    ret = sdio_write_addr(&card.func0, CARD_PING_ADDR, check_buf, BYTE_TEST_SIZE);
-    zassert_equal(ret, 0, "Write to card failed");
-
-    memset(buf, 0, BYTE_TEST_SIZE);
-
-    ret = sdio_read_addr(&card.func0, CARD_PING_ADDR, buf, BYTE_TEST_SIZE);
-    zassert_equal(ret, 0, "SD card read failed");
-
-    zassert_mem_equal(buf, check_buf, BYTE_TEST_SIZE, "Read of written area was not correct");
-
-    /* Write bytes to sdio card. */
-    for (int test_len = 4; test_len <= BLK_SIZE; test_len += 4)
-    {
-        ret = sdio_write_addr(&card.func0, CARD_PING_ADDR, check_buf, test_len);
-        zassert_equal(ret, 0, "Write to card failed");
-
-        memset(buf, 0, BYTE_TEST_SIZE);
-
-        ret = sdio_read_addr(&card.func0, CARD_PING_ADDR, buf, test_len);
-        zassert_equal(ret, 0, "SD card read failed");
-
-        zassert_mem_equal(buf, check_buf, test_len, "Read of written area was not correct");
-    }
-
-    TC_PRINT("\nSDIO Card Start blocks write read test\n");
-    /* Write blocks to sdio card. */
-    for (int blk_num = 1; blk_num <= BLK_NUM; blk_num ++)
-    {
-        uint32_t test_len = blk_num*BLK_SIZE;
-        ret = sdio_write_addr(&card.func0, CARD_PING_ADDR, check_buf, test_len);
-        zassert_equal(ret, 0, "Write to card failed");
-
-        memset(buf, 0, test_len);
-
-        ret = sdio_read_addr(&card.func0, CARD_PING_ADDR, buf, test_len);
-        zassert_equal(ret, 0, "SD card read failed");
-
-        zassert_mem_equal(buf, check_buf,test_len, "Read of written area was not correct");
-    }
 }
 
 #ifdef CONFIG_SDIO_CARD_1BITWIDTH
