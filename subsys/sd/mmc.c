@@ -478,6 +478,17 @@ static int mmc_set_ddr50_timing(struct sd_card *card, struct mmc_ext_csd *ext)
 	    card->host_props.host_caps.ddr50_support &&
 	    (card->bus_io.bus_width >= SDHC_BUS_WIDTH4BIT)) {
 
+		cmd.arg = MMC_SWITCH_HS_TIMING_ARG;
+		cmd.opcode = SD_SWITCH;
+		cmd.response_type = SD_RSP_TYPE_R1b;
+		cmd.timeout_ms = CONFIG_SD_CMD_TIMEOUT;
+		ret = sdhc_request(card->sdhc, &cmd, NULL);
+		sdmmc_wait_ready(card);
+		if (ret) {
+			LOG_ERR("Setting HS Timing mode failed: %d", ret);
+			return ret;
+		}
+
 		if (card->bus_io.bus_width == SDHC_BUS_WIDTH4BIT) {
 			cmd.arg = MMC_SWITCH_4_BIT_DDR_BUS_ARG;
 		}
@@ -502,6 +513,7 @@ static int mmc_set_ddr50_timing(struct sd_card *card, struct mmc_ext_csd *ext)
 		if (ret) {
 			return ret;
 		}
+		card->card_speed = MMC_HS_TIMING;
 	} else {
 		return -ENOTSUP;
 	}

@@ -227,6 +227,7 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 	if (ios->timing == SDHC_TIMING_DDR52 )
 	{
 		eUHSMode = AM_HAL_HOST_UHS_DDR50;
+		LOG_DBG("MMC Card DDR50 Mode");
 	}
 
 	if (eUHSMode != data->card.cfg.eUHSMode)
@@ -419,6 +420,11 @@ static int ambiq_sdio_request(const struct device *dev,
 	{
 		LOG_DBG("Set CheckBusyCmd");
 		sdio_cmd.bCheckBusyCmd = true;
+		sdio_cmd.ui32RespType = MMC_RSP_R1b;
+	}
+	else if (sdio_cmd.ui8Idx == 17 || sdio_cmd.ui8Idx == 18 || sdio_cmd.ui8Idx == 24 || sdio_cmd.ui8Idx == 25)
+	{
+		sdio_cmd.ui32RespType = MMC_RSP_R1;
 	}
 
 #ifdef CONFIG_AMBIQ_SDIO_ASYNC
