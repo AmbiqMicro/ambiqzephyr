@@ -652,7 +652,11 @@ int sdio_card_init(struct sd_card *card)
 		((card->cccr_flags & SDIO_SUPPORT_HS) ||
 		(card->cccr_flags & SDIO_SUPPORT_4BIT_LS_BUS))) {
 		/* Raise bus width to 4 bits */
+#ifdef CONFIG_SDIO_CARD_1BITWIDTH
+		ret = sdio_set_bus_width(card, SDHC_BUS_WIDTH1BIT);
+#else
 		ret = sdio_set_bus_width(card, SDHC_BUS_WIDTH4BIT);
+#endif
 		if (ret) {
 			return ret;
 		}

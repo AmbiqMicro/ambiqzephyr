@@ -28,6 +28,13 @@ config SD_STACK
 	help
 	  Enable SD card support.
 
+config SDIO_CARD_1BITWIDTH
+	bool "SDIO CARD 1 bit width support"
+	default n
+	select SDHC
+	help
+	  Enable SDIO card 1 bit width.
+
 if MMC_STACK
 
 config MMC_DDR50

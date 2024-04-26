@@ -93,6 +93,9 @@ void prepare_data_pattern(uint32_t pattern_index, uint8_t* buff, uint32_t len)
     }
 }
 
+/*
+ * Enable SDIO card function's interrupt
+ */
 static int sdio_card_func_interrupt_enable(void)
 {
 	int ret;
@@ -215,8 +218,8 @@ ZTEST(sd_stack, test_card_config)
 	}
 }
 
-/* SDIO Card Write Read bytes test*/
-ZTEST(sd_stack, test_rw)
+/* SDIO Card Write Read test with default bus io setting*/
+ZTEST(sd_stack, test_wr_default_bus_io)
 {
     int ret;
 
@@ -237,7 +240,7 @@ ZTEST(sd_stack, test_rw)
     ret = sdio_set_block_size(&card.func0, BLK_SIZE);
     zassert_equal(ret, 0, "Block size set failed");
 
-    TC_PRINT("\nSDIO Card Start bytess write read test\n");
+    TC_PRINT("\nSDIO Card Start bytes write read test\n");
 
     /* Write 128 bytes to sdio card. */
     ret = sdio_write_addr(&card.func0, CARD_PING_ADDR, check_buf, BYTE_TEST_SIZE);
@@ -281,8 +284,80 @@ ZTEST(sd_stack, test_rw)
     }
 }
 
-/* SDIO Card different clock test*/
-ZTEST(sd_stack, test_rw_clock)
+#ifdef CONFIG_SDIO_CARD_1BITWIDTH
+/* SDIO Card different clock test in 1bitwidth*/
+ZTEST(sd_stack, test_wr_clock_1bit_width)
+{
+    int ret;
+
+    ret = sd_init(sdhc_dev, &card);
+    zassert_equal(ret, 0, "Card initialization failed");
+
+    for (uint32_t speed_index = SPEED_START_INDEX; speed_index < SPEED_END_INDEX; speed_index++)
+    {
+        TC_PRINT("\nSDIO Card transefer clock = %s, bit width =%d\n",sdio_test_speeds[speed_index].string, card.bus_io.bus_width);
+
+        card.bus_io.clock = sdio_test_speeds[speed_index].speed;
+        card.bus_io.bus_width = SDHC_BUS_WIDTH1BIT;
+        ret = sdhc_set_io(card.sdhc, &card.bus_io);
+        zassert_equal(ret, 0, "Set sdhc io clock failed");
+
+        for (int i = 0; i < sizeof(buf); i++) {
+            check_buf[i] = (uint8_t)i;
+        }
+
+        ret = sdio_init_func(&card, &card.func0, SDIO_FUNC_NUM_1);
+        zassert_equal(ret, 0, "Function1 init failed");
+
+        card.func0.num = SDIO_FUNC_NUM_1;
+        ret = sdio_enable_func(&card.func0);
+        zassert_equal(ret, 0, "Function1 enable failed");
+
+        ret = sdio_card_func_interrupt_enable();
+        zassert_equal(ret, 0, "Function1 interrupt enable failed");
+
+        ret = sdio_set_block_size(&card.func0, BLK_SIZE);
+        zassert_equal(ret, 0, "Block size set failed");
+
+        TC_PRINT("\nSDIO Card Start bytes write read test\n");
+
+        /* Write bytes to sdio card. */
+        for (int test_len = 4; test_len <= BLK_SIZE; test_len += 4)
+        {
+            ret = sdio_write_addr(&card.func0, CARD_PING_ADDR, check_buf, test_len);
+            zassert_equal(ret, 0, "Write to card failed");
+
+            memset(buf, 0, BYTE_TEST_SIZE);
+
+            ret = sdio_read_addr(&card.func0, CARD_PING_ADDR, buf, test_len);
+            zassert_equal(ret, 0, "SD card read failed");
+
+            zassert_mem_equal(buf, check_buf, test_len, "Read of written area was not correct");
+        }
+
+        /* Now write nonzero data block */
+        prepare_data_pattern(speed_index, check_buf, MULTIPLE_BLK_SIZE);
+
+        TC_PRINT("\nSDIO Card Start blocks write data\n");
+        /* Write blocks to sdio card. */
+        for (int blk_num = 1; blk_num <= BLK_NUM; blk_num ++)
+        {
+            uint32_t test_len = blk_num*BLK_SIZE;
+            ret = sdio_write_addr(&card.func0, CARD_PING_ADDR, check_buf, test_len);
+            zassert_equal(ret, 0, "Write to card failed");
+
+            memset(buf, 0, test_len);
+
+            ret = sdio_read_addr(&card.func0, CARD_PING_ADDR, buf, test_len);
+            zassert_equal(ret, 0, "SD card read failed");
+
+            zassert_mem_equal(buf, check_buf,test_len, "Read of written area was not correct");
+        }
+    }
+}
+#else
+/* SDIO Card different clock test in 4 bitwidth*/
+ZTEST(sd_stack, test_wr_clock_4bit_width)
 {
     int ret;
 
@@ -351,5 +426,7 @@ ZTEST(sd_stack, test_rw_clock)
         }
     }
 }
+
+#endif
 
 ZTEST_SUITE(sd_stack, NULL, NULL, NULL, NULL, NULL);
