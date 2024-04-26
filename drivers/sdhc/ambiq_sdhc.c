@@ -201,7 +201,7 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 	if (eBusVoltage != data->card.cfg.eIoVoltage)
 	{
 		data->card.cfg.eIoVoltage = eBusVoltage;
-		ui32Status = data->card.pHost->ops->set_bus_voltage(data->card.pHost->pHandle, eBusVoltage);
+		ui32Status = data->host->ops->set_bus_voltage(data->host->pHandle, eBusVoltage);
 		if (ui32Status != AM_HAL_STATUS_SUCCESS)
 		{
 			return -ENOTSUP;
@@ -211,14 +211,14 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 	if (eBusWidth != data->card.cfg.eBusWidth)
 	{
 		data->card.cfg.eBusWidth = eBusWidth;
-		ui32Status = data->card.pHost->ops->set_bus_width(data->card.pHost->pHandle, eBusWidth);
+		ui32Status = data->host->ops->set_bus_width(data->host->pHandle, eBusWidth);
 		if (ui32Status != AM_HAL_STATUS_SUCCESS)
 		{
 			return -ENOTSUP;
 		}
 	}
 
-	ui32Status = data->card.pHost->ops->set_bus_clock(data->card.pHost->pHandle, data->card.cfg.ui32Clock);
+	ui32Status = data->host->ops->set_bus_clock(data->host->pHandle, data->card.cfg.ui32Clock);
 	if (ui32Status != AM_HAL_STATUS_SUCCESS)
 	{
 		return -ENOTSUP;
@@ -233,7 +233,7 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 	if (eUHSMode != data->card.cfg.eUHSMode)
 	{
 		data->card.cfg.eUHSMode = eUHSMode;
-		ui32Status = data->card.pHost->ops->set_uhs_mode(data->card.pHost->pHandle, eUHSMode);
+		ui32Status = data->host->ops->set_uhs_mode(data->host->pHandle, eUHSMode);
 		if (ui32Status != AM_HAL_STATUS_SUCCESS)
 		{
 			return -ENOTSUP;
@@ -332,7 +332,7 @@ static int ambiq_sdio_get_card_present(const struct device *dev)
 
 	LOG_DBG("Get card present status");
 
-	return data->card.pHost->ops->get_cd(data->card.pHost->pHandle);
+	return data->host->ops->get_cd(data->host->pHandle);
 }
 
 
@@ -341,7 +341,7 @@ static int ambiq_sdio_card_busy(const struct device *dev)
 	struct ambiq_sdio_data *data = dev->data;
 	uint32_t ui32Status;
 
-	ui32Status = data->card.pHost->ops->card_busy(data->card.pHost->pHandle, DEFAULT_GET_STATUS_TIMEOUT_MS);
+	ui32Status = data->host->ops->card_busy(data->host->pHandle, DEFAULT_GET_STATUS_TIMEOUT_MS);
 	LOG_DBG("Check card busy status");
 
 	return (ui32Status != AM_HAL_STATUS_SUCCESS) ? 1 : 0;
@@ -431,8 +431,8 @@ static int ambiq_sdio_request(const struct device *dev,
 	if (data)
 	{
 		sdio_cmd.bASync = true;
-		dev_data->card.pHost->AsyncCmd = sdio_cmd;
-		dev_data->card.pHost->AsyncCmdData = cmd_data;
+		dev_data->host->AsyncCmd = sdio_cmd;
+		dev_data->host->AsyncCmdData = cmd_data;
 	}
 #endif
 
@@ -447,7 +447,7 @@ static int ambiq_sdio_request(const struct device *dev,
 #ifdef CONFIG_AMBIQ_SDIO_ASYNC
 		k_sem_reset(dev_data->async_sem);
 #endif
-		ui32Status = dev_data->card.pHost->ops->execute_cmd(dev_data->card.pHost->pHandle, &sdio_cmd, &cmd_data);
+		ui32Status = dev_data->host->ops->execute_cmd(dev_data->host->pHandle, &sdio_cmd, &cmd_data);
 #ifdef CONFIG_AMBIQ_SDIO_ASYNC
 		if ((ui32Status & 0xFFFF) == AM_HAL_STATUS_SUCCESS)
 		{
@@ -460,7 +460,7 @@ static int ambiq_sdio_request(const struct device *dev,
 	}
 	else
 	{
-		ui32Status = dev_data->card.pHost->ops->execute_cmd(dev_data->card.pHost->pHandle, &sdio_cmd, NULL);
+		ui32Status = dev_data->host->ops->execute_cmd(dev_data->host->pHandle, &sdio_cmd, NULL);
 	}
 	if ((ui32Status & 0xFFFF) != AM_HAL_STATUS_SUCCESS)
 	{
