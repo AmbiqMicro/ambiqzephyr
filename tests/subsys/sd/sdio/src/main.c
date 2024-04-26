@@ -270,7 +270,7 @@ ZTEST(sd_stack, test_wr_clock_1bit_width)
         }
 
         /* Now write nonzero data block */
-        prepare_data_pattern(speed_index, check_buf, MULTIPLE_BLK_SIZE);
+        prepare_data_pattern(speed_index%5, check_buf, MULTIPLE_BLK_SIZE);
 
         TC_PRINT("\nSDIO Card Start blocks write data\n");
         /* Write blocks to sdio card. */
@@ -341,7 +341,7 @@ ZTEST(sd_stack, test_wr_clock_4bit_width)
         }
 
         /* Now write nonzero data block */
-        prepare_data_pattern(speed_index, check_buf, MULTIPLE_BLK_SIZE);
+        prepare_data_pattern(speed_index%5, check_buf, MULTIPLE_BLK_SIZE);
 
         TC_PRINT("\nSDIO Card Start blocks write data\n");
         /* Write blocks to sdio card. */
