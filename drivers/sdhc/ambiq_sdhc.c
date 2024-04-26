@@ -141,7 +141,7 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 	am_hal_host_uhs_mode_e eUHSMode = AM_HAL_HOST_UHS_SDR50;
 	uint32_t ui32Status = 0;
 
-	LOG_DBG("%s(SDIO clock_freq=%d, bus_width=%d, timing=%d, mode=%d)", __func__, ios->clock,
+	LOG_DBG("(SDIO clock_freq=%d, bus_width=%d, timing_mode=%d, bus_mode=%d)", ios->clock,
 		ios->bus_width, ios->timing, ios->bus_mode);
 
 	if (ios->clock != 0 && (ios->clock <= AMBIQ_SDIO_FREQ_MAX) && (ios->clock >= AMBIQ_SDIO_FREQ_MIN))
