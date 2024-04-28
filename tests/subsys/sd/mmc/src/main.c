@@ -323,7 +323,7 @@ ZTEST(sd_stack, test_wr_multiple_mode_ddr)
     int blk_cnt = 0;
     int loopcnt = 0;
 
-    for (uint32_t bitwidth = 2; bitwidth < WIDTH_END_INDEX; bitwidth++) {
+    for (uint32_t bitwidth = 1; bitwidth < WIDTH_END_INDEX; bitwidth++) {
         for (uint32_t speed_index = 1; speed_index < SPEED_END_INDEX; speed_index++) {
 
             card.bus_width = sdio_test_widths[bitwidth].width;
@@ -380,8 +380,14 @@ ZTEST(sd_stack, test_wr_multiple_mode)
 
             card.bus_width = sdio_test_widths[bitwidth].width;
             card.bus_io.clock = sdio_test_speeds[speed_index].speed;
-            if ( sdio_test_speeds[speed_index].speed  < 96000000 ) {
-                    card.host_props.host_caps.hs200_support = false;
+
+            if ( (sdio_test_speeds[speed_index].speed == 96000000 && card.host_props.host_caps.hs200_support == false) 
+               ||(sdio_test_speeds[speed_index].speed == 48000000 && card.host_props.host_caps.hs200_support == true)) {
+                    continue;
+            }
+
+            if ( (sdio_test_speeds[speed_index].speed  == 96000000) && (sdio_test_widths[bitwidth].width == SDHC_BUS_WIDTH1BIT) ) {
+                    continue;
             }
 
             ret = sd_init(sdhc_dev, &card);
