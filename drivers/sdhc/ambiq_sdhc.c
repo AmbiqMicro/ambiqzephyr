@@ -621,7 +621,7 @@ static int ambiq_sdio_pm_action(const struct device *dev,
 	PM_DEVICE_DT_INST_DEFINE(n, ambiq_sdio_pm_action);					\
 	DEVICE_DT_INST_DEFINE(n,											\
 		&ambiq_sdio_init,												\
-		NULL,															\
+		PM_DEVICE_DT_INST_GET(n),										\
 		&ambiq_sdio_data_##n,											\
 		&ambiq_sdio_config_##n,											\
 		POST_KERNEL,													\
