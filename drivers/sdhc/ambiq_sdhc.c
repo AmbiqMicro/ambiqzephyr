@@ -47,39 +47,35 @@ struct ambiq_sdio_data {
 static K_SEM_DEFINE(sdio_async_sem_0, 0, 1);
 static void ambiq_sdio_event_cb_0(am_hal_host_evt_t *pEvt)
 {
-    am_hal_card_host_t *pHost = (am_hal_card_host_t *)pEvt->pCtx;
+	am_hal_card_host_t *pHost = (am_hal_card_host_t *)pEvt->pCtx;
 
-    if (AM_HAL_EVT_XFER_COMPLETE == pEvt->eType &&
-        pHost->AsyncCmdData.dir == AM_HAL_DATA_DIR_READ)
-    {
-        LOG_DBG("Last Read Xfered block %d\n", pEvt->ui32BlkCnt);
+	if (AM_HAL_EVT_XFER_COMPLETE == pEvt->eType &&
+		pHost->AsyncCmdData.dir == AM_HAL_DATA_DIR_READ) {
+		LOG_DBG("Last Read Xfered block %d\n", pEvt->ui32BlkCnt);
 		k_sem_give(&sdio_async_sem_0);
-    }
+	}
 	else if (AM_HAL_EVT_XFER_COMPLETE == pEvt->eType &&
-        pHost->AsyncCmdData.dir == AM_HAL_DATA_DIR_WRITE)
-    {
-        LOG_DBG("Last Write Xfered block %d\n", pEvt->ui32BlkCnt);
+		pHost->AsyncCmdData.dir == AM_HAL_DATA_DIR_WRITE) {
+		LOG_DBG("Last Write Xfered block %d\n", pEvt->ui32BlkCnt);
 		k_sem_give(&sdio_async_sem_0);
-    }
+	}
 }
 
 static K_SEM_DEFINE(sdio_async_sem_1, 0, 1);
 static void ambiq_sdio_event_cb_1(am_hal_host_evt_t *pEvt)
 {
-    am_hal_card_host_t *pHost = (am_hal_card_host_t *)pEvt->pCtx;
+	am_hal_card_host_t *pHost = (am_hal_card_host_t *)pEvt->pCtx;
 
-    if (AM_HAL_EVT_XFER_COMPLETE == pEvt->eType &&
-        pHost->AsyncCmdData.dir == AM_HAL_DATA_DIR_READ)
-    {
-        LOG_DBG("Last Read Xfered block %d\n", pEvt->ui32BlkCnt);
+	if (AM_HAL_EVT_XFER_COMPLETE == pEvt->eType &&
+		pHost->AsyncCmdData.dir == AM_HAL_DATA_DIR_READ) {
+		LOG_DBG("Last Read Xfered block %d\n", pEvt->ui32BlkCnt);
 		k_sem_give(&sdio_async_sem_1);
-    }
-    else if (AM_HAL_EVT_XFER_COMPLETE == pEvt->eType &&
-        pHost->AsyncCmdData.dir == AM_HAL_DATA_DIR_WRITE)
-    {
-        LOG_DBG("Last Write Xfered block %d\n", pEvt->ui32BlkCnt);
+	}
+	else if (AM_HAL_EVT_XFER_COMPLETE == pEvt->eType &&
+		pHost->AsyncCmdData.dir == AM_HAL_DATA_DIR_WRITE) {
+		LOG_DBG("Last Write Xfered block %d\n", pEvt->ui32BlkCnt);
 		k_sem_give(&sdio_async_sem_1);
-    }
+	}
 }
 #endif
 
@@ -100,8 +96,7 @@ static int ambiq_sdio_reset(const struct device *dev)
 
 	LOG_DBG("SDHC Software Reset");
 	ui32Status = am_hal_sdhc_software_reset(config->pSDHC, AM_HAL_SDHC_SW_RESET_ALL);
-	if ( ui32Status )
-	{
+	if ( ui32Status ) {
 		LOG_ERR("SDHC software reset failed, ui32Status = %u", ui32Status);
 		return -EIO;
 	}
@@ -146,27 +141,22 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 	LOG_DBG("(SDIO clock_freq=%d, bus_width=%d, timing_mode=%d, bus_mode=%d)", ios->clock,
 		ios->bus_width, ios->timing, ios->bus_mode);
 
-	if (ios->clock != 0 && (ios->clock <= AMBIQ_SDIO_FREQ_MAX) && (ios->clock >= AMBIQ_SDIO_FREQ_MIN))
-	{
+	if (ios->clock != 0 && (ios->clock <= AMBIQ_SDIO_FREQ_MAX) && (ios->clock >= AMBIQ_SDIO_FREQ_MIN)) {
 		data->card.cfg.ui32Clock = ios->clock;
 	}
-	else if (ios->clock != 0 && (ios->clock > AMBIQ_SDIO_FREQ_MAX) && (ios->clock <= MMC_CLOCK_HS200))
-	{
+	else if (ios->clock != 0 && (ios->clock > AMBIQ_SDIO_FREQ_MAX) && (ios->clock <= MMC_CLOCK_HS200)) {
 		data->card.cfg.ui32Clock = AMBIQ_SDIO_FREQ_MAX;
 		eUHSMode = AM_HAL_HOST_UHS_SDR104;
 	}
-	else if (ios->clock != 0)
-	{
+	else if (ios->clock != 0) {
 		return -ENOTSUP;
 	}
 
-	if (ios->bus_mode != SDHC_BUSMODE_PUSHPULL)
-	{
+	if (ios->bus_mode != SDHC_BUSMODE_PUSHPULL) {
 		return -ENOTSUP;
 	}
 
-	switch (ios->bus_width)
-	{
+	switch (ios->bus_width) {
 		case SDHC_BUS_WIDTH1BIT:
 			eBusWidth = AM_HAL_HOST_BUS_WIDTH_1;
 			break;
@@ -180,8 +170,7 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 			return -ENOTSUP;
 	}
 
-	switch (ios->signal_voltage)
-	{
+	switch (ios->signal_voltage) {
 		case SD_VOL_3_3_V:
 			eBusVoltage = AM_HAL_HOST_BUS_VOLTAGE_3_3;
 			break;
@@ -195,13 +184,11 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 			return -ENOTSUP;
 	}
 
-	if (ios->signal_voltage != SD_VOL_1_8_V)
-	{
+	if (ios->signal_voltage != SD_VOL_1_8_V) {
 		return -ENOTSUP;
 	}
 
-	if (eBusVoltage != data->card.cfg.eIoVoltage)
-	{
+	if (eBusVoltage != data->card.cfg.eIoVoltage) {
 		data->card.cfg.eIoVoltage = eBusVoltage;
 		ui32Status = data->host->ops->set_bus_voltage(data->host->pHandle, eBusVoltage);
 		if (ui32Status != AM_HAL_STATUS_SUCCESS)
@@ -210,8 +197,7 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 		}
 	}
 
-	if (eBusWidth != data->card.cfg.eBusWidth)
-	{
+	if (eBusWidth != data->card.cfg.eBusWidth) {
 		data->card.cfg.eBusWidth = eBusWidth;
 		ui32Status = data->host->ops->set_bus_width(data->host->pHandle, eBusWidth);
 		if (ui32Status != AM_HAL_STATUS_SUCCESS)
@@ -221,19 +207,16 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 	}
 
 	ui32Status = data->host->ops->set_bus_clock(data->host->pHandle, data->card.cfg.ui32Clock);
-	if (ui32Status != AM_HAL_STATUS_SUCCESS)
-	{
+	if (ui32Status != AM_HAL_STATUS_SUCCESS) {
 		return -ENOTSUP;
 	}
 
-	if (ios->timing == SDHC_TIMING_DDR52 )
-	{
+	if (ios->timing == SDHC_TIMING_DDR52 ) {
 		eUHSMode = AM_HAL_HOST_UHS_DDR50;
 		LOG_DBG("MMC Card DDR50 Mode");
 	}
 
-	if (eUHSMode != data->card.cfg.eUHSMode)
-	{
+	if (eUHSMode != data->card.cfg.eUHSMode) {
 		data->card.cfg.eUHSMode = eUHSMode;
 		ui32Status = data->host->ops->set_uhs_mode(data->host->pHandle, eUHSMode);
 		if (ui32Status != AM_HAL_STATUS_SUCCESS)
@@ -274,23 +257,20 @@ static int ambiq_sdio_init(const struct device *dev)
 		LOG_ERR("Checking if card is available again\n");
 	}
 
-    data->card.eCardPwrCtrlPolicy = AM_HAL_CARD_PWR_CTRL_SDHC_OFF;
-    data->card.eState = AM_HAL_CARD_STATE_PWRON;
-    data->card.pCardPwrCtrlFunc = NULL;
+	data->card.eCardPwrCtrlPolicy = AM_HAL_CARD_PWR_CTRL_SDHC_OFF;
+	data->card.eState = AM_HAL_CARD_STATE_PWRON;
+	data->card.pCardPwrCtrlFunc = NULL;
 
 #ifdef CONFIG_AMBIQ_SDIO_ASYNC
-	if (config->inst == 0)
-	{
+	if (config->inst == 0) {
 		data->async_sem = &sdio_async_sem_0;
 		am_hal_card_register_evt_callback(&data->card, ambiq_sdio_event_cb_0);
 	}
-	else if (config->inst == 1)
-	{
+	else if (config->inst == 1) {
 		data->async_sem = &sdio_async_sem_1;
 		am_hal_card_register_evt_callback(&data->card, ambiq_sdio_event_cb_1);
 	}
-	else
-	{
+	else {
 		return -ENODEV;
 	}
 #endif
@@ -306,26 +286,21 @@ static int ambiq_sdio_execute_tuning(const struct device *dev)
 	struct ambiq_sdio_data *data = dev->data;
 	uint8_t ui8TxRxDelays[2] = {0};
 
-	if ( config->tx_delay <  16 )
-	{
+	if ( config->tx_delay <  16 ) {
 		ui8TxRxDelays[0] = config->tx_delay;
 	}
-	else
-	{
+	else {
 		return -EINVAL;
 	}
 
-	if ( config->rx_delay <  32 )
-	{
+	if ( config->rx_delay <  32 ) {
 		ui8TxRxDelays[1] = config->rx_delay;
 	}
-	else
-	{
+	else {
 		return -EINVAL;
 	}
 
-	if (ui8TxRxDelays[0] != 0 || ui8TxRxDelays[1] != 0)
-	{
+	if (ui8TxRxDelays[0] != 0 || ui8TxRxDelays[1] != 0) {
 		am_hal_card_host_set_txrx_delay(data->host,ui8TxRxDelays);
 	}
 
@@ -360,45 +335,38 @@ static int ambiq_sdio_request(const struct device *dev,
 {
 	int ret = 0;
 	struct ambiq_sdio_data *dev_data = dev->data;
-    uint32_t ui32Status = 0;
+	uint32_t ui32Status = 0;
 
-    am_hal_card_cmd_t sdio_cmd = {0};
-    am_hal_card_cmd_data_t cmd_data = {0};
+	am_hal_card_cmd_t sdio_cmd = {0};
+	am_hal_card_cmd_data_t cmd_data = {0};
 
-	if (cmd)
-	{
+	if (cmd) {
 		sdio_cmd.ui8Idx = cmd->opcode;
 		sdio_cmd.ui32Arg = cmd->arg;
 		sdio_cmd.ui32RespType = cmd->response_type;
 		sdio_cmd.bASync = false;
 	}
-	else
-	{
+	else {
 		LOG_ERR("Invalid CMD");
 		return -EINVAL;
 	}
 
-	if (data)
-	{
+	if (data) {
 		cmd_data.ui32BlkCnt = data->blocks;
 		cmd_data.ui32BlkSize = data->block_size;
 		cmd_data.pui8Buf = data->data;
 
-		if (sdio_cmd.ui8Idx == MMC_CMD_READ_MULTIPLE_BLOCK || sdio_cmd.ui8Idx == MMC_CMD_WRITE_MULTIPLE_BLOCK)
-		{
+		if (sdio_cmd.ui8Idx == MMC_CMD_READ_MULTIPLE_BLOCK || sdio_cmd.ui8Idx == MMC_CMD_WRITE_MULTIPLE_BLOCK) {
 			sdio_cmd.bAutoCMD23 = true;
 		}
 
-		if (sdio_cmd.ui8Idx == MMC_CMD_WRITE_SINGLE_BLOCK || sdio_cmd.ui8Idx == MMC_CMD_WRITE_MULTIPLE_BLOCK )
-		{
+		if (sdio_cmd.ui8Idx == MMC_CMD_WRITE_SINGLE_BLOCK || sdio_cmd.ui8Idx == MMC_CMD_WRITE_MULTIPLE_BLOCK ) {
 			cmd_data.dir = AM_HAL_DATA_DIR_WRITE;
 		}
-		else if ( (sdio_cmd.ui8Idx == SDIO_CMD_IO_RW_EXTENDED) && (sdio_cmd.ui32Arg & BIT(SDIO_CMD_ARG_RW_SHIFT)))
-		{
+		else if ( (sdio_cmd.ui8Idx == SDIO_CMD_IO_RW_EXTENDED) && (sdio_cmd.ui32Arg & BIT(SDIO_CMD_ARG_RW_SHIFT))) {
 			cmd_data.dir = AM_HAL_DATA_DIR_WRITE;
 		}
-		else
-		{
+		else {
 			cmd_data.dir = AM_HAL_DATA_DIR_READ;
 		}
 	}
@@ -406,36 +374,30 @@ static int ambiq_sdio_request(const struct device *dev,
 	LOG_DBG("Send SDIO CMD%d", sdio_cmd.ui8Idx);
 	LOG_DBG("CMD->Arg = 0x%x CMD->RespType = 0x%x", sdio_cmd.ui32Arg, sdio_cmd.ui32RespType);
 
-	if (sdio_cmd.ui8Idx == 1)
-	{
+	if (sdio_cmd.ui8Idx == 1) {
 		LOG_DBG("Conifg CMD1 Arg & RespType");
 		sdio_cmd.ui32Arg = 0x40000000 | 0xff8080;
 		sdio_cmd.ui32RespType = MMC_RSP_R3;
 	}
-	else if (sdio_cmd.ui8Idx == 3)
-	{
+	else if (sdio_cmd.ui8Idx == 3) {
 		LOG_DBG("Conifg CMD3 RespType");
 		sdio_cmd.ui32RespType = MMC_RSP_R6;
 	}
-	else if ((sdio_cmd.ui8Idx == 52) || (sdio_cmd.ui8Idx == 53))
-	{
+	else if ((sdio_cmd.ui8Idx == 52) || (sdio_cmd.ui8Idx == 53)) {
 		LOG_DBG("Conifg CMD%d RespType", sdio_cmd.ui8Idx);
 		sdio_cmd.ui32RespType = MMC_RSP_R5;
 	}
-	else if (sdio_cmd.ui8Idx == 6 || sdio_cmd.ui8Idx == 38)
-	{
+	else if (sdio_cmd.ui8Idx == 6 || sdio_cmd.ui8Idx == 38) {
 		LOG_DBG("Set CheckBusyCmd");
 		sdio_cmd.bCheckBusyCmd = true;
 		sdio_cmd.ui32RespType = MMC_RSP_R1b;
 	}
-	else if (sdio_cmd.ui8Idx == 17 || sdio_cmd.ui8Idx == 18 || sdio_cmd.ui8Idx == 24 || sdio_cmd.ui8Idx == 25)
-	{
+	else if (sdio_cmd.ui8Idx == 17 || sdio_cmd.ui8Idx == 18 || sdio_cmd.ui8Idx == 24 || sdio_cmd.ui8Idx == 25) {
 		sdio_cmd.ui32RespType = MMC_RSP_R1;
 	}
 
 #ifdef CONFIG_AMBIQ_SDIO_ASYNC
-	if (data)
-	{
+	if (data) {
 		sdio_cmd.bASync = true;
 		dev_data->host->AsyncCmd = sdio_cmd;
 		dev_data->host->AsyncCmdData = cmd_data;
@@ -456,35 +418,28 @@ static int ambiq_sdio_request(const struct device *dev,
 		return -EBUSY;
 	}
 
-	if ( data )
-	{
+	if ( data ) {
 #ifdef CONFIG_AMBIQ_SDIO_ASYNC
 		k_sem_reset(dev_data->async_sem);
 #endif
 		ui32Status = dev_data->host->ops->execute_cmd(dev_data->host->pHandle, &sdio_cmd, &cmd_data);
 #ifdef CONFIG_AMBIQ_SDIO_ASYNC
-		if ((ui32Status & 0xFFFF) == AM_HAL_STATUS_SUCCESS)
-		{
-			if (k_sem_take(dev_data->async_sem, K_MSEC(data->timeout_ms)))
-			{
+		if ((ui32Status & 0xFFFF) == AM_HAL_STATUS_SUCCESS) {
+			if (k_sem_take(dev_data->async_sem, K_MSEC(data->timeout_ms))) {
 				return -ETIMEDOUT;
 			}
 		}
 #endif
 	}
-	else
-	{
+	else {
 		ui32Status = dev_data->host->ops->execute_cmd(dev_data->host->pHandle, &sdio_cmd, NULL);
 	}
-	if ((ui32Status & 0xFFFF) != AM_HAL_STATUS_SUCCESS)
-	{
-		if ((ui32Status & 0xFFFF) == AM_HAL_STATUS_TIMEOUT)
-		{
+	if ((ui32Status & 0xFFFF) != AM_HAL_STATUS_SUCCESS) {
+		if ((ui32Status & 0xFFFF) == AM_HAL_STATUS_TIMEOUT) {
 			LOG_DBG("CMD%d Timeout!", sdio_cmd.ui8Idx);
 			ret = -ETIMEDOUT;
 		}
-		else
-		{
+		else {
 			LOG_DBG("Failed to send CMD%d, ui32Status = 0x%x", sdio_cmd.ui8Idx, ui32Status);
 			ret = -EIO;
 		}
@@ -497,8 +452,7 @@ static int ambiq_sdio_request(const struct device *dev,
 	LOG_DBG("Resp0 = 0x%x, Resp1 = 0x%x, Resp2 = 0x%x, Resp3 = 0x%x", cmd->response[0],
 		cmd->response[1], cmd->response[2], cmd->response[3]);
 
-	if (data)
-	{
+	if (data) {
 		data->bytes_xfered = (ui32Status >> 16) & 0xFFFF;
 	}
 
@@ -551,7 +505,7 @@ static const struct sdhc_driver_api ambiq_sdio_api = {
 
 #ifdef CONFIG_PM_DEVICE
 static int ambiq_sdio_pm_action(const struct device *dev,
-			       enum pm_device_action action)
+				   enum pm_device_action action)
 {
 	struct ambiq_sdio_data *data = dev->data;
 	int ret;
@@ -567,45 +521,43 @@ static int ambiq_sdio_pm_action(const struct device *dev,
 		return -ENOTSUP;
 	}
 
-	if(ret != AM_HAL_STATUS_SUCCESS)
-	{
+	if(ret != AM_HAL_STATUS_SUCCESS) {
 		return -EPERM;
 	}
-	else
-	{
+	else {
 		return 0;
 	}
 }
 #endif
 
-#define AMBIQ_SDIO_INIT(n)							\
+#define AMBIQ_SDIO_INIT(n)												\
 	static void sdio_##n##_irq_config_func(const struct device *dev)	\
-	{									\
-		IRQ_CONNECT(DT_INST_IRQN(n), DT_INST_IRQ(n, priority),		\
-			ambiq_sdio_isr, DEVICE_DT_INST_GET(n), 0);		\
-		irq_enable(DT_INST_IRQN(n));					\
-	}									\
-										\
-	PINCTRL_DT_INST_DEFINE(n);						\
-										\
+	{																	\
+		IRQ_CONNECT(DT_INST_IRQN(n), DT_INST_IRQ(n, priority),			\
+			ambiq_sdio_isr, DEVICE_DT_INST_GET(n), 0);					\
+		irq_enable(DT_INST_IRQN(n));									\
+	}																	\
+																		\
+	PINCTRL_DT_INST_DEFINE(n);											\
+																		\
 	static const struct ambiq_sdio_config ambiq_sdio_config_##n = {		\
-		.pSDHC = (SDIO_Type *) DT_INST_REG_ADDR(n),			\
-		.pincfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),			\
-		.irq_config_func = sdio_##n##_irq_config_func,			\
-		.inst = n,                                              \
-		.tx_delay = DT_INST_PROP(n, txdelay),            \
-		.rx_delay = DT_INST_PROP(n, rxdelay),            \
-	};									\
-										\
-	static struct ambiq_sdio_data ambiq_sdio_data_##n;          \
-	PM_DEVICE_DT_INST_DEFINE(n, ambiq_sdio_pm_action);           \
-	DEVICE_DT_INST_DEFINE(n,						\
-		&ambiq_sdio_init,						\
-		NULL,								\
-		&ambiq_sdio_data_##n,               \
-		&ambiq_sdio_config_##n,                  \
-		POST_KERNEL,							\
-		CONFIG_SDHC_INIT_PRIORITY,					\
+		.pSDHC = (SDIO_Type *) DT_INST_REG_ADDR(n),						\
+		.pincfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),					\
+		.irq_config_func = sdio_##n##_irq_config_func,					\
+		.inst = n,														\
+		.tx_delay = DT_INST_PROP(n, txdelay),							\
+		.rx_delay = DT_INST_PROP(n, rxdelay),							\
+	};																	\
+																		\
+	static struct ambiq_sdio_data ambiq_sdio_data_##n;					\
+	PM_DEVICE_DT_INST_DEFINE(n, ambiq_sdio_pm_action);					\
+	DEVICE_DT_INST_DEFINE(n,											\
+		&ambiq_sdio_init,												\
+		NULL,															\
+		&ambiq_sdio_data_##n,											\
+		&ambiq_sdio_config_##n,											\
+		POST_KERNEL,													\
+		CONFIG_SDHC_INIT_PRIORITY,										\
 		&ambiq_sdio_api);
 
 DT_INST_FOREACH_STATUS_OKAY(AMBIQ_SDIO_INIT)
