@@ -13,8 +13,10 @@
 #include <zephyr/irq.h>
 #include <zephyr/kernel.h>
 #include <zephyr/pm/device.h>
+#include <zephyr/pm/policy.h>
+#include <zephyr/pm/device_runtime.h>
 
-#include "am_mcu_apollo.h"
+#include <am_mcu_apollo.h>
 
 LOG_MODULE_REGISTER(ambiq_sdio, CONFIG_SDHC_LOG_LEVEL);
 
@@ -272,6 +274,10 @@ static int ambiq_sdio_init(const struct device *dev)
 		LOG_ERR("Checking if card is available again\n");
 	}
 
+    data->card.eCardPwrCtrlPolicy = AM_HAL_CARD_PWR_CTRL_SDHC_OFF;
+    data->card.eState = AM_HAL_CARD_STATE_PWRON;
+    data->card.pCardPwrCtrlFunc = NULL;
+
 #ifdef CONFIG_AMBIQ_SDIO_ASYNC
 	if (config->inst == 0)
 	{
@@ -436,6 +442,14 @@ static int ambiq_sdio_request(const struct device *dev,
 	}
 #endif
 
+#if defined(CONFIG_PM_DEVICE_RUNTIME)
+	ret = pm_device_runtime_get(dev);
+
+	if (ret < 0) {
+		LOG_ERR("pm_device_runtime_get failed: %d", ret);
+	}
+#endif
+
 	ret = k_mutex_lock(&dev_data->access_mutex, K_MSEC(cmd->timeout_ms));
 	if (ret) {
 		LOG_ERR("Could not access card");
@@ -488,6 +502,17 @@ static int ambiq_sdio_request(const struct device *dev,
 		data->bytes_xfered = (ui32Status >> 16) & 0xFFFF;
 	}
 
+#if defined(CONFIG_PM_DEVICE_RUNTIME)
+	/* Use async put to avoid useless device suspension/resumption
+	 * when doing consecutive transmission.
+	 */
+	ret = pm_device_runtime_put_async(dev, K_MSEC(2));
+
+	if (ret < 0) {
+		LOG_ERR("pm_device_runtime_put failed: %d", ret);
+	}
+#endif
+
 	return ret;
 }
 
@@ -524,6 +549,34 @@ static const struct sdhc_driver_api ambiq_sdio_api = {
 	.disable_interrupt  = ambiq_sdio_card_interrupt_disable,
 };
 
+#ifdef CONFIG_PM_DEVICE
+static int ambiq_sdio_pm_action(const struct device *dev,
+			       enum pm_device_action action)
+{
+	struct ambiq_sdio_data *data = dev->data;
+	int ret;
+
+	switch (action) {
+	case PM_DEVICE_ACTION_RESUME:
+		ret = am_hal_card_pwrctrl_wakeup(&data->card);
+		break;
+	case PM_DEVICE_ACTION_SUSPEND:
+		ret = am_hal_card_pwrctrl_sleep(&data->card);
+		break;
+	default:
+		return -ENOTSUP;
+	}
+
+	if(ret != AM_HAL_STATUS_SUCCESS)
+	{
+		return -EPERM;
+	}
+	else
+	{
+		return 0;
+	}
+}
+#endif
 
 #define AMBIQ_SDIO_INIT(n)							\
 	static void sdio_##n##_irq_config_func(const struct device *dev)	\
@@ -545,6 +598,7 @@ static const struct sdhc_driver_api ambiq_sdio_api = {
 	};									\
 										\
 	static struct ambiq_sdio_data ambiq_sdio_data_##n;          \
+	PM_DEVICE_DT_INST_DEFINE(n, ambiq_sdio_pm_action);           \
 	DEVICE_DT_INST_DEFINE(n,						\
 		&ambiq_sdio_init,						\
 		NULL,								\
