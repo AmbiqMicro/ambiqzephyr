@@ -16,6 +16,7 @@ config SOC_APOLLO5
     select CPU_HAS_FPU
     select ARMV8_M_DSP
     select ARMV8_1_M_PMU
+    select HAS_PM
 
 endchoice
 
