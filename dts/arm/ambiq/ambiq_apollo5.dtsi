@@ -142,6 +142,7 @@
 			reg = <SDIO0_REG_BASE SDIO0_REG_SIZE>;
 			interrupts = <26 0>;
 			status = "disabled";
+			zephyr,pm-device-runtime-auto;
 		};
 
 		sdio1: sdio@SDIO1_BASE_NAME {
@@ -149,6 +150,7 @@
 			reg = <SDIO1_REG_BASE SDIO1_REG_SIZE>;
 			interrupts = <84 0>;
 			status = "disabled";
+			zephyr,pm-device-runtime-auto;
 		};
 
         pinctrl: pin-controller@GPIO_BASE_NAME {

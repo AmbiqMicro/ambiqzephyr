@@ -109,15 +109,35 @@ static int ambiq_sdio_reset(const struct device *dev)
 {
 	const struct ambiq_sdio_config *config = dev->config;
 	uint32_t ui32Status = 0;
+	int ret = 0;
+
+#if defined(CONFIG_PM_DEVICE_RUNTIME)
+	ret = pm_device_runtime_get(dev);
+
+	if (ret < 0) {
+		LOG_ERR("pm_device_runtime_get failed: %d", ret);
+	}
+#endif /* CONFIG_PM_DEVICE_RUNTIME */
 
 	LOG_DBG("SDHC Software Reset");
 	ui32Status = am_hal_sdhc_software_reset(config->pSDHC, AM_HAL_SDHC_SW_RESET_ALL);
 	if ( ui32Status ) {
 		LOG_ERR("SDHC software reset failed, ui32Status = %u", ui32Status);
-		return -EIO;
+		ret = -EIO;
 	}
 
-	return 0;
+#if defined(CONFIG_PM_DEVICE_RUNTIME)
+	/* Use async put to avoid useless device suspension/resumption
+	 * when doing consecutive transmission.
+	 */
+	ret = pm_device_runtime_put_async(dev, K_MSEC(2));
+
+	if (ret < 0) {
+		LOG_ERR("pm_device_runtime_put failed: %d", ret);
+	}
+#endif /* CONFIG_PM_DEVICE_RUNTIME */
+
+	return ret;
 }
 
 /*
@@ -159,6 +179,7 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 	am_hal_host_bus_width_e eBusWidth;
 	am_hal_host_uhs_mode_e eUHSMode = AM_HAL_HOST_UHS_SDR50;
 	uint32_t ui32Status = 0;
+	int ret = 0;
 
 	LOG_DBG("(SDIO clock_freq=%d, bus_width=%d, timing_mode=%d, bus_mode=%d)", ios->clock,
 		ios->bus_width, ios->timing, ios->bus_mode);
@@ -215,6 +236,14 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 		return -ENOTSUP;
 	}
 
+#if defined(CONFIG_PM_DEVICE_RUNTIME)
+	ret = pm_device_runtime_get(dev);
+
+	if (ret < 0) {
+		LOG_ERR("pm_device_runtime_get failed: %d", ret);
+	}
+#endif /* CONFIG_PM_DEVICE_RUNTIME */
+
 	/* Change SDIO Host Bus Voltage */
 	if (eBusVoltage != data->card.cfg.eIoVoltage) {
 		data->card.cfg.eIoVoltage = eBusVoltage;
@@ -257,7 +286,18 @@ static int ambiq_sdio_set_io(const struct device *dev, struct sdhc_io *ios)
 		}
 	}
 
-	return 0;
+#if defined(CONFIG_PM_DEVICE_RUNTIME)
+	/* Use async put to avoid useless device suspension/resumption
+	 * when doing consecutive transmission.
+	 */
+	ret = pm_device_runtime_put_async(dev, K_MSEC(2));
+
+	if (ret < 0) {
+		LOG_ERR("pm_device_runtime_put failed: %d", ret);
+	}
+#endif /* CONFIG_PM_DEVICE_RUNTIME */
+
+	return ret;
 }
 
 /*
@@ -326,6 +366,7 @@ static int ambiq_sdio_execute_tuning(const struct device *dev)
 	const struct ambiq_sdio_config *config = dev->config;
 	struct ambiq_sdio_data *data = dev->data;
 	uint8_t ui8TxRxDelays[2] = {0};
+	int ret = 0;
 
 	/* SDIO TX delay setting range is 0 ~ 15 */
 	if ( config->tx_delay <  16 ) {
@@ -345,10 +386,30 @@ static int ambiq_sdio_execute_tuning(const struct device *dev)
 
 	/* Timing delay is disabled if both TX and RX delay are set into 0 */
 	if (ui8TxRxDelays[0] != 0 || ui8TxRxDelays[1] != 0) {
+#if defined(CONFIG_PM_DEVICE_RUNTIME)
+	ret = pm_device_runtime_get(dev);
+
+	if (ret < 0) {
+		LOG_ERR("pm_device_runtime_get failed: %d", ret);
+	}
+#endif /* CONFIG_PM_DEVICE_RUNTIME */
+
 		am_hal_card_host_set_txrx_delay(data->host,ui8TxRxDelays);
+
+#if defined(CONFIG_PM_DEVICE_RUNTIME)
+	/* Use async put to avoid useless device suspension/resumption
+	 * when doing consecutive transmission.
+	 */
+	ret = pm_device_runtime_put_async(dev, K_MSEC(2));
+
+	if (ret < 0) {
+		LOG_ERR("pm_device_runtime_put failed: %d", ret);
+	}
+#endif /* CONFIG_PM_DEVICE_RUNTIME */
+
 	}
 
-	return 0;
+	return ret;
 }
 
 /*
@@ -357,10 +418,30 @@ static int ambiq_sdio_execute_tuning(const struct device *dev)
 static int ambiq_sdio_get_card_present(const struct device *dev)
 {
 	struct ambiq_sdio_data *data = dev->data;
+	int status = 0;
+	int ret = 0;
 
 	LOG_DBG("Get card present status");
 
-	return data->host->ops->get_cd(data->host->pHandle);
+#if defined(CONFIG_PM_DEVICE_RUNTIME)
+	ret = pm_device_runtime_get(dev);
+
+	if (ret < 0) {
+		LOG_ERR("pm_device_runtime_get failed: %d", ret);
+	}
+#endif /* CONFIG_PM_DEVICE_RUNTIME */
+	status = data->host->ops->get_cd(data->host->pHandle);
+#if defined(CONFIG_PM_DEVICE_RUNTIME)
+	/* Use async put to avoid useless device suspension/resumption
+	 * when doing consecutive transmission.
+	 */
+	ret = pm_device_runtime_put_async(dev, K_MSEC(2));
+
+	if (ret < 0) {
+		LOG_ERR("pm_device_runtime_put failed: %d", ret);
+	}
+#endif /* CONFIG_PM_DEVICE_RUNTIME */
+	return status;
 }
 
 /*
@@ -370,9 +451,27 @@ static int ambiq_sdio_card_busy(const struct device *dev)
 {
 	struct ambiq_sdio_data *data = dev->data;
 	uint32_t ui32Status;
+	int ret = 0;
 
+#if defined(CONFIG_PM_DEVICE_RUNTIME)
+	ret = pm_device_runtime_get(dev);
+
+	if (ret < 0) {
+		LOG_ERR("pm_device_runtime_get failed: %d", ret);
+	}
+#endif /* CONFIG_PM_DEVICE_RUNTIME */
 	ui32Status = data->host->ops->card_busy(data->host->pHandle, DEFAULT_GET_STATUS_TIMEOUT_MS);
 	LOG_DBG("Check card busy status");
+#if defined(CONFIG_PM_DEVICE_RUNTIME)
+	/* Use async put to avoid useless device suspension/resumption
+	 * when doing consecutive transmission.
+	 */
+	ret = pm_device_runtime_put_async(dev, K_MSEC(2));
+
+	if (ret < 0) {
+		LOG_ERR("pm_device_runtime_put failed: %d", ret);
+	}
+#endif /* CONFIG_PM_DEVICE_RUNTIME */
 
 	return (ui32Status != AM_HAL_STATUS_SUCCESS) ? 1 : 0;
 }
