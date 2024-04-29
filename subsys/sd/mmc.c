@@ -44,7 +44,7 @@
 #define MMC_SWITCH_HS200_TIMING_ARG                                                                \
 	(0xFC000000 & (0U << 26)) + (0x03000000 & (0b11 << 24)) + (0x00FF0000 & (185U << 16)) +    \
 		(0x0000FF00 & (2U << 8)) + (0x000000F7 & (0U << 3)) + (0x00000000 & (3U << 0))
-#define MMC_RCA_ARG	(CONFIG_MMC_RCA << 16U)
+#define MMC_RCA_ARG     (CONFIG_MMC_RCA << 16U)
 #define MMC_REL_ADR_ARG (card->relative_addr << 16U)
 #define MMC_SWITCH_PWR_CLASS_ARG                                                                   \
 	(0xFC000000 & (0U << 26)) + (0x03000000 & (0b11 << 24)) + (0x00FF0000 & (187U << 16)) +    \
@@ -98,8 +98,10 @@ static int mmc_set_timing(struct sd_card *card, struct mmc_ext_csd *card_ext_csd
 /* Enable cache for emmc if applicable */
 static int mmc_set_cache(struct sd_card *card, struct mmc_ext_csd *card_ext_csd);
 
+#ifdef CONFIG_MMC_DDR50
 /* Sets card to DDR50 mode (using CMD6) */
 static int mmc_set_ddr50_timing(struct sd_card *card, struct mmc_ext_csd *card_ext_csd);
+#endif /*CONFIG_MMC_DDR50*/
 
 /*
  * Initialize MMC card for use with subsystem
@@ -205,7 +207,7 @@ int mmc_card_init(struct sd_card *card)
 	if (ret) {
 		return ret;
 	}
-#endif
+#endif /*CONFIG_MMC_DDR50*/
 
 	/* Turn on cache if it exists */
 	ret = mmc_set_cache(card, &card_ext_csd);
@@ -469,13 +471,13 @@ static int mmc_set_power_class_HS200(struct sd_card *card, struct mmc_ext_csd *e
 	return ret;
 }
 
+#ifdef CONFIG_MMC_DDR50
 static int mmc_set_ddr50_timing(struct sd_card *card, struct mmc_ext_csd *ext)
 {
 	int ret = 0;
 	struct sdhc_command cmd = {0};
 
-	if (ext->device_type.MMC_HS_DDR_1800MV &&
-	    card->host_props.host_caps.ddr50_support &&
+	if (ext->device_type.MMC_HS_DDR_1800MV && card->host_props.host_caps.ddr50_support &&
 	    (card->bus_io.bus_width >= SDHC_BUS_WIDTH4BIT)) {
 
 		cmd.arg = MMC_SWITCH_HS_TIMING_ARG;
@@ -491,8 +493,7 @@ static int mmc_set_ddr50_timing(struct sd_card *card, struct mmc_ext_csd *ext)
 
 		if (card->bus_io.bus_width == SDHC_BUS_WIDTH4BIT) {
 			cmd.arg = MMC_SWITCH_4_BIT_DDR_BUS_ARG;
-		}
-		else {
+		} else {
 			cmd.arg = MMC_SWITCH_8_BIT_DDR_BUS_ARG;
 		}
 		cmd.opcode = SD_SWITCH;
@@ -520,6 +521,7 @@ static int mmc_set_ddr50_timing(struct sd_card *card, struct mmc_ext_csd *ext)
 
 	return ret;
 }
+#endif /*CONFIG_MMC_DDR50*/
 
 static int mmc_set_timing(struct sd_card *card, struct mmc_ext_csd *ext)
 {
