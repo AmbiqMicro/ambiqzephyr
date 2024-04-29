@@ -12,13 +12,13 @@ Apollo5 EB is a board by Ambiq featuring their ultra-low power Apollo5 SoC.
 Hardware
 ********
 
-- Apollo5 SoC with upto 192 MHz operating frequency
-- ARM® Cortex® M4F core
-- 64 kB 2-way Associative/Direct-Mapped Cache per core
-- Up to 2 MB of non-volatile memory (NVM) for code/data
-- Up to 2.75 MB of low leakage / low power RAM for code/data
-- 384 kB Tightly Coupled RAM
-- 384 kB Extended RAM
+- Apollo5 SoC with up to 250 MHz operating frequency
+- ARM® Cortex® M55 core
+- 64 kB Instruction Cache and 64 kB Data Cache
+- Up to 4 MB of non-volatile memory (NVM) for code/data
+- Up to 3 MB of low leakage / low power RAM for code/data
+- 256 kB Instruction Tightly Coupled RAM (ITCM)
+- 512 kB Data Tightly Coupled RAM (DTCM)
 
 For more information about the Apollo5 SoC and Apollo5 EB board:
 
