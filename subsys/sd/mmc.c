@@ -92,8 +92,10 @@ static inline int mmc_set_max_freq(struct sd_card *card, struct sd_csd *card_csd
 /* Sends CMD6 to switch bus width*/
 static int mmc_set_bus_width(struct sd_card *card);
 
+#ifndef CONFIG_MMC_DDR50
 /* Sets card to the fastest timing mode (using CMD6) and SDHC to max frequency */
 static int mmc_set_timing(struct sd_card *card, struct mmc_ext_csd *card_ext_csd);
+#endif /*CONFIG_MMC_DDR50*/
 
 /* Enable cache for emmc if applicable */
 static int mmc_set_cache(struct sd_card *card, struct mmc_ext_csd *card_ext_csd);
@@ -523,6 +525,7 @@ static int mmc_set_ddr50_timing(struct sd_card *card, struct mmc_ext_csd *ext)
 }
 #endif /*CONFIG_MMC_DDR50*/
 
+#ifndef CONFIG_MMC_DDR50
 static int mmc_set_timing(struct sd_card *card, struct mmc_ext_csd *ext)
 {
 	int ret = 0;
@@ -633,6 +636,7 @@ static int mmc_set_timing(struct sd_card *card, struct mmc_ext_csd *ext)
 	}
 	return ret;
 }
+#endif /*CONFIG_MMC_DDR50*/
 
 static int mmc_read_ext_csd(struct sd_card *card, struct mmc_ext_csd *card_ext_csd)
 {
