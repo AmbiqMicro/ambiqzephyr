@@ -99,7 +99,7 @@ struct mspi_ambiq_data {
 	am_hal_mspi_dev_config_t        hal_dev_cfg;
 	am_hal_mspi_config_t            hal_config_cfg;
 	am_hal_mspi_xip_config_t        hal_xip_cfg;
-	am_hal_mspi_xip_misc_t hal_xip_misc_cfg;
+	am_hal_mspi_xip_misc_t          hal_xip_misc_cfg;
 
 	struct mspi_dev_id              *dev_id;
 	struct k_mutex                  lock;
@@ -693,6 +693,7 @@ static int mspi_ambiq_dev_config(const struct device *controller,
 		hal_dev_cfg.ui8WriteLatency = dev_cfg->ui32TXDummy;
 		hal_dev_cfg.bTurnaround = (dev_cfg->ui32RXDummy != 0);
 		hal_dev_cfg.ui8TurnAround = dev_cfg->ui32RXDummy;
+		hal_dev_cfg.bEmulateDDR = dev_cfg->eDataRate ? true : false;
 
 		hal_dev_cfg.eClockFreq = mspi_set_freq(cfg, dev_cfg->ui32Freq);
 		if (hal_dev_cfg.eClockFreq == 0) {
@@ -812,6 +813,12 @@ static int mspi_ambiq_xip_config(const struct device *controller,
 		eRequest = AM_HAL_MSPI_REQ_XIP_DIS;
 	}
 
+	ret = am_hal_mspi_control(data->mspiHandle, AM_HAL_MSPI_REQ_XIP_MISC_CONFIG, &data->hal_xip_misc_cfg);
+	if (ret) {
+		LOG_INST_ERR(cfg->log, "%u, fail to configure XIP MISC config, code:%d.", __LINE__, ret);
+		return -EHOSTDOWN;
+	}
+
 	ret = am_hal_mspi_control(data->mspiHandle, eRequest, NULL);
 	if (ret) {
 		LOG_INST_ERR(cfg->log, "%u,Unable to complete xip config:%d.", __LINE__,
@@ -866,7 +873,7 @@ static int mspi_ambiq_scramble_config(const struct device *controller,
 
 	ret = am_hal_mspi_control(data->mspiHandle, AM_HAL_MSPI_REQ_XIP_CONFIG, &hal_xip_cfg);
 	if (ret) {
-		LOG_INST_ERR(cfg->log, "%u, fail to configure MSPI, code:%d.", __LINE__, ret);
+		LOG_INST_ERR(cfg->log, "%u, fail to configure XIP config, code:%d.", __LINE__, ret);
 		return -EHOSTDOWN;
 	}
 
