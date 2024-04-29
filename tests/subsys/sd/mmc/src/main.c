@@ -11,9 +11,9 @@
 #include <zephyr/kernel.h>
 #include <zephyr/ztest.h>
 
-#define SECTOR_COUNT 32
-#define SECTOR_SIZE  512 /* subsystem should set all cards to 512 byte blocks */
-#define BUF_SIZE     (SECTOR_SIZE * SECTOR_COUNT)
+#define SECTOR_COUNT   32
+#define SECTOR_SIZE    512 /* subsystem should set all cards to 512 byte blocks */
+#define BUF_SIZE       (SECTOR_SIZE * SECTOR_COUNT)
 #define EMMC_BLOCK_NUM (0x760000)
 
 #define SPEED_START_INDEX (0)
@@ -31,88 +31,71 @@ static uint32_t sector_count;
 
 #define MMC_UNALIGN_OFFSET 1
 
-typedef struct
-{
-  enum sdhc_bus_width width;
-  const char           *string;
+typedef struct {
+	enum sdhc_bus_width width;
+	const char *string;
 } sdio_width_t;
 
-typedef struct
-{
-  const uint32_t     speed;
-  const char         *string;
+typedef struct {
+	const uint32_t speed;
+	const char *string;
 } sdio_speed_t;
 
-sdio_speed_t sdio_test_speeds[] =
-{
-  { 96000000,    "96MHz" },
-  { 48000000,    "48MHz" },
-  { 24000000,    "24MHz" },
-  { 12000000,    "12MHz" },
-  {  3000000,     "3MHz" },
-  {   750000,    "750KHz"},
-  {   375000,    "375KHz"},
+sdio_speed_t sdio_test_speeds[] = {
+	{96000000, "96MHz"}, {48000000, "48MHz"}, {24000000, "24MHz"}, {12000000, "12MHz"},
+	{3000000, "3MHz"},   {750000, "750KHz"},  {375000, "375KHz"},
 };
 
-sdio_width_t sdio_test_widths[] =
-{
-  { SDHC_BUS_WIDTH1BIT,    "1bit" },
-  { SDHC_BUS_WIDTH4BIT,    "4bit" },
-  { SDHC_BUS_WIDTH8BIT,    "8bit" },
+sdio_width_t sdio_test_widths[] = {
+	{SDHC_BUS_WIDTH1BIT, "1bit"},
+	{SDHC_BUS_WIDTH4BIT, "4bit"},
+	{SDHC_BUS_WIDTH8BIT, "8bit"},
 };
 
-
-void prepare_data_pattern(uint32_t pattern_index, uint8_t* buff, uint32_t len)
+void prepare_data_pattern(uint32_t pattern_index, uint8_t *buff, uint32_t len)
 {
-    uint32_t *pui32TxPtr = (uint32_t*)buff;
-    uint8_t  *pui8TxPtr  = (uint8_t*)buff;
+	uint32_t *pui32TxPtr = (uint32_t *)buff;
+	uint8_t *pui8TxPtr = (uint8_t *)buff;
 
-    switch ( pattern_index )
-    {
-        case 0:
-            // 0x5555AAAA
-            for (uint32_t i = 0; i < len / 4; i++)
-            {
-               pui32TxPtr[i] = (0x5555AAAA);
-            }
-            break;
-        case 1:
-            // 0xFFFF0000
-            for (uint32_t i = 0; i < len / 4; i++)
-            {
-               pui32TxPtr[i] = (0xFFFF0000);
-            }
-            break;
-        case 2:
-            // walking
-            for (uint32_t i = 0; i < len; i++)
-            {
-               pui8TxPtr[i] = 0x01 << (i % 8);
-            }
-            break;
-        case 3:
-            // incremental from 1
-            for (uint32_t i = 0; i < len; i++)
-            {
-               pui8TxPtr[i] = ((i + 1) & 0xFF);
-            }
-            break;
-        case 4:
-            // decremental from 0xff
-            for ( uint32_t i = 0; i < len; i++ )
-            {
-                // decrement starting from 0xff
-                pui8TxPtr[i] = (0xff - i) & 0xFF;
-            }
-            break;
-        default:
-            // incremental from 1
-            for (uint32_t i = 0; i < len; i++)
-            {
-               pui8TxPtr[i] = ((i ) & 0xFF);
-            }
-            break;
-    }
+	switch (pattern_index) {
+	case 0:
+		// 0x5555AAAA
+		for (uint32_t i = 0; i < len / 4; i++) {
+			pui32TxPtr[i] = (0x5555AAAA);
+		}
+		break;
+	case 1:
+		// 0xFFFF0000
+		for (uint32_t i = 0; i < len / 4; i++) {
+			pui32TxPtr[i] = (0xFFFF0000);
+		}
+		break;
+	case 2:
+		// walking
+		for (uint32_t i = 0; i < len; i++) {
+			pui8TxPtr[i] = 0x01 << (i % 8);
+		}
+		break;
+	case 3:
+		// incremental from 1
+		for (uint32_t i = 0; i < len; i++) {
+			pui8TxPtr[i] = ((i + 1) & 0xFF);
+		}
+		break;
+	case 4:
+		// decremental from 0xff
+		for (uint32_t i = 0; i < len; i++) {
+			// decrement starting from 0xff
+			pui8TxPtr[i] = (0xff - i) & 0xFF;
+		}
+		break;
+	default:
+		// incremental from 1
+		for (uint32_t i = 0; i < len; i++) {
+			pui8TxPtr[i] = ((i) & 0xFF);
+		}
+		break;
+	}
 }
 
 /*
@@ -318,102 +301,120 @@ ZTEST(sd_stack, test_card_config)
 #ifdef CONFIG_MMC_DDR50
 ZTEST(sd_stack, test_wr_multiple_mode_ddr)
 {
-    int ret;
-    int block_addr = 0;
-    int blk_cnt = 0;
-    int loopcnt = 0;
+	int ret;
+	int block_addr = 0;
+	int blk_cnt = 0;
+	int loopcnt = 0;
 
-    for (uint32_t bitwidth = 1; bitwidth < WIDTH_END_INDEX; bitwidth++) {
-        for (uint32_t speed_index = 1; speed_index < SPEED_END_INDEX; speed_index++) {
+	for (uint32_t bitwidth = 1; bitwidth < WIDTH_END_INDEX; bitwidth++) {
+		for (uint32_t speed_index = 1; speed_index < SPEED_END_INDEX; speed_index++) {
 
-            card.bus_width = sdio_test_widths[bitwidth].width;
-            card.bus_io.clock = sdio_test_speeds[speed_index].speed;
-            card.bus_io.timing = SDHC_TIMING_DDR50;
-            card.host_props.host_caps.hs200_support = false;
+			card.bus_width = sdio_test_widths[bitwidth].width;
+			card.bus_io.clock = sdio_test_speeds[speed_index].speed;
+			card.bus_io.timing = SDHC_TIMING_DDR50;
+			card.host_props.host_caps.hs200_support = false;
 
-            ret = sd_init(sdhc_dev, &card);
-            zassert_equal(ret, 0, "mmc init failed");
+			ret = sd_init(sdhc_dev, &card);
+			zassert_equal(ret, 0, "mmc init failed");
 
-            TC_PRINT("MMC DDR write read test width:%s speed:%s\n", sdio_test_widths[bitwidth].string, sdio_test_speeds[speed_index].string);
+			TC_PRINT("MMC DDR write read test width:%s speed:%s\n",
+				 sdio_test_widths[bitwidth].string,
+				 sdio_test_speeds[speed_index].string);
 
-            for ( blk_cnt = 1; blk_cnt <= SECTOR_COUNT; blk_cnt += SECTOR_COUNT/4) {
-                for ( block_addr = 0; block_addr < EMMC_BLOCK_NUM; block_addr += EMMC_BLOCK_NUM/4) {
-                    TC_PRINT("MMC DDR write read write start block 0x%x, block cnt = %d\n", block_addr, blk_cnt);
+			for (blk_cnt = 1; blk_cnt <= SECTOR_COUNT; blk_cnt += SECTOR_COUNT / 4) {
+				for (block_addr = 0; block_addr < EMMC_BLOCK_NUM;
+				     block_addr += EMMC_BLOCK_NUM / 4) {
+					TC_PRINT("MMC DDR write read write start block 0x%x, block "
+						 "cnt = %d\n",
+						 block_addr, blk_cnt);
 
-                    /* Now write nonzero data block */
-                    prepare_data_pattern(loopcnt%5, check_buf, BUF_SIZE);
+					/* Now write nonzero data block */
+					prepare_data_pattern(loopcnt % 5, check_buf, BUF_SIZE);
 
-                    ret = mmc_write_blocks(&card, check_buf, block_addr, blk_cnt);
-                    zassert_equal(ret, 0, "Write to card failed");
-                    /* Clear the read buffer, then write to it again */
-                    memset(buf, 0, BUF_SIZE);
-                    ret = mmc_read_blocks(&card, buf, block_addr, blk_cnt);
-                    zassert_equal(ret, 0, "Read from card failed");
-                    zassert_mem_equal(buf, check_buf, SECTOR_SIZE*blk_cnt, "Read of written area was not correct");
-                    loopcnt ++;
-               }
-           }
-        }
-    }
+					ret = mmc_write_blocks(&card, check_buf, block_addr,
+							       blk_cnt);
+					zassert_equal(ret, 0, "Write to card failed");
+					/* Clear the read buffer, then write to it again */
+					memset(buf, 0, BUF_SIZE);
+					ret = mmc_read_blocks(&card, buf, block_addr, blk_cnt);
+					zassert_equal(ret, 0, "Read from card failed");
+					zassert_mem_equal(buf, check_buf, SECTOR_SIZE * blk_cnt,
+							  "Read of written area was not correct");
+					loopcnt++;
+				}
+			}
+		}
+	}
 }
 #else
 /* Test reads and writes in different mode settings */
 ZTEST(sd_stack, test_wr_multiple_mode)
 {
-    int ret;
-    int block_addr = 0;
-    int blk_cnt = 0;
-    int loopcnt = 0;
+	int ret;
+	int block_addr = 0;
+	int blk_cnt = 0;
+	int loopcnt = 0;
 
-    /* Zero the write buffer */
-    memset(buf, 0, BUF_SIZE);
-    memset(check_buf, 0, BUF_SIZE);
-    ret = mmc_write_blocks(&card, buf, block_addr, SECTOR_COUNT / 2);
-    zassert_equal(ret, 0, "Write to card failed");
-    /* Verify that a read from this area is empty */
-    ret = mmc_read_blocks(&card, buf, block_addr, SECTOR_COUNT / 2);
-    zassert_equal(ret, 0, "Read from card failed");
-    zassert_mem_equal(buf, check_buf, BUF_SIZE, "Read of erased area was not zero");
+	/* Zero the write buffer */
+	memset(buf, 0, BUF_SIZE);
+	memset(check_buf, 0, BUF_SIZE);
+	ret = mmc_write_blocks(&card, buf, block_addr, SECTOR_COUNT / 2);
+	zassert_equal(ret, 0, "Write to card failed");
+	/* Verify that a read from this area is empty */
+	ret = mmc_read_blocks(&card, buf, block_addr, SECTOR_COUNT / 2);
+	zassert_equal(ret, 0, "Read from card failed");
+	zassert_mem_equal(buf, check_buf, BUF_SIZE, "Read of erased area was not zero");
 
-    for (uint32_t bitwidth = WIDTH_START_INDEX; bitwidth < WIDTH_END_INDEX; bitwidth++) {
-        for (uint32_t speed_index = SPEED_START_INDEX; speed_index < SPEED_END_INDEX; speed_index++) {
+	for (uint32_t bitwidth = WIDTH_START_INDEX; bitwidth < WIDTH_END_INDEX; bitwidth++) {
+		for (uint32_t speed_index = SPEED_START_INDEX; speed_index < SPEED_END_INDEX;
+		     speed_index++) {
 
-            card.bus_width = sdio_test_widths[bitwidth].width;
-            card.bus_io.clock = sdio_test_speeds[speed_index].speed;
+			card.bus_width = sdio_test_widths[bitwidth].width;
+			card.bus_io.clock = sdio_test_speeds[speed_index].speed;
 
-            if ( (sdio_test_speeds[speed_index].speed == 96000000 && card.host_props.host_caps.hs200_support == false) 
-               ||(sdio_test_speeds[speed_index].speed == 48000000 && card.host_props.host_caps.hs200_support == true)) {
-                    continue;
-            }
+			if ((sdio_test_speeds[speed_index].speed == 96000000 &&
+			     card.host_props.host_caps.hs200_support == false) ||
+			    (sdio_test_speeds[speed_index].speed == 48000000 &&
+			     card.host_props.host_caps.hs200_support == true)) {
+				continue;
+			}
 
-            if ( (sdio_test_speeds[speed_index].speed  == 96000000) && (sdio_test_widths[bitwidth].width == SDHC_BUS_WIDTH1BIT) ) {
-                    continue;
-            }
+			if ((sdio_test_speeds[speed_index].speed == 96000000) &&
+			    (sdio_test_widths[bitwidth].width == SDHC_BUS_WIDTH1BIT)) {
+				continue;
+			}
 
-            ret = sd_init(sdhc_dev, &card);
-            zassert_equal(ret, 0, "mmc init failed");
+			ret = sd_init(sdhc_dev, &card);
+			zassert_equal(ret, 0, "mmc init failed");
 
-            TC_PRINT("MMC write read test width:%s speed:%s\n", sdio_test_widths[bitwidth].string, sdio_test_speeds[speed_index].string);
+			TC_PRINT("MMC write read test width:%s speed:%s\n",
+				 sdio_test_widths[bitwidth].string,
+				 sdio_test_speeds[speed_index].string);
 
-            for ( blk_cnt = 1; blk_cnt <= SECTOR_COUNT; blk_cnt += SECTOR_COUNT/4) {
-                for ( block_addr = 0; block_addr < EMMC_BLOCK_NUM; block_addr += EMMC_BLOCK_NUM/4) {
-                    TC_PRINT("MMC write read write start block 0x%x, block cnt = %d\n", block_addr, blk_cnt);
+			for (blk_cnt = 1; blk_cnt <= SECTOR_COUNT; blk_cnt += SECTOR_COUNT / 4) {
+				for (block_addr = 0; block_addr < EMMC_BLOCK_NUM;
+				     block_addr += EMMC_BLOCK_NUM / 4) {
+					TC_PRINT("MMC write read write start block 0x%x, block cnt "
+						 "= %d\n",
+						 block_addr, blk_cnt);
 
-                    /* Now write nonzero data block */
-                    prepare_data_pattern(loopcnt%5, check_buf, BUF_SIZE);
+					/* Now write nonzero data block */
+					prepare_data_pattern(loopcnt % 5, check_buf, BUF_SIZE);
 
-                    ret = mmc_write_blocks(&card, check_buf, block_addr, blk_cnt);
-                    zassert_equal(ret, 0, "Write to card failed");
-                    /* Clear the read buffer, then write to it again */
-                    memset(buf, 0, BUF_SIZE);
-                    ret = mmc_read_blocks(&card, buf, block_addr, blk_cnt);
-                    zassert_equal(ret, 0, "Read from card failed");
-                    zassert_mem_equal(buf, check_buf, SECTOR_SIZE*blk_cnt, "Read of written area was not correct");
-                    loopcnt ++;
-               }
-           }
-        }
-    }
+					ret = mmc_write_blocks(&card, check_buf, block_addr,
+							       blk_cnt);
+					zassert_equal(ret, 0, "Write to card failed");
+					/* Clear the read buffer, then write to it again */
+					memset(buf, 0, BUF_SIZE);
+					ret = mmc_read_blocks(&card, buf, block_addr, blk_cnt);
+					zassert_equal(ret, 0, "Read from card failed");
+					zassert_mem_equal(buf, check_buf, SECTOR_SIZE * blk_cnt,
+							  "Read of written area was not correct");
+					loopcnt++;
+				}
+			}
+		}
+	}
 }
 #endif
 
