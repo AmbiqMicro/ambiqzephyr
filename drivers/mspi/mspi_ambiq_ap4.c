@@ -257,7 +257,7 @@ static inline int mspi_context_lock(struct mspi_context *ctx,
 			ret = 0;
 		} else if (ctx->packets_left == 0) {
 			if (ctx->callback_ctx) {
-				struct mspi_event_data *evt_data;
+				volatile struct mspi_event_data *evt_data;
 				evt_data = &ctx->callback_ctx->mspi_evt.evt_data;
 				while (evt_data->status != 0) {
 				}
@@ -564,7 +564,12 @@ static int mspi_ambiq_dev_config(const struct device *controller,
 		goto e_return;
 	}
 
-	if (param_mask != MSPI_DEVICE_CONFIG_ALL) {
+	if (param_mask == MSPI_DEVICE_CONFIG_NONE) {
+		/* Do nothing except obtaining the controller lock */
+		data->dev_id = (struct mspi_dev_id *)dev_id;
+		return ret;
+
+	} else if (param_mask != MSPI_DEVICE_CONFIG_ALL) {
 		if (data->dev_id != dev_id) {
 			LOG_INST_ERR(cfg->log, "%u, config failed, must be the same device.",
 					 __LINE__);
@@ -960,6 +965,7 @@ static int mspi_ambiq_get_channel_status(const struct device *controller, uint8_
 		return -EBUSY;
 	}
 
+	data->dev_id = NULL;
 	k_mutex_unlock(&data->lock);
 
 	return ret;
