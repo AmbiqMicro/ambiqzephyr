@@ -287,9 +287,7 @@ static inline int mspi_verify_device(const struct device *controller,
 		}
 	}
 
-// TODO:
-//	if (device_index >= cfg->mspicfg.ui32SlaveNum ||
-	if (device_index > cfg->mspicfg.ui32SlaveNum ||
+	if (device_index >= cfg->mspicfg.ui32SlaveNum ||
 		device_index != dev_id->dev_idx) {
 		LOG_INST_ERR(cfg->log, "%u, invalid device ID.", __LINE__);
 		return -ENODEV;
@@ -635,15 +633,13 @@ static int mspi_ambiq_dev_config(const struct device *controller,
 		}
 
 	} else {
-//		if (data->dev_id != dev_id) {
-// TODO:
-//			ret = pinctrl_apply_state(cfg->pcfg,
-//						  PINCTRL_STATE_PRIV_START + dev_id->dev_idx);
-//			ret = pinctrl_apply_state(cfg->pcfg, dev_id->dev_idx);
-//			if (ret) {
-//				goto e_return;
-//			}
-//		}
+		if (data->dev_id != dev_id) {
+			ret = pinctrl_apply_state(cfg->pcfg,
+						  PINCTRL_STATE_PRIV_START + dev_id->dev_idx);
+			if (ret) {
+				goto e_return;
+			}
+		}
 
 		if (dev_cfg->eEndian != MSPI_XFER_LITTLE_ENDIAN) {
 			LOG_INST_ERR(cfg->log, "%u, only support MSB first.", __LINE__);

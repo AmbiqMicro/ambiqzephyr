@@ -26,16 +26,15 @@
     pinctrl-names = "default","sleep","flash";
     status = "okay";
 
-    ce-gpios = <&gpio64_95 23 GPIO_ACTIVE_LOW>,
-                <&gpio64_95 25 GPIO_ACTIVE_LOW>;
+    ce-gpios = <&gpio64_95 25 GPIO_ACTIVE_LOW>;
 
     cmdq-buffer-location = ".mspi_buff";
     cmdq-buffer-size = <256>;
 
-    atxp032: atxp032@1 {
+    atxp032: atxp032@0 {
         compatible = "mspi-atxp032";
         size = <DT_SIZE_M(32)>;
-        reg = <1>;
+        reg = <0>;
         status = "okay";
         mspi-max-frequency = <48000000>;
         mspi-io-mode = "MSPI_IO_MODE_OCTAL";
