@@ -3439,6 +3439,15 @@ static void le_set_ext_adv_param(struct net_buf *buf, struct net_buf **evt)
 			*evt = cmd_complete_status(BT_HCI_ERR_UNSUPP_FEATURE_PARAM_VAL);
 			return;
 		}
+
+		if ((cmd->prim_adv_phy > BT_HCI_LE_PHY_CODED) ||
+		    (cmd->sec_adv_phy > BT_HCI_LE_PHY_CODED) ||
+		    (!IS_ENABLED(CONFIG_BT_CTLR_PHY_CODED) &&
+		     ((cmd->prim_adv_phy == BT_HCI_LE_PHY_CODED) ||
+		      (cmd->sec_adv_phy == BT_HCI_LE_PHY_CODED)))) {
+			*evt = cmd_complete_status(BT_HCI_ERR_UNSUPP_FEATURE_PARAM_VAL);
+			return;
+		}
 	}
 
 	status = ll_adv_set_by_hci_handle_get_or_new(cmd->handle, &handle);
@@ -4096,6 +4105,15 @@ static void le_ext_create_connection(struct net_buf *buf, struct net_buf **evt)
 	}
 
 	phys = cmd->phys;
+
+	/* Ignore Scan Interval and Scan Window, and ignore scanning if
+	 * Initiating PHY is set for LE 2M PHY
+	 * Refer to Bluetooth Core Specification Version 5.4 Vol 4, Part E
+	 * 7.8.66 LE Extended Create Connection command
+	 */
+	phys &= ~BT_HCI_LE_EXT_SCAN_PHY_2M;
+
+	/* Check if unsupported PHY requested for scanning */
 	if (IS_ENABLED(CONFIG_BT_CTLR_PARAM_CHECK) &&
 	    (((phys & phys_bitmask) == 0) || (phys & ~phys_bitmask))) {
 		*evt = cmd_status(BT_HCI_ERR_UNSUPP_FEATURE_PARAM_VAL);

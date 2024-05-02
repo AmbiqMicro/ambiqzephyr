@@ -808,6 +808,7 @@ int bt_hci_disconnect(uint16_t handle, uint8_t reason)
 
 static uint16_t disconnected_handles[CONFIG_BT_MAX_CONN];
 static uint8_t disconnected_handles_reason[CONFIG_BT_MAX_CONN];
+
 static void disconnected_handles_reset(void)
 {
 	(void)memset(disconnected_handles, 0, sizeof(disconnected_handles));
@@ -909,7 +910,7 @@ static void hci_disconn_complete(struct net_buf *buf)
 
 #if defined(CONFIG_BT_CENTRAL) && !defined(CONFIG_BT_FILTER_ACCEPT_LIST)
 	if (atomic_test_bit(conn->flags, BT_CONN_AUTO_CONNECT)) {
-		bt_conn_set_state(conn, BT_CONN_CONNECTING_SCAN);
+		bt_conn_set_state(conn, BT_CONN_SCAN_BEFORE_INITIATING);
 		bt_le_scan_update(false);
 	}
 #endif /* defined(CONFIG_BT_CENTRAL) && !defined(CONFIG_BT_FILTER_ACCEPT_LIST) */
@@ -1042,11 +1043,11 @@ static struct bt_conn *find_pending_connect(uint8_t role, bt_addr_le_t *peer_add
 	 */
 	if (IS_ENABLED(CONFIG_BT_CENTRAL) && role == BT_HCI_ROLE_CENTRAL) {
 		conn = bt_conn_lookup_state_le(BT_ID_DEFAULT, peer_addr,
-					       BT_CONN_CONNECTING);
+					       BT_CONN_INITIATING);
 		if (IS_ENABLED(CONFIG_BT_FILTER_ACCEPT_LIST) && !conn) {
 			conn = bt_conn_lookup_state_le(BT_ID_DEFAULT,
 						       BT_ADDR_LE_NONE,
-						       BT_CONN_CONNECTING_AUTO);
+						       BT_CONN_INITIATING_FILTER_LIST);
 		}
 
 		return conn;
@@ -1054,11 +1055,11 @@ static struct bt_conn *find_pending_connect(uint8_t role, bt_addr_le_t *peer_add
 
 	if (IS_ENABLED(CONFIG_BT_PERIPHERAL) && role == BT_HCI_ROLE_PERIPHERAL) {
 		conn = bt_conn_lookup_state_le(bt_dev.adv_conn_id, peer_addr,
-					       BT_CONN_CONNECTING_DIR_ADV);
+					       BT_CONN_ADV_DIR_CONNECTABLE);
 		if (!conn) {
 			conn = bt_conn_lookup_state_le(bt_dev.adv_conn_id,
 						       BT_ADDR_LE_NONE,
-						       BT_CONN_CONNECTING_ADV);
+						       BT_CONN_ADV_CONNECTABLE);
 		}
 
 		return conn;
@@ -1177,7 +1178,7 @@ static void le_conn_complete_cancel(uint8_t err)
 		/* Check if device is marked for autoconnect. */
 		if (atomic_test_bit(conn->flags, BT_CONN_AUTO_CONNECT)) {
 			/* Restart passive scanner for device */
-			bt_conn_set_state(conn, BT_CONN_CONNECTING_SCAN);
+			bt_conn_set_state(conn, BT_CONN_SCAN_BEFORE_INITIATING);
 		}
 	} else {
 		if (atomic_test_bit(conn->flags, BT_CONN_AUTO_CONNECT)) {
@@ -3085,6 +3086,17 @@ static void le_read_supp_states_complete(struct net_buf *buf)
 	bt_dev.le.states = sys_get_le64(rp->le_states);
 }
 
+#if defined(CONFIG_BT_BROADCASTER)
+static void le_read_maximum_adv_data_len_complete(struct net_buf *buf)
+{
+	struct bt_hci_rp_le_read_max_adv_data_len *rp = (void *)buf->data;
+
+	LOG_DBG("status 0x%02x", rp->status);
+
+	bt_dev.le.max_adv_data_len = sys_le16_to_cpu(rp->max_adv_data_len);
+}
+#endif /* CONFIG_BT_BROADCASTER */
+
 #if defined(CONFIG_BT_SMP)
 static void le_read_resolving_list_size_complete(struct net_buf *buf)
 {
@@ -3385,6 +3397,25 @@ static int le_init(void)
 
 		net_buf_unref(rsp);
 	}
+
+#if defined(CONFIG_BT_BROADCASTER)
+	if (IS_ENABLED(CONFIG_BT_EXT_ADV) && BT_DEV_FEAT_LE_EXT_ADV(bt_dev.le.features)) {
+		/* Read LE Max Adv Data Len */
+		err = bt_hci_cmd_send_sync(BT_HCI_OP_LE_READ_MAX_ADV_DATA_LEN, NULL, &rsp);
+		if (err == 0) {
+			le_read_maximum_adv_data_len_complete(rsp);
+			net_buf_unref(rsp);
+		} else if (err == -EIO) {
+			LOG_WRN("Controller does not support 'LE_READ_MAX_ADV_DATA_LEN'. "
+				"Assuming maximum length is 31 bytes.");
+			bt_dev.le.max_adv_data_len = 31;
+		} else {
+			return err;
+		}
+	} else {
+		bt_dev.le.max_adv_data_len = 31;
+	}
+#endif /* CONFIG_BT_BROADCASTER */
 
 	if (BT_FEAT_BREDR(bt_dev.features)) {
 		buf = bt_hci_cmd_create(BT_HCI_OP_LE_WRITE_LE_HOST_SUPP,
