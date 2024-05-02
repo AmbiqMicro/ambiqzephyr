@@ -6,6 +6,9 @@ if SOC_SERIES_APOLLO4X
 
 rsource "Kconfig.defconfig.apollo4*"
 
+config HWINFO_AMBIQ
+	default HWINFO
+
 config PM
 	default y
 
