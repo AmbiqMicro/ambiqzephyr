@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2024 Ambiq Micro
+
+description: AMBIQ RTC
+
+compatible: "ambiq,rtc"
+
+include: rtc-device.yaml
+
+properties:
+  reg:
+    required: true
+  clock:
+    type: int
+    default: 0
+    description: |
+      Clock to gate the RTC.
+      Use the macros not the actual enum value, here is the concordance
+      list. (Not implemented in driver currently)
+        0    AM_HAL_CLKGEN_CONTROL_RTC_SEL_XTAL
+        1    AM_HAL_CLKGEN_CONTROL_RTC_SEL_LFRC
+    enum:
+      - 0
+      - 1

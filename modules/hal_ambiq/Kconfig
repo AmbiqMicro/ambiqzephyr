@@ -50,6 +50,11 @@ config AMBIQ_HAL_USE_MSPI
 	help
 	  Use the MSPI driver from Ambiq HAL
 
+config AMBIQ_HAL_USE_RTC
+	bool
+	help
+	  Use the RTC driver from Ambiq HAL
+
 config AMBIQ_HAL_USE_HWINFO
 	bool
 	help

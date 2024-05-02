@@ -70,6 +70,28 @@ ZTEST(rtc_api, test_alarm_callback)
 		}
 	}
 
+#if CONFIG_RTC_AMBIQ
+	/* Ambiq requires the following parts of the time
+	 * to be filled in for the alarm to function:
+	 * - month
+	 * - day of month
+	 * - day of week
+	 * - hour
+	 * - minute
+	 * - sec
+	 */
+
+	/* Initialize RTC alarm time to set */
+	timer_set = RTC_TEST_ALARM_SET_TIME;
+
+	gmtime_r(&timer_set, (struct tm *)(&alarm_time_set));
+
+	alarm_time_set.tm_isdst = -1;
+	alarm_time_set.tm_nsec = 0;
+
+	alarm_time_set.tm_sec = 0;
+#endif
+
 	/* Set alarm time */
 	alarm_time_set.tm_min = RTC_TEST_ALARM_TIME_MINUTE;
 	alarm_time_set.tm_hour = RTC_TEST_ALARM_TIME_HOUR;
