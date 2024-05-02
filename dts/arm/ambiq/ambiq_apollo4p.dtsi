@@ -103,6 +103,13 @@
 			status = "disabled";
 		};
 
+		counter1: counter@40008080 {
+			compatible = "ambiq,counter";
+			reg = <0x40008080 0x80>;
+			interrupts = <68 0>;
+			status = "disabled";
+		};
+
 		uart0: uart@4001c000 {
 			compatible = "ambiq,uart", "arm,pl011";
 			reg = <0x4001c000 0x1000>;
