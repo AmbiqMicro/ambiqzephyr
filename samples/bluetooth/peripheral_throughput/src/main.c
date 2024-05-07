@@ -40,8 +40,8 @@
  * rate can be higher.
  */
 #if (CONFIG_SOC_SERIES_APOLLO3X)
-#define UPDATE_PARAM_INTERVAL_MIN 12 /* 15ms */
-#define UPDATE_PARAM_INTERVAL_MAX 15 /* 18.75ms */
+#define UPDATE_PARAM_INTERVAL_MIN 14 /* 17.5ms */
+#define UPDATE_PARAM_INTERVAL_MAX 14 /* 17.5ms */
 #else
 #define UPDATE_PARAM_INTERVAL_MIN 32 /* 40ms */
 #define UPDATE_PARAM_INTERVAL_MAX 40 /* 50ms */
@@ -132,7 +132,7 @@ int main(void)
 	bt_conn_auth_cb_register(&auth_cb_display);
 
 	while (1) {
-		k_sleep(K_USEC(1));
+		// k_sleep(K_USEC(1));
 		throughput_notify();
 	}
 	return 0;
