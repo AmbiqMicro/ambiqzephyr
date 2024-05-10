@@ -36,12 +36,6 @@ struct bt_throughput throughput;
 static uint16_t tx_length = 0;
 static struct bt_gatt_attr *throughput_notify_ch;
 static bool throughput_notif_enabled = false;
-static struct k_sem *notify_sem;
-static uint8_t notify_buffer[CONFIG_BT_BUF_ACL_TX_COUNT][256];
-static uint8_t buf_fill_pkts = 0;
-static uint8_t buf_sent_pkts = 0;
-
-extern struct k_sem *bt_conn_get_pkts(struct bt_conn *conn);
 
 void mtu_updated(struct bt_conn *conn, uint16_t tx, uint16_t rx)
 {
@@ -183,8 +177,6 @@ int bt_throughput_notify(void)
 		return -EPERM;
 	}
 
-	notify_sem = bt_conn_get_pkts(throughput.conn);
-
 	do {
 		if ((throughput.data.trans_mode != THROUGHPUT_TRANS_MODE_TX) &&
 		    (throughput.data.trans_mode != THROUGHPUT_TRANS_MODE_TRX)) {
@@ -204,39 +196,14 @@ int bt_throughput_notify(void)
 
 		notify_params.len = tx_length;
 		notify_params.user_data = &tx_length;
-		/* Fill the maximum supported ACL packets to the buffer at once */
-		if (buf_fill_pkts == 0) {
-			for (int i = 0; i < (*notify_sem).limit; i++) {
-				memcpy(&notify_buffer[i][0], &throughput.data.tx_payload[0], tx_length);
-				buf_fill_pkts ++;
-				throughput.data.tx_index++;
-				throughput.data.tx_payload[0] = (uint8_t)throughput.data.tx_index;
-				throughput.data.tx_payload[1] = (uint8_t)(throughput.data.tx_index >> 8);				
-			}
+		throughput.data.tx_payload[0] = (uint8_t)throughput.data.tx_index;
+		throughput.data.tx_payload[1] = (uint8_t)(throughput.data.tx_index >> 8);
+		ret = bt_gatt_notify_cb(throughput.conn, &notify_params);
+		if (ret) {
+			break;
 		}
 
-		/* The application buffer is full and the controller buffer is empty, send all the
-		 * application buffer at once to the controller buffer then the controller will try
-		 * to send all received HCI buffer to the peer in the whole connection event.
-		 * This is to address the controller does not free the TX buffer as soon as possible
-		 * in the middle of connection event.
-		 */
-		if ((buf_fill_pkts == (*notify_sem).limit) && ((*notify_sem).count == (*notify_sem).limit)) {
-			for (int i = buf_sent_pkts; i < buf_fill_pkts; i++) {
-				notify_params.data = notify_buffer[i];
-				ret = bt_gatt_notify_cb(throughput.conn, &notify_params);
-				if (ret) {
-					break;
-				}
-				buf_sent_pkts ++;
-			}
-		}
-
-		/* All the buffers have been sent to the controller */
-		if (buf_fill_pkts == buf_sent_pkts) {
-			buf_fill_pkts = 0;
-			buf_sent_pkts = 0;
-		}
+		throughput.data.tx_index++;
 	} while (0);
 
 	return ret;
@@ -253,8 +220,6 @@ int bt_throughput_conn_init(struct bt_conn *conn)
 	throughput.data.trans_mode = THROUGHPUT_TRANS_MODE_NONE;
 	throughput.data.mtu = bt_gatt_get_mtu(conn);
 	throughput.conn = conn;
-	buf_fill_pkts = 0;
-	buf_sent_pkts = 0;
 
 	return 0;
 }
