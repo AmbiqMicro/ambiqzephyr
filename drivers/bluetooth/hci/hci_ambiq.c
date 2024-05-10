@@ -72,6 +72,21 @@ static const struct spi_buf_set spi_rx = {.buffers = &spi_rx_buf, .count = 1};
 static K_SEM_DEFINE(sem_irq, 0, 1);
 static K_SEM_DEFINE(sem_spi_available, 1, 1);
 
+#ifdef CONFIG_BT_THROUGHPUT_DROP_WORKAROUND
+struct tp_wa_t {
+	struct k_sem *acl_pkts_sem;
+	struct k_sem buf_fill_sem;
+	uint8_t buf[CONFIG_BT_BUF_ACL_TX_COUNT][256];
+	uint16_t len[CONFIG_BT_BUF_ACL_TX_COUNT];
+	uint8_t buf_fill_idx;
+	uint8_t buf_sent_idx;
+};
+
+static struct tp_wa_t tp_wa_data;
+bool acl_pkts_need_cache = false;
+extern struct k_sem *bt_conn_get_pkts(struct bt_conn *conn);
+#endif /* CONFIG_BT_THROUGHPUT_DROP_WORKAROUND */
+
 void bt_packet_irq_isr(const struct device *unused1, struct gpio_callback *unused2,
 		       uint32_t unused3)
 {
@@ -338,6 +353,39 @@ static int bt_hci_send(struct net_buf *buf)
 	switch (bt_buf_get_type(buf)) {
 	case BT_BUF_ACL_OUT:
 		net_buf_push_u8(buf, BT_HCI_H4_ACL);
+
+#ifdef CONFIG_BT_THROUGHPUT_DROP_WORKAROUND
+		if (acl_pkts_need_cache) {
+			k_sem_take(&tp_wa_data.buf_fill_sem, K_FOREVER);
+			memcpy(&tp_wa_data.buf[tp_wa_data.buf_fill_idx][0], buf->data, buf->len);
+			tp_wa_data.len[tp_wa_data.buf_fill_idx] = buf->len;
+			tp_wa_data.buf_fill_idx++;
+			tp_wa_data.acl_pkts_sem = bt_conn_get_pkts(NULL);
+			if (tp_wa_data.buf_fill_idx >=
+			    ((*tp_wa_data.acl_pkts_sem).limit - (*tp_wa_data.acl_pkts_sem).count)) {
+				for (int i = tp_wa_data.buf_sent_idx; i < tp_wa_data.buf_fill_idx;
+				     i++) {
+					/* Send the SPI packet */
+					ret = spi_send_packet(&tp_wa_data.buf[i][0],
+							      tp_wa_data.len[i]);
+					if (ret) {
+						break;
+					}
+					tp_wa_data.buf_sent_idx++;
+				}
+
+				/* All the buffers have been sent to the controller */
+				if (tp_wa_data.buf_fill_idx == tp_wa_data.buf_sent_idx) {
+					tp_wa_data.buf_fill_idx = 0;
+					tp_wa_data.buf_sent_idx = 0;
+					k_sem_give(&tp_wa_data.buf_fill_sem);
+				}
+			} else {
+				k_sem_give(&tp_wa_data.buf_fill_sem);
+			}
+		}
+#endif /* CONFIG_BT_THROUGHPUT_DROP_WORKAROUND */
+
 		break;
 	case BT_BUF_CMD:
 		net_buf_push_u8(buf, BT_HCI_H4_CMD);
@@ -348,8 +396,15 @@ static int bt_hci_send(struct net_buf *buf)
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_BT_THROUGHPUT_DROP_WORKAROUND
+	if (!acl_pkts_need_cache) {
+		/* Send the SPI packet */
+		ret = spi_send_packet(buf->data, buf->len);
+	}
+#else
 	/* Send the SPI packet */
 	ret = spi_send_packet(buf->data, buf->len);
+#endif /* CONFIG_BT_THROUGHPUT_DROP_WORKAROUND */
 
 	net_buf_unref(buf);
 
@@ -364,6 +419,10 @@ static int bt_hci_open(void)
 	if (ret) {
 		return ret;
 	}
+
+#ifdef CONFIG_BT_THROUGHPUT_DROP_WORKAROUND
+	k_sem_init(&tp_wa_data.buf_fill_sem, 1, 1);
+#endif /* CONFIG_BT_THROUGHPUT_DROP_WORKAROUND */
 
 	/* Start RX thread */
 	k_thread_create(&spi_rx_thread_data, spi_rx_stack, K_KERNEL_STACK_SIZEOF(spi_rx_stack),
