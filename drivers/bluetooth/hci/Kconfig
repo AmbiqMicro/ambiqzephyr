@@ -152,19 +152,6 @@ config BT_HCI_INIT_PRIORITY
 	  The priority of BT HCI driver initialization needs to be lower than
 	  the SPI, GPIO, clock controller drivers initialization priorities.
 
-config BT_THROUGHPUT_DROP_WORKAROUND
-    bool "Throughput drop issue workaround"
-	default y
-	depends on SOC_SERIES_APOLLO3X
-	help
-	  For some reason the Apollo3x BLE controller does not free the TX buffer
-	  as soon as possible in the middle of connection event, and causes the
-	  throughput drop issue when retransmission happens. The workaround is to
-	  cached the ACL packets at first and send all the cached ACL packets at 
-	  once to the controller when the cached buffer is full and the controller
-	  buffer is empty. Then the controller is able to send all received HCI
-	  buffer to the peer in the whole connection event.
-
 endif # BT_AMBIQ_HCI
 
 config BT_STM32_IPM_RX_STACK_SIZE
