@@ -36,9 +36,6 @@ struct bt_throughput throughput;
 static uint16_t tx_length = 0;
 static struct bt_gatt_attr *throughput_notify_ch;
 static bool throughput_notif_enabled = false;
-#ifdef CONFIG_BT_THROUGHPUT_DROP_WORKAROUND
-extern bool acl_pkts_need_cache;
-#endif /* CONFIG_BT_THROUGHPUT_DROP_WORKAROUND */
 
 void mtu_updated(struct bt_conn *conn, uint16_t tx, uint16_t rx)
 {
@@ -196,12 +193,6 @@ int bt_throughput_notify(void)
 				throughput.data.tx_index = 1;
 			}
 		}
-
-#ifdef CONFIG_BT_THROUGHPUT_DROP_WORKAROUND
-		if (!acl_pkts_need_cache) {
-			acl_pkts_need_cache = true;
-		}
-#endif /* CONFIG_BT_THROUGHPUT_DROP_WORKAROUND */
 
 		notify_params.len = tx_length;
 		notify_params.user_data = &tx_length;
