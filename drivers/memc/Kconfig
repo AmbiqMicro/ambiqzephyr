@@ -31,6 +31,6 @@ source "drivers/memc/Kconfig.sifive"
 
 source "drivers/memc/Kconfig.nxp_s32"
 
-source "drivers/memc/Kconfig.ambiq"
+source "drivers/memc/Kconfig.mspi"
 
 endif

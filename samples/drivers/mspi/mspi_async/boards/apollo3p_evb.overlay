@@ -87,20 +87,21 @@
 				 <MSPI1_6_P57>,
 				 <MSPI1_7_P58>;
 			drive-strength = "0.75";
+			ambiq,iom-mspi = <0>;
 			ambiq,iom-num = <1>;
 		};
 
 		group2 {
 			pinmux = <MSPI1_8_P59>;
 			drive-strength = "0.75";
-			ambiq,iom-nce-module = <0>;
+			ambiq,iom-mspi = <0>;
 			ambiq,iom-num = <2>;
 		};
 
 		group3 {
 			pinmux = <NCE69_P69>;
 			drive-strength = "1.0";
-			ambiq,iom-nce-module = <0>;
+			ambiq,iom-mspi = <0>;
 			ambiq,iom-num = <1>;
 		};
 
