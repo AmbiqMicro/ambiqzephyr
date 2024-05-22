@@ -25,7 +25,6 @@ config FLASH_MSPI_ATXP032
 	select FLASH_HAS_PAGE_LAYOUT
 	select FLASH_JESD216
 	select FLASH_HAS_EX_OP
-	select GPIO
 	select MSPI_AMBIQ_AP3 if SOC_SERIES_APOLLO3X
 
 endmenu

@@ -275,17 +275,6 @@ static int flash_mspi_atxp032_unprotect_sector(const struct device *flash, off_t
 	return ret;
 }
 
-static int flash_mspi_atxp032_protect_sector(const struct device *flash, off_t addr)
-{
-	int ret;
-
-	LOG_DBG("protect sector at 0x%08zx", (ssize_t)addr);
-
-	ret = flash_mspi_atxp032_command_write(flash, 0x36, addr, 4, 0, NULL, 0);
-
-	return ret;
-}
-
 static int flash_mspi_atxp032_erase_sector(const struct device *flash, off_t addr)
 {
 	int ret;
