@@ -185,8 +185,9 @@ int main(void)
 	}
 
 	while (write_ctx.status != 0 || read_ctx.status != 0) {
-		printk("w:%d,r:%d\n", cb_ctx1.mspi_evt.evt_data.packet_idx,
-				      cb_ctx2.mspi_evt.evt_data.packet_idx);
+		printk("Waiting for complete..., write completed:%d, read completed:%d\n",
+			cb_ctx1.mspi_evt.evt_data.packet_idx,
+			cb_ctx2.mspi_evt.evt_data.packet_idx);
 		k_busy_wait(100000);
 	}
 
