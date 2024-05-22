@@ -341,7 +341,7 @@ static int mspi_ambiq_deinit(const struct device *controller)
 		goto e_deinit_return;
 	}
 
-	ret = am_hal_mspi_deinitialize(&data->mspiHandle);
+	ret = am_hal_mspi_deinitialize(data->mspiHandle);
 	if (ret) {
 		LOG_INST_ERR(cfg->log, "%u, fail to deinit MSPI.", __LINE__);
 		ret = -ENODEV;

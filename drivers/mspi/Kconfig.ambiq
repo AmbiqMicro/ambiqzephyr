@@ -10,6 +10,7 @@ config MSPI_AMBIQ_AP3
 	select MSPI_XIP
 	select MSPI_SCRAMBLE
 	select MSPI_TIMING
+	select GPIO
 	help
 	  Enable driver for Ambiq MSPI.
 
