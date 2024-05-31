@@ -91,13 +91,14 @@ int aps6404l_write(const struct device *dev,
 	};
 
 	struct spi_dt_spec spec;
+    memcpy(&spec, &cfg->spec, sizeof(spec));
+    spec.config.operation |= SPI_HALF_DUPLEX;
 
 	while (ui32NumBytes)
 	{
 		tx_buf[0].buf = cmd;
 		tx_buf[0].len = 1;
 		tx.count = 1;
-		memcpy(&spec, &cfg->spec, sizeof(spec));
 		spec.config.operation |= SPI_HOLD_ON_CS;
 
 		if (spi_transceive_dt(&spec, &tx, 0))
@@ -115,7 +116,7 @@ int aps6404l_write(const struct device *dev,
 		tx_buf->buf = address;
 		tx_buf->len = 3;
 		tx_buf[1].buf = pui8TxBuffer; 
-		tx.count = size + 1;
+		tx.count = 2;
 
 		spec.config.operation &= ~SPI_HOLD_ON_CS;
 		if (spi_write_dt(&spec, &tx))
@@ -166,6 +167,8 @@ int aps6404l_read(const struct device *dev,
 
 
 	struct spi_dt_spec spec;
+    memcpy(&spec, &cfg->spec, sizeof(spec));
+    spec.config.operation |= SPI_HALF_DUPLEX;
 
 	while (ui32NumBytes)
 	{
@@ -173,7 +176,6 @@ int aps6404l_read(const struct device *dev,
 		tx_buf[0].len = 1;
 		tx.count = 1;
 
-		memcpy(&spec, &cfg->spec, sizeof(spec));
 		spec.config.operation |= SPI_HOLD_ON_CS;
 		if (spi_transceive_dt(&spec, &tx, 0))
 		{
