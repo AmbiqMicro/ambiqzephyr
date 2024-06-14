@@ -20,6 +20,10 @@ static int arm_apollo4_init(void)
 	/* Disable the RTC. */
 	am_hal_rtc_osc_disable();
 
+#ifdef CONFIG_LOG_BACKEND_SWO
+	am_hal_tpiu_enable(CONFIG_LOG_BACKEND_SWO_FREQ_HZ);
+#endif /* CONFIG_LOG_BACKEND_SWO */
+
 	return 0;
 }
 
