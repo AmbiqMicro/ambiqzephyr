@@ -91,7 +91,7 @@ static int i2c_ambiq_read(const struct device *dev, struct i2c_msg *msg, uint16_
 #ifdef CONFIG_I2C_AMBIQ_DMA
 	data->transfer_status = -EFAULT;
 	ret = am_hal_iom_nonblocking_transfer(data->iom_handler, &trans, i2c_ambiq_callback,
-					      (void *)dev);
+						  (void *)dev);
 	if (k_sem_take(&data->transfer_sem, K_MSEC(I2C_TRANSFER_TIMEOUT_MSEC))) {
 		LOG_ERR("Timeout waiting for transfer complete");
 		/* cancel timed out transaction */
@@ -125,7 +125,7 @@ static int i2c_ambiq_write(const struct device *dev, struct i2c_msg *msg, uint16
 #ifdef CONFIG_I2C_AMBIQ_DMA
 	data->transfer_status = -EFAULT;
 	ret = am_hal_iom_nonblocking_transfer(data->iom_handler, &trans, i2c_ambiq_callback,
-					      (void *)dev);
+						  (void *)dev);
 
 	if (k_sem_take(&data->transfer_sem, K_MSEC(I2C_TRANSFER_TIMEOUT_MSEC))) {
 		LOG_ERR("Timeout waiting for transfer complete");
@@ -177,7 +177,7 @@ static int i2c_ambiq_configure(const struct device *dev, uint32_t dev_config)
 }
 
 static int i2c_ambiq_transfer(const struct device *dev, struct i2c_msg *msgs, uint8_t num_msgs,
-			      uint16_t addr)
+				  uint16_t addr)
 {
 	struct i2c_ambiq_data *data = dev->data;
 	int ret = 0;
@@ -220,7 +220,7 @@ static int i2c_ambiq_init(const struct device *dev)
 	data->iom_cfg.eInterfaceMode = AM_HAL_IOM_I2C_MODE;
 
 	if (AM_HAL_STATUS_SUCCESS !=
-	    am_hal_iom_initialize((config->base - REG_IOM_BASEADDR) / config->size,
+		am_hal_iom_initialize((config->base - REG_IOM_BASEADDR) / config->size,
 				  &data->iom_handler)) {
 		LOG_ERR("Fail to initialize I2C\n");
 		return -ENXIO;

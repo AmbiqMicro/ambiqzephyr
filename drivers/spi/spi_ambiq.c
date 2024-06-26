@@ -168,7 +168,7 @@ static int spi_config(const struct device *dev, const struct spi_config *config)
 }
 
 static int spi_ambiq_xfer_half_duplex(const struct device *dev, am_hal_iom_dir_e dir,
-				      am_hal_iom_transfer_t trans, bool cont)
+					  am_hal_iom_transfer_t trans, bool cont)
 {
 	struct spi_ambiq_data *data = dev->data;
 	struct spi_context *ctx = &data->ctx;
@@ -194,8 +194,8 @@ static int spi_ambiq_xfer_half_duplex(const struct device *dev, am_hal_iom_dir_e
 		trans.bContinue = cont;
 #ifdef CONFIG_SPI_AMBIQ_DMA
 		if (AM_HAL_STATUS_SUCCESS !=
-		    am_hal_iom_nonblocking_transfer(data->iom_handler, &trans, spi_ambiq_callback,
-						    (void *)dev)) {
+			am_hal_iom_nonblocking_transfer(data->iom_handler, &trans, spi_ambiq_callback,
+							(void *)dev)) {
 			spi_ambiq_reset(dev);
 			return -EIO;
 		}
@@ -223,10 +223,10 @@ static int spi_ambiq_xfer_half_duplex(const struct device *dev, am_hal_iom_dir_e
 				trans.pui32RxBuffer = (uint32_t *)ctx->rx_buf;
 #ifdef CONFIG_SPI_AMBIQ_DMA
 				if (AM_HAL_STATUS_SUCCESS !=
-				    am_hal_iom_nonblocking_transfer(
-					    data->iom_handler, &trans,
-					    ((is_last == true) ? spi_ambiq_callback : NULL),
-					    (void *)dev)) {
+					am_hal_iom_nonblocking_transfer(
+						data->iom_handler, &trans,
+						((is_last == true) ? spi_ambiq_callback : NULL),
+						(void *)dev)) {
 					spi_ambiq_reset(dev);
 					return -EIO;
 				}
@@ -246,7 +246,7 @@ static int spi_ambiq_xfer_half_duplex(const struct device *dev, am_hal_iom_dir_e
 }
 
 static int spi_ambiq_xfer_full_duplex(const struct device *dev, am_hal_iom_dir_e dir,
-				      am_hal_iom_transfer_t trans, bool cont)
+					  am_hal_iom_transfer_t trans, bool cont)
 {
 	struct spi_ambiq_data *data = dev->data;
 	struct spi_context *ctx = &data->ctx;
@@ -286,7 +286,7 @@ static int spi_ambiq_xfer_full_duplex(const struct device *dev, am_hal_iom_dir_e
 }
 
 static int spi_ambiq_fill_instruction(const struct device *dev, am_hal_iom_transfer_t *trans,
-				      uint32_t len)
+					  uint32_t len)
 {
 	struct spi_ambiq_data *data = dev->data;
 	struct spi_context *ctx = &data->ctx;
@@ -406,8 +406,8 @@ static int spi_ambiq_release(const struct device *dev, const struct spi_config *
 	am_hal_iom_status_get(data->iom_handler, &iom_status);
 
 	if ((iom_status.bStatIdle != IOM0_STATUS_IDLEST_IDLE) ||
-	    (iom_status.bStatCmdAct == IOM0_STATUS_CMDACT_ACTIVE) ||
-	    (iom_status.ui32NumPendTransactions)) {
+		(iom_status.bStatCmdAct == IOM0_STATUS_CMDACT_ACTIVE) ||
+		(iom_status.ui32NumPendTransactions)) {
 		return -EBUSY;
 	}
 
@@ -432,7 +432,7 @@ static int spi_ambiq_init(const struct device *dev)
 	int ret = 0;
 
 	if (AM_HAL_STATUS_SUCCESS !=
-	    am_hal_iom_initialize((cfg->base - REG_IOM_BASEADDR) / cfg->size, &data->iom_handler)) {
+		am_hal_iom_initialize((cfg->base - REG_IOM_BASEADDR) / cfg->size, &data->iom_handler)) {
 		LOG_ERR("Fail to initialize SPI\n");
 		return -ENXIO;
 	}
