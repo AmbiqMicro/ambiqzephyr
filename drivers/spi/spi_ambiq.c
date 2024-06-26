@@ -421,6 +421,10 @@ static const struct spi_driver_api spi_ambiq_driver_api = {
 	.release = spi_ambiq_release,
 };
 
+#ifdef SOC_SERIES_APOLLO4X
+#define REG_IOM_BASEADDR IOM0_BASE
+#endif
+
 static int spi_ambiq_init(const struct device *dev)
 {
 	struct spi_ambiq_data *data = dev->data;

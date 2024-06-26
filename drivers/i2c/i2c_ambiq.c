@@ -206,6 +206,10 @@ static int i2c_ambiq_transfer(const struct device *dev, struct i2c_msg *msgs, ui
 	return 0;
 }
 
+#ifdef SOC_SERIES_APOLLO4X
+#define REG_IOM_BASEADDR IOM0_BASE
+#endif
+
 static int i2c_ambiq_init(const struct device *dev)
 {
 	struct i2c_ambiq_data *data = dev->data;
