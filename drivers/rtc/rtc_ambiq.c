@@ -41,8 +41,7 @@ static int iYear;
 
 static void rtc_time_to_ambiq_time_set(const struct rtc_time *tm, am_hal_rtc_time_t *atm)
 {
-	atm->ui32CenturyEnable = true;
-	atm->ui32Century = ((tm->tm_year <= 99) || (tm->tm_year >= 200));
+	atm->ui32CenturyBit = ((tm->tm_year <= 99) || (tm->tm_year >= 200));
 	atm->ui32Year = tm->tm_year;
 	if (tm->tm_year > 99) {
 		atm->ui32Year = tm->tm_year % 100;
@@ -63,7 +62,7 @@ static void rtc_time_to_ambiq_time_set(const struct rtc_time *tm, am_hal_rtc_tim
 static void ambiq_time_to_rtc_time_set(const am_hal_rtc_time_t *atm, struct rtc_time *tm)
 {
 	tm->tm_year = atm->ui32Year;
-	if (atm->ui32Century == 0)
+	if (atm->ui32CenturyBit == 0)
 		tm->tm_year += 100;
 	else
 		tm->tm_year += 200;
@@ -101,10 +100,6 @@ static int ambiq_rtc_set_time(const struct device *dev,
 	/* Convertn to Ambiq Time */
 	rtc_time_to_ambiq_time_set(timeptr, &ambiq_time);
 
-	if ((ambiq_time.ui32Year == 99) && (ambiq_time.ui32CenturyEnable == 1)) {
-		return -EINVAL;
-	}
-
 	err = am_hal_rtc_time_set(&ambiq_time);
 	if (err) {
 		LOG_WRN("Set Timer returned an error - %d!", err);
@@ -131,8 +126,7 @@ static int ambiq_rtc_get_time(const struct device *dev, struct rtc_time *timeptr
 	}
 
 	if ((iYear == 99) && (ambiq_time.ui32Year == 0)) {
-		if (ambiq_time.ui32CenturyEnable == true) {
-			ambiq_time.ui32Century = 0;
+			ambiq_time.ui32CenturyBit = 0;
 			am_hal_rtc_time_t ambiq_time2 = ambiq_time;
 
 			am_hal_rtc_time_set(&ambiq_time2);
@@ -141,7 +135,6 @@ static int ambiq_rtc_get_time(const struct device *dev, struct rtc_time *timeptr
 				goto unlock;
 			}
 			am_hal_rtc_time_get(&ambiq_time);
-		}
 	}
 
 	ambiq_time_to_rtc_time_set(&ambiq_time, timeptr);
@@ -162,7 +155,8 @@ static int lcl_time_input_validate(const struct rtc_time *timeptr, uint16_t mask
 {
 	if (timeptr != NULL) {
 		if (mask & RTC_ALARM_TIME_MASK_YEAR) {
-			if (timeptr->tm_year > 100) {
+            /* TODO: need to update for max Ambiq time*/
+			if (timeptr->tm_year > 200) {
 				return -EINVAL;
 			}
 		}
