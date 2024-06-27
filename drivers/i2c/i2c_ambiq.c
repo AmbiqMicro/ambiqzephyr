@@ -22,6 +22,7 @@ LOG_MODULE_REGISTER(ambiq_i2c, CONFIG_I2C_LOG_LEVEL);
 
 typedef int (*ambiq_i2c_pwr_func_t)(void);
 
+#define REG_IOM_BASEADDR IOM0_BASE
 #define PWRCTRL_MAX_WAIT_US       5
 #define I2C_TRANSFER_TIMEOUT_MSEC 500 /* Transfer timeout period */
 

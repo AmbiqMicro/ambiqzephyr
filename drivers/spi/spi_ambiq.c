@@ -42,6 +42,8 @@ struct spi_ambiq_data {
 	uint32_t *pDMATCBBuffer;
 };
 
+#define REG_IOM_BASEADDR IOM0_BASE
+
 #define SPI_BASE (((const struct spi_ambiq_config *)(dev)->config)->base)
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
 #define REG_STAT 0x2B4
