@@ -289,8 +289,8 @@ static int adc_ambiq_init(const struct device *dev)
 	int ret;
 
 	/* Initialize the ADC and get the handle*/
-	if (0 !=
-		am_hal_adc_initialize((cfg->base - REG_ADC_BASEADDR) / (cfg->size * 4),
+	if (AM_HAL_STATUS_SUCCESS !=
+		am_hal_adc_initialize((cfg->base - ADC_BASE) / (cfg->size * 4),
 				  &data->adcHandle)) {
 		ret = -ENODEV;
 		LOG_ERR("Faile to initialize ADC, code:%d", ret);

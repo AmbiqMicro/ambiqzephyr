@@ -42,8 +42,6 @@ struct spi_ambiq_data {
 	uint32_t *pDMATCBBuffer;
 };
 
-#define REG_IOM_BASEADDR IOM0_BASE
-
 #define SPI_BASE (((const struct spi_ambiq_config *)(dev)->config)->base)
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
 #define REG_STAT 0x2B4
@@ -370,7 +368,7 @@ static int spi_ambiq_init(const struct device *dev)
 	void *buf = NULL;
 
 	if (AM_HAL_STATUS_SUCCESS !=
-	    am_hal_iom_initialize((cfg->base - REG_IOM_BASEADDR) / cfg->size, &data->IOMHandle)) {
+	    am_hal_iom_initialize((cfg->base - IOM0_BASE) / cfg->size, &data->IOMHandle)) {
 		LOG_ERR("Fail to initialize SPI\n");
 		return -ENXIO;
 	}

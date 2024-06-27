@@ -22,7 +22,6 @@ LOG_MODULE_REGISTER(ambiq_i2c, CONFIG_I2C_LOG_LEVEL);
 
 typedef int (*ambiq_i2c_pwr_func_t)(void);
 
-#define REG_IOM_BASEADDR IOM0_BASE
 #define PWRCTRL_MAX_WAIT_US       5
 #define I2C_TRANSFER_TIMEOUT_MSEC 500 /* Transfer timeout period */
 
@@ -220,7 +219,7 @@ static int i2c_ambiq_init(const struct device *dev)
 	data->iom_cfg.eInterfaceMode = AM_HAL_IOM_I2C_MODE;
 
 	if (AM_HAL_STATUS_SUCCESS !=
-	    am_hal_iom_initialize((config->base - REG_IOM_BASEADDR) / config->size,
+	    am_hal_iom_initialize((config->base - IOM0_BASE) / config->size,
 				  &data->IOMHandle)) {
 		LOG_ERR("Fail to initialize I2C\n");
 		return -ENXIO;
