@@ -16,9 +16,9 @@ LOG_MODULE_REGISTER(ambiq_rtc, CONFIG_RTC_LOG_LEVEL);
 
 #include <am_mcu_apollo.h>
 
-#define AMBIQ_RTC_ALARM_TIME_MASK                                                         \
-	(RTC_ALARM_TIME_MASK_SECOND | RTC_ALARM_TIME_MASK_MINUTE | RTC_ALARM_TIME_MASK_HOUR | \
-	 RTC_ALARM_TIME_MASK_WEEKDAY | RTC_ALARM_TIME_MASK_MONTH | RTC_ALARM_TIME_MASK_YEAR)
+#define AMBIQ_RTC_ALARM_TIME_MASK                                                              \
+	(RTC_ALARM_TIME_MASK_SECOND | RTC_ALARM_TIME_MASK_MINUTE | RTC_ALARM_TIME_MASK_HOUR |      \
+	 RTC_ALARM_TIME_MASK_WEEKDAY | RTC_ALARM_TIME_MASK_MONTH | RTC_ALARM_TIME_MASK_MONTHDAY)
 
 /* struct tm start time:   1st, Jan, 1900 */
 #define TM_YEAR_REF 1900
@@ -37,12 +37,9 @@ struct ambiq_rtc_data {
 
 static struct ambiq_rtc_data rtc_data;
 
-static int iYear;
-
 static void rtc_time_to_ambiq_time_set(const struct rtc_time *tm, am_hal_rtc_time_t *atm)
 {
-	atm->ui32CenturyEnable = true;
-	atm->ui32Century = ((tm->tm_year <= 99) || (tm->tm_year >= 200));
+	atm->ui32CenturyBit = ((tm->tm_year <= 99) || (tm->tm_year >= 200));
 	atm->ui32Year = tm->tm_year;
 	if (tm->tm_year > 99) {
 		atm->ui32Year = tm->tm_year % 100;
@@ -56,14 +53,18 @@ static void rtc_time_to_ambiq_time_set(const struct rtc_time *tm, am_hal_rtc_tim
 
 	/* Nanoseconds times 10mil is hundredths */
 	atm->ui32Hundredths = tm->tm_nsec / 10000000;
-	iYear = atm->ui32Year;
+	if (atm->ui32Hundredths > 99) {
+		uint16_t value = atm->ui32Hundredths / 100;
+		atm->ui32Second += value;
+		atm->ui32Hundredths -= value*100;
+	}
 }
 
 /* To set the timer registers */
 static void ambiq_time_to_rtc_time_set(const am_hal_rtc_time_t *atm, struct rtc_time *tm)
 {
 	tm->tm_year = atm->ui32Year;
-	if (atm->ui32Century == 0)
+	if (atm->ui32CenturyBit == 0)
 		tm->tm_year += 100;
 	else
 		tm->tm_year += 200;
@@ -78,9 +79,19 @@ static void ambiq_time_to_rtc_time_set(const am_hal_rtc_time_t *atm, struct rtc_
 	tm->tm_nsec = atm->ui32Hundredths * 10000000;
 }
 
+static int test_for_rollover(am_hal_rtc_time_t *atm)
+{
+	if ((atm->ui32Year == 99) &&
+		(atm->ui32Month == 12) &&
+		(atm->ui32DayOfMonth == 31)) {
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 /* To set the timer registers */
-static int ambiq_rtc_set_time(const struct device *dev,
-							const struct rtc_time *timeptr)
+static int ambiq_rtc_set_time(const struct device *dev, const struct rtc_time *timeptr)
 {
 	int err = 0;
 	am_hal_rtc_time_t ambiq_time = {0};
@@ -101,7 +112,7 @@ static int ambiq_rtc_set_time(const struct device *dev,
 	/* Convertn to Ambiq Time */
 	rtc_time_to_ambiq_time_set(timeptr, &ambiq_time);
 
-	if ((ambiq_time.ui32Year == 99) && (ambiq_time.ui32CenturyEnable == 1)) {
+	if (test_for_rollover(&ambiq_time)) {
 		return -EINVAL;
 	}
 
@@ -130,20 +141,6 @@ static int ambiq_rtc_get_time(const struct device *dev, struct rtc_time *timeptr
 		goto unlock;
 	}
 
-	if ((iYear == 99) && (ambiq_time.ui32Year == 0)) {
-		if (ambiq_time.ui32CenturyEnable == true) {
-			ambiq_time.ui32Century = 0;
-			am_hal_rtc_time_t ambiq_time2 = ambiq_time;
-
-			am_hal_rtc_time_set(&ambiq_time2);
-			if (err != 0) {
-				LOG_WRN("Get Timer returned an error - %d!", err);
-				goto unlock;
-			}
-			am_hal_rtc_time_get(&ambiq_time);
-		}
-	}
-
 	ambiq_time_to_rtc_time_set(&ambiq_time, timeptr);
 
 	LOG_DBG("get time: year = %d, mon = %d, mday = %d, wday = %d, hour = %d, "
@@ -162,7 +159,7 @@ static int lcl_time_input_validate(const struct rtc_time *timeptr, uint16_t mask
 {
 	if (timeptr != NULL) {
 		if (mask & RTC_ALARM_TIME_MASK_YEAR) {
-			if (timeptr->tm_year > 100) {
+			if (timeptr->tm_year > 200) {
 				return -EINVAL;
 			}
 		}
@@ -402,6 +399,7 @@ static int ambiq_rtc_init(const struct device *dev)
 static const struct rtc_driver_api ambiq_rtc_driver_api = {
 	.set_time = ambiq_rtc_set_time,
 	.get_time = ambiq_rtc_get_time,
+	/* RTC_UPDATE not supported */
 #ifdef CONFIG_RTC_ALARM
 	.alarm_get_supported_fields = ambiq_rtc_alarm_get_supported_fields,
 	.alarm_set_time = ambiq_rtc_alarm_set_time,
