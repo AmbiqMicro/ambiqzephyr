@@ -16,9 +16,9 @@ LOG_MODULE_REGISTER(ambiq_rtc, CONFIG_RTC_LOG_LEVEL);
 
 #include <am_mcu_apollo.h>
 
-#define AMBIQ_RTC_ALARM_TIME_MASK                                                         \
-	(RTC_ALARM_TIME_MASK_SECOND | RTC_ALARM_TIME_MASK_MINUTE | RTC_ALARM_TIME_MASK_HOUR | \
-	 RTC_ALARM_TIME_MASK_WEEKDAY | RTC_ALARM_TIME_MASK_MONTH | RTC_ALARM_TIME_MASK_YEAR)
+#define AMBIQ_RTC_ALARM_TIME_MASK                                                              \
+	(RTC_ALARM_TIME_MASK_SECOND | RTC_ALARM_TIME_MASK_MINUTE | RTC_ALARM_TIME_MASK_HOUR |      \
+	 RTC_ALARM_TIME_MASK_WEEKDAY | RTC_ALARM_TIME_MASK_MONTH | RTC_ALARM_TIME_MASK_MONTHDAY)
 
 /* struct tm start time:   1st, Jan, 1900 */
 #define TM_YEAR_REF 1900
@@ -56,6 +56,12 @@ static void rtc_time_to_ambiq_time_set(const struct rtc_time *tm, am_hal_rtc_tim
 
 	/* Nanoseconds times 10mil is hundredths */
 	atm->ui32Hundredths = tm->tm_nsec / 10000000;
+	if (atm->ui32Hundredths > 99) {
+		uint16_t value = atm->ui32Hundredths / 100;
+		atm->ui32Second += value;
+		atm->ui32Hundredths -= value*100;
+	}
+
 	iYear = atm->ui32Year;
 }
 
@@ -162,7 +168,7 @@ static int lcl_time_input_validate(const struct rtc_time *timeptr, uint16_t mask
 {
 	if (timeptr != NULL) {
 		if (mask & RTC_ALARM_TIME_MASK_YEAR) {
-			if (timeptr->tm_year > 100) {
+			if (timeptr->tm_year > 200) {
 				return -EINVAL;
 			}
 		}
@@ -402,6 +408,7 @@ static int ambiq_rtc_init(const struct device *dev)
 static const struct rtc_driver_api ambiq_rtc_driver_api = {
 	.set_time = ambiq_rtc_set_time,
 	.get_time = ambiq_rtc_get_time,
+	/* RTC_UPDATE not supported */
 #ifdef CONFIG_RTC_ALARM
 	.alarm_get_supported_fields = ambiq_rtc_alarm_get_supported_fields,
 	.alarm_set_time = ambiq_rtc_alarm_set_time,
