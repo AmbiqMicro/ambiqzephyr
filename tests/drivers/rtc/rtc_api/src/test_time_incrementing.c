@@ -20,8 +20,8 @@ static const struct device *rtc = DEVICE_DT_GET(DT_ALIAS(rtc));
 
 ZTEST(rtc_api, test_time_counting)
 {
-	struct rtc_time datetime_set;
-	struct rtc_time datetime_get;
+	struct rtc_time datetime_set = {0};
+	struct rtc_time datetime_get = {0};
 	time_t timer_get;
 	time_t timer_set = RTC_TEST_TIME_COUNTING_SET_TIME;
 	time_t timer_get_last = timer_set;

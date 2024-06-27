@@ -24,6 +24,7 @@
 		led2 = &led2;
 		sw0 = &button0;
 		sw1 = &button1;
+		rtc = &rtc0;
 	};
 
 	leds {
@@ -75,6 +76,12 @@ compatible = "ambiq,adc";
 
 &counter1 {
 	status = "disabled";
+};
+
+&rtc0 {
+	status = "okay";
+	alarms-count = <1>;
+	clock = <0>;
 };
 
 &wdt0 {

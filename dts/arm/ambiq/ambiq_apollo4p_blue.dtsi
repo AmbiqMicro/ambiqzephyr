@@ -238,6 +238,18 @@
 			ambiq,pwrcfg = <&pwrcfg 0x4 0x100>;
 		};
 
+		adc0: adc@50010000 {
+			reg = <0x50010000 0x294>;
+			interrupts = <19 0>;
+			interrupt-names = "ADC";
+			channel-count = <10>;
+			vref-mv = <1500>;
+			status = "disabled";
+			#io-channel-cells = <1>;
+			ambiq,pwrcfg = <&pwrcfg 0x4 0x2000>;
+			zephyr,pm-device-runtime-auto;
+		};
+
 		mspi0: spi@40060000 {
 			compatible = "ambiq,mspi";
 			reg = <0x40060000 0x400>;
