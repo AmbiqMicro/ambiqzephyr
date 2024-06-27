@@ -219,7 +219,7 @@ static int i2c_ambiq_init(const struct device *dev)
 	data->iom_cfg.eInterfaceMode = AM_HAL_IOM_I2C_MODE;
 
 	if (AM_HAL_STATUS_SUCCESS !=
-	    am_hal_iom_initialize((config->base - REG_IOM_BASEADDR) / config->size,
+	    am_hal_iom_initialize((config->base - IOM0_BASE) / config->size,
 				  &data->IOMHandle)) {
 		LOG_ERR("Fail to initialize I2C\n");
 		return -ENXIO;

@@ -76,7 +76,7 @@ static int uart_ambiq_pm_action(const struct device *dev, enum pm_device_action 
 	int key;
 
 	/*Uart module number*/
-	uint32_t ui32Module = ((uint32_t)get_uart(dev) == REG_UART_BASEADDR) ? 0 : 1;
+	uint32_t ui32Module = ((uint32_t)get_uart(dev) == UART0_BASE) ? 0 : 1;
 
 	/*Uart Power module*/
 	am_hal_pwrctrl_periph_e eUARTPowerModule =

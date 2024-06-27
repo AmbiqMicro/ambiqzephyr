@@ -368,7 +368,7 @@ static int spi_ambiq_init(const struct device *dev)
 	void *buf = NULL;
 
 	if (AM_HAL_STATUS_SUCCESS !=
-	    am_hal_iom_initialize((cfg->base - REG_IOM_BASEADDR) / cfg->size, &data->IOMHandle)) {
+	    am_hal_iom_initialize((cfg->base - IOM0_BASE) / cfg->size, &data->IOMHandle)) {
 		LOG_ERR("Fail to initialize SPI\n");
 		return -ENXIO;
 	}
