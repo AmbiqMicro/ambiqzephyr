@@ -71,6 +71,8 @@ typedef struct {
 } uart_register_state_t;
 static uart_register_state_t sRegState[2];
 
+#define REG_UART_BASEADDR UART0_BASE
+
 static int uart_ambiq_pm_action(const struct device *dev, enum pm_device_action action)
 {
 	int key;

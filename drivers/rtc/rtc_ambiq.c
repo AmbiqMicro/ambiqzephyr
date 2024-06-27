@@ -37,12 +37,9 @@ struct ambiq_rtc_data {
 
 static struct ambiq_rtc_data rtc_data;
 
-static int iYear;
-
 static void rtc_time_to_ambiq_time_set(const struct rtc_time *tm, am_hal_rtc_time_t *atm)
 {
-	atm->ui32CenturyEnable = true;
-	atm->ui32Century = ((tm->tm_year <= 99) || (tm->tm_year >= 200));
+	atm->ui32CenturyBit = ((tm->tm_year <= 99) || (tm->tm_year >= 200));
 	atm->ui32Year = tm->tm_year;
 	if (tm->tm_year > 99) {
 		atm->ui32Year = tm->tm_year % 100;
@@ -61,15 +58,13 @@ static void rtc_time_to_ambiq_time_set(const struct rtc_time *tm, am_hal_rtc_tim
 		atm->ui32Second += value;
 		atm->ui32Hundredths -= value*100;
 	}
-
-	iYear = atm->ui32Year;
 }
 
 /* To set the timer registers */
 static void ambiq_time_to_rtc_time_set(const am_hal_rtc_time_t *atm, struct rtc_time *tm)
 {
 	tm->tm_year = atm->ui32Year;
-	if (atm->ui32Century == 0)
+	if (atm->ui32CenturyBit == 0)
 		tm->tm_year += 100;
 	else
 		tm->tm_year += 200;
@@ -84,9 +79,19 @@ static void ambiq_time_to_rtc_time_set(const am_hal_rtc_time_t *atm, struct rtc_
 	tm->tm_nsec = atm->ui32Hundredths * 10000000;
 }
 
+static int test_for_rollover(am_hal_rtc_time_t *atm)
+{
+	if ((atm->ui32Year == 99) &&
+		(atm->ui32Month == 12) &&
+		(atm->ui32DayOfMonth == 31)) {
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 /* To set the timer registers */
-static int ambiq_rtc_set_time(const struct device *dev,
-							const struct rtc_time *timeptr)
+static int ambiq_rtc_set_time(const struct device *dev, const struct rtc_time *timeptr)
 {
 	int err = 0;
 	am_hal_rtc_time_t ambiq_time = {0};
@@ -107,7 +112,7 @@ static int ambiq_rtc_set_time(const struct device *dev,
 	/* Convertn to Ambiq Time */
 	rtc_time_to_ambiq_time_set(timeptr, &ambiq_time);
 
-	if ((ambiq_time.ui32Year == 99) && (ambiq_time.ui32CenturyEnable == 1)) {
+	if (test_for_rollover(&ambiq_time)) {
 		return -EINVAL;
 	}
 
@@ -134,20 +139,6 @@ static int ambiq_rtc_get_time(const struct device *dev, struct rtc_time *timeptr
 	if (err != 0) {
 		LOG_WRN("Get Timer returned an error - %d!", err);
 		goto unlock;
-	}
-
-	if ((iYear == 99) && (ambiq_time.ui32Year == 0)) {
-		if (ambiq_time.ui32CenturyEnable == true) {
-			ambiq_time.ui32Century = 0;
-			am_hal_rtc_time_t ambiq_time2 = ambiq_time;
-
-			am_hal_rtc_time_set(&ambiq_time2);
-			if (err != 0) {
-				LOG_WRN("Get Timer returned an error - %d!", err);
-				goto unlock;
-			}
-			am_hal_rtc_time_get(&ambiq_time);
-		}
 	}
 
 	ambiq_time_to_rtc_time_set(&ambiq_time, timeptr);
