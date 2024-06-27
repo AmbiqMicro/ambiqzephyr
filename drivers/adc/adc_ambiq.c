@@ -167,14 +167,14 @@ static int adc_ambiq_start_read(const struct device *dev, const struct adc_seque
 		LOG_ERR("Too many channels for sequencer. Max: %d", AMBIQ_ADC_SLOT_BUMBER);
 		return -ENOTSUP;
 	}
-
+#if defined(CONFIG_SOC_SERIES_APOLLO4X)
 	if (sequence->options) {
 		if (sequence->options->interval_us) {
 			LOG_ERR("Interval between samplings not supported");
 			return -ENOTSUP;
 		}
 	}
-
+#endif
 	channels = sequence->channels;
 	for (slot_index = 0; slot_index < active_channels; slot_index++) {
 		channel_id = find_lsb_set(channels) - 1;
@@ -311,11 +311,11 @@ static int adc_ambiq_init(const struct device *dev)
 #endif
 	ADCConfig.ePolarity = AM_HAL_ADC_TRIGPOL_RISING;
 	ADCConfig.eTrigger = AM_HAL_ADC_TRIGSEL_SOFTWARE;
-	ADCConfig.eRepeatTrigger = AM_HAL_ADC_RPTTRIGSEL_INT,
+	//ADCConfig.eRepeatTrigger = AM_HAL_ADC_RPTTRIGSEL_INT,
 	ADCConfig.eClockMode = AM_HAL_ADC_CLKMODE_LOW_POWER;
-	ADCConfig.ePowerMode = AM_HAL_ADC_LPMODE1;
+	ADCConfig.ePowerMode = AM_HAL_ADC_LPMODE0;
 	ADCConfig.eRepeat = AM_HAL_ADC_SINGLE_SCAN;
-	if (0 != am_hal_adc_configure(data->adcHandle, &ADCConfig)) {
+	if (AM_HAL_STATUS_SUCCESS != am_hal_adc_configure(data->adcHandle, &ADCConfig)) {
 		ret = -ENODEV;
 		LOG_ERR("Configuring ADC failed, code:%d", ret);
 		return ret;
