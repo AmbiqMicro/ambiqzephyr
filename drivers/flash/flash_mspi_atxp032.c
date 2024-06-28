@@ -629,8 +629,9 @@ static int flash_mspi_atxp032_init(const struct device *flash)
 
 	if (flash_mspi_atxp032_get_vendor_id(flash, &vendor_id)) {
 		LOG_ERR("Could not read vendor id/%u", __LINE__);
-		return -EIO;
+//		return -EIO;
 	}
+
 	LOG_DBG("Vendor id: 0x%0x", vendor_id);
 	if (vendor_id != ATXP032_VENDOR_ID) {
 		LOG_WRN("Vendor ID does not match expected value of 0x%0x/%u", ATXP032_VENDOR_ID,
@@ -826,7 +827,7 @@ static const struct flash_driver_api flash_mspi_atxp032_api = {
 
 #define FLASH_MSPI_ATXP032(n)                                                                     \
 	static const struct flash_mspi_atxp032_config flash_mspi_atxp032_config_##n = {           \
-		.port = (DT_REG_ADDR(DT_INST_BUS(n)) - REG_MSPI_BASEADDR) /                       \
+		.port = (DT_REG_ADDR(DT_INST_BUS(n)) - MSPI0_BASE) /                       \
 			(DT_REG_SIZE(DT_INST_BUS(n)) * 4),                                        \
 		.mem_size = DT_INST_PROP(n, size) / 8,                                            \
 		.flash_param =                                                                    \

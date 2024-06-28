@@ -104,8 +104,43 @@ child-binding:
         default: 1500
         description: |
           The pullup resistor value. The default value is 1500 ohms.
+      ambiq,pull-up-ohms:
+        type: int
+        enum:
+          - 1500
+          - 6000
+          - 12000
+          - 24000
+        default: 1500
+        description: |
+          The 1.5K-24K pullup values are valid for select I2C enabled pads.
+          For Apollo3 these pins are 0-1,5-6,8-9,25,27,39-40,42-43,48-49.
+          The default value is 1500 ohms, which is the reset value of
+          register PADREGx.PADxRSEL.
       ambiq,iom-nce-module:
         type: int
         default: 0
         description: |
-          IOM nCE module select. The default value is reset value.
+          IOM nCE module select, selects the SPI channel (CE) number (0-3).
+          The default value is 0, which is the reset value of
+          register CFGx.GPIOnOUTCFG. If the pin is not a CE, this
+          descriptor will be ignored.
+      ambiq,iom-mspi:
+        type: int
+        default: 0
+        description: |
+          Indicates the module which uses specific CE pin, 1 if CE is IOM, 0 if MSPI.
+          User should check g_ui8NCEtable in am_hal_gpio.c for the mapping
+          information and config the pins accordingly, we give a default value
+          0 here to make it be consistent with AM_HAL_GPIO_PINCFG_DEFAULT in
+          ambiq hal. If the pin is not a CE, this descriptor will be ignored.
+      ambiq,iom-num:
+        type: int
+        default: 0
+        description: |
+          Indicates the instance which uses specific CE pin.
+          IOM number (0-5) or MSPI (0-2).
+          User should check g_ui8NCEtable in am_hal_gpio.c for the mapping
+          information and config the pins accordingly, we give a default value
+          0 here to make it be consistent with AM_HAL_GPIO_PINCFG_DEFAULT in
+          ambiq hal. If the pin is not a CE, this descriptor will be ignored.
