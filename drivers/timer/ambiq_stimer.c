@@ -27,7 +27,16 @@
 #define CYC_PER_TICK (sys_clock_hw_cycles_per_sec() / CONFIG_SYS_CLOCK_TICKS_PER_SEC)
 #define MAX_TICKS    ((k_ticks_t)(COUNTER_MAX / CYC_PER_TICK) - 1)
 #define MAX_CYCLES   (MAX_TICKS * CYC_PER_TICK)
+#if defined(CONFIG_SOC_SERIES_APOLLO3X)
 #define MIN_DELAY    1
+#else if defined(CONFIG_SOC_SERIES_APOLLO4X)
+#define MIN_DELAY    4
+#endif
+#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+#define COMPARE_INTERRUPT    (AM_HAL_STIMER_INT_COMPAREA | AM_HAL_STIMER_INT_COMPAREB)
+#else if defined(CONFIG_SOC_SERIES_APOLLO4X)
+#define COMPARE_INTERRUPT    (AM_HAL_STIMER_INT_COMPAREA)
+#endif
 
 #define TIMER_IRQ (DT_INST_IRQN(0))
 
@@ -78,8 +87,8 @@ static void stimer_isr(const void *arg)
 
 	uint32_t irq_status = am_hal_stimer_int_status_get(false);
 
-	if (irq_status & AM_HAL_STIMER_INT_COMPAREA) {
-		am_hal_stimer_int_clear(AM_HAL_STIMER_INT_COMPAREA);
+	if (irq_status & COMPARE_INTERRUPT) {
+		am_hal_stimer_int_clear(COMPARE_INTERRUPT);
 
 		k_spinlock_key_t key = k_spin_lock(&g_lock);
 
@@ -105,6 +114,9 @@ static void stimer_isr(const void *arg)
 
 			/* Set delta. */
 			am_hal_stimer_compare_delta_set(0, delta);
+#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+			am_hal_stimer_compare_delta_set(1, delta+1);
+#endif
 		}
 
 		k_spin_unlock(&g_lock, key);
@@ -155,6 +167,9 @@ void sys_clock_set_timeout(int32_t ticks, bool idle)
 		am_hal_stimer_int_set(AM_HAL_STIMER_INT_COMPAREA);
 	} else {
 		am_hal_stimer_compare_delta_set(0, delta);
+#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+		am_hal_stimer_compare_delta_set(1, delta+1);
+#endif
 	}
 
 	k_spin_unlock(&g_lock, key);
@@ -201,6 +216,9 @@ static int stimer_init(void)
 	/* Start timer with period CYC_PER_TICK if tickless is not enabled */
 	if (!IS_ENABLED(CONFIG_TICKLESS_KERNEL)) {
 		am_hal_stimer_compare_delta_set(0, CYC_PER_TICK);
+#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+		am_hal_stimer_compare_delta_set(1, CYC_PER_TICK+1);
+#endif
 	}
 	return 0;
 }
