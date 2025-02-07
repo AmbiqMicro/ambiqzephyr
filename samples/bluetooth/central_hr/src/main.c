@@ -244,6 +244,9 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
 			return;
 		}
 	}
+
+	k_sleep(K_SECONDS(4));
+	bt_conn_disconnect(conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)

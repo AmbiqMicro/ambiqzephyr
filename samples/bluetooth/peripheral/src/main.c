@@ -252,6 +252,20 @@ static void connected(struct bt_conn *conn, uint8_t err)
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
 	printk("Disconnected, reason 0x%02x %s\n", reason, bt_hci_err_to_str(reason));
+
+	int err;
+
+	err = bt_le_adv_stop();
+	if (err) {
+		printk("Advertising failed to stop (err %d)\n", err);
+	}
+
+	err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+	if (err) {
+		printk("Advertising failed to start (err %d)\n", err);
+	}
+
+	printk("Advertising successfully started\n");
 }
 
 static void alert_stop(void)
@@ -413,11 +427,20 @@ static struct bt_hrs_cb hrs_cb = {
 	.ctrl_point_write = bt_hrs_ctrl_point_write,
 };
 
+static void read_local_ver_complete(struct net_buf *buf)
+{
+	struct bt_hci_rp_read_local_version_info *rp = (void *)buf->data;
+	if (rp->status) {
+		printk("status 0x%02x, hci_ver 0x%02x\n", rp->status, rp->hci_version);
+	}
+}
+
 int main(void)
 {
 	struct bt_gatt_attr *vnd_ind_attr;
 	char str[BT_UUID_STR_LEN];
 	int err;
+	struct net_buf *rsp;
 
 	err = bt_enable(NULL);
 	if (err) {
@@ -441,7 +464,17 @@ int main(void)
 	 * of starting delayed work so we do it here
 	 */
 	while (1) {
-		k_sleep(K_SECONDS(1));
+		k_sleep(K_MSEC(500));
+
+		/* Read Local Version Information */
+		err = bt_hci_cmd_send_sync(BT_HCI_OP_READ_LOCAL_VERSION_INFO, NULL,
+					&rsp);
+		if (err) {
+			printk("bt send failed %d\n", err);
+			return err;
+		}
+		read_local_ver_complete(rsp);
+		net_buf_unref(rsp);
 
 		/* Current time update notification example
 		 * For testing purposes, we send a manual update notification every second.
