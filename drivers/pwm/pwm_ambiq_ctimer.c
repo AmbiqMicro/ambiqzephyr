@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define DT_DRV_COMPAT ambiq_timer_pwm
+#define DT_DRV_COMPAT ambiq_ctimer_pwm
 
 #include <errno.h>
 #include <zephyr/drivers/pwm.h>
@@ -14,11 +14,7 @@
 
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(ambiq_timer_pwm, CONFIG_PWM_LOG_LEVEL);
-
-#if defined(CONFIG_SOC_SERIES_APOLLO4X)
-typedef am_hal_timer_config_t pwm_timer_config_t;
-#endif
+LOG_MODULE_REGISTER(ambiq_ctimer_pwm, CONFIG_PWM_LOG_LEVEL);
 
 struct pwm_ambiq_timer_data {
 	uint32_t cycles;
@@ -26,6 +22,8 @@ struct pwm_ambiq_timer_data {
 
 struct pwm_ambiq_timer_config {
 	uint32_t timer_num;
+	uint32_t timer_seg;
+	uint32_t pwm_type;
 	uint32_t clock_sel;
 	const struct pinctrl_dev_config *pincfg;
 };
@@ -34,63 +32,94 @@ static uint32_t get_clock_cycles(uint32_t clock_sel)
 {
 	uint32_t ret = 0;
 	switch (clock_sel) {
-	case 0:
-		ret = 24000000;
-		break;
 	case 1:
-		ret = 6000000;
+		ret = 12000000;
 		break;
 	case 2:
-		ret = 1500000;
+		ret = 3000000;
 		break;
 	case 3:
-		ret = 375000;
+		ret = 187500;
 		break;
 	case 4:
-		ret = 93750;
+		ret = 47000;
 		break;
 	case 5:
-		ret = 1000;
+		ret = 12000;
 		break;
 	case 6:
-		ret = 500;
+		ret = 32768;
 		break;
 	case 7:
-		ret = 31;
+		ret = 16384;
 		break;
 	case 8:
-		ret = 1;
+		ret = 2048;
 		break;
 	case 9:
 		ret = 256;
 		break;
 	case 10:
-		ret = 32768;
+		ret = 512;
 		break;
 	case 11:
-		ret = 16384;
+		ret = 32;
 		break;
 	case 12:
-		ret = 8192;
+		ret = 1000;
 		break;
 	case 13:
-		ret = 4096;
+		ret = 116;
 		break;
 	case 14:
-		ret = 2048;
+		ret = 100;
 		break;
-	case 15:
-		ret = 1024;
+	case 15: /* todo: check on value */
+		ret = 0;
 		break;
 	case 16:
-		ret = 256;
+		ret = 8192;
 		break;
 	case 17:
-		ret = 100;
+		ret = 4096;
+		break;
+	case 18:
+		ret = 1024;
 		break;
 	}
 
 	return ret;
+}
+
+static void start_clock(uint32_t clock_sel)
+{
+	switch (clock_sel) {
+	default:
+		break;
+	case 1:
+	case 2:
+	case 3:
+	case 4:
+	case 5:
+		am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_SYSCLK_MAX, 0);
+		break;
+	case 6:
+	case 7:
+	case 8:
+	case 9:
+	case 14: /* RTC will assume XTAL since LFRC isn't as accurate */
+	case 16:
+	case 17:
+	case 18:
+		am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_XTAL_START, 0);
+		break;
+	case 10:
+	case 11:
+	case 12:
+	case 13:
+		am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_LFRC_START, 0);
+		break;
+	}
 }
 
 static int ambiq_timer_pwm_set_cycles(const struct device *dev, uint32_t channel,
@@ -115,13 +144,25 @@ static int ambiq_timer_pwm_set_cycles(const struct device *dev, uint32_t channel
 		if (pulse_cycles == period_cycles) {
 			--pulse_cycles;
 		} else if (pulse_cycles == 0) {
+			period_cycles = 0;
 			pulse_cycles = 1;
 		}
 	}
 
-	am_hal_timer_clear(config->timer_num);
-	am_hal_timer_compare0_set(config->timer_num, period_cycles);
-	am_hal_timer_compare1_set(config->timer_num, pulse_cycles);
+	uint32_t seg = 0;
+
+	if (config->timer_seg == 0) {
+		seg = 0x0000FFFF;
+	} else if (config->timer_seg == 1) {
+		seg = 0xFFFF0000;
+	} else {
+		seg = 0xFFFFFFFF;
+	}
+
+	/* todo: need to check if all of this is required */
+	am_hal_ctimer_clear(config->timer_num, seg);
+	am_hal_ctimer_period_set(config->timer_num, seg, period_cycles, pulse_cycles);
+	am_hal_ctimer_start(config->timer_num, seg);
 
 	return 0;
 }
@@ -152,21 +193,28 @@ static int ambiq_timer_pwm_init(const struct device *dev)
 		return err;
 	}
 
-	pwm_timer_config_t pwm_timer_config;
-	am_hal_timer_default_config_set(&pwm_timer_config);
+	uint32_t seg = 0;
 
-	pwm_timer_config.eFunction = AM_HAL_TIMER_FN_PWM;
-	pwm_timer_config.eInputClock = config->clock_sel;
+	if (config->timer_seg == 0) {
+		seg = 0x0000FFFF;
+	} else if (config->timer_seg == 1) {
+		seg = 0xFFFF0000;
+	} else {
+		seg = 0xFFFFFFFF;
+	}
+
 	data->cycles = get_clock_cycles(config->clock_sel);
 
-	am_hal_timer_output_config(config->pincfg->states->pins->pin_num,
-				   AM_HAL_TIMER_OUTPUT_TMR0_OUT0 + config->timer_num * 2);
+	start_clock(config->clock_sel);
 
-	am_hal_timer_config(config->timer_num, &pwm_timer_config);
+	am_hal_ctimer_output_config(config->timer_num, seg, config->pincfg->states->pins->pin_num,
+				    AM_HAL_CTIMER_OUTPUT_NORMAL,
+				    AM_HAL_GPIO_PIN_DRIVESTRENGTH_12MA);
 
-	am_hal_timer_clear(config->timer_num);
-	am_hal_timer_compare0_set(config->timer_num, 0);
-	am_hal_timer_compare1_set(config->timer_num, 1);
+	am_hal_ctimer_config_single(config->timer_num, seg,
+				    (_VAL2FLD(CTIMER_CTRL0_TMRA0FN, config->pwm_type + 2) |
+				     _VAL2FLD(CTIMER_CTRL0_TMRA0CLK, config->clock_sel) |
+				     AM_HAL_CTIMER_INT_ENABLE));
 
 	return 0;
 }
@@ -182,10 +230,12 @@ static const struct pwm_driver_api pwm_ambiq_timer_driver_api = {
 		.cycles = 0,                                                                       \
 	};                                                                                         \
 	static const struct pwm_ambiq_timer_config pwm_ambiq_timer_config_##n = {                  \
-		.timer_num = (DT_REG_ADDR(DT_INST_PARENT(n)) - TIMER_BASE) /                       \
+		.timer_num = (DT_REG_ADDR(DT_INST_PARENT(n)) - CTIMER_BASE) /                      \
 			     DT_REG_SIZE(DT_INST_PARENT(n)),                                       \
+		.timer_seg = DT_INST_ENUM_IDX(n, timer_segment),                                   \
 		.clock_sel = DT_INST_ENUM_IDX(n, clock_select),                                    \
-		.pincfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n)};                                      \
+		.pincfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                       \
+		.pwm_type = DT_INST_ENUM_IDX(n, pwm_type)};                                        \
                                                                                                    \
 	DEVICE_DT_INST_DEFINE(n, ambiq_timer_pwm_init, NULL, &pwm_ambiq_timer_data_##n,            \
 			      &pwm_ambiq_timer_config_##n, POST_KERNEL, CONFIG_PWM_INIT_PRIORITY,  \

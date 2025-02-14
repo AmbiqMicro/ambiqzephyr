@@ -9,3 +9,12 @@ config PWM_AMBIQ_TIMER
 	select AMBIQ_HAL_USE_TIMER
 	help
 	  Enable timer based pwm driver.
+
+config PWM_AMBIQ_CTIMER
+	bool "Ambiq CTimer PWM driver"
+	default y
+	depends on DT_HAS_AMBIQ_CTIMER_PWM_ENABLED
+	select AMBIQ_HAL
+	select AMBIQ_HAL_USE_TIMER
+	help
+	  Enable ctimer based pwm driver.

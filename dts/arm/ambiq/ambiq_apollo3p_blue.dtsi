@@ -133,7 +133,7 @@
 				status = "disabled";
 			};
 			pwm {
-				compatible = "ambiq,timer-pwm";
+				compatible = "ambiq,ctimer-pwm";
 				status = "disabled";
 				#pwm-cells = <3>;
 			};
@@ -150,7 +150,7 @@
 				status = "disabled";
 			};
 			pwm {
-				compatible = "ambiq,timer-pwm";
+				compatible = "ambiq,ctimer-pwm";
 				status = "disabled";
 				#pwm-cells = <3>;
 			};
@@ -167,7 +167,7 @@
 				status = "disabled";
 			};
 			pwm {
-				compatible = "ambiq,timer-pwm";
+				compatible = "ambiq,ctimer-pwm";
 				status = "disabled";
 				#pwm-cells = <3>;
 			};
@@ -184,7 +184,7 @@
 				status = "disabled";
 			};
 			pwm {
-				compatible = "ambiq,timer-pwm";
+				compatible = "ambiq,ctimer-pwm";
 				status = "disabled";
 				#pwm-cells = <3>;
 			};
@@ -201,7 +201,7 @@
 				status = "disabled";
 			};
 			pwm {
-				compatible = "ambiq,timer-pwm";
+				compatible = "ambiq,ctimer-pwm";
 				status = "disabled";
 				#pwm-cells = <3>;
 			};
@@ -218,7 +218,7 @@
 				status = "disabled";
 			};
 			pwm {
-				compatible = "ambiq,timer-pwm";
+				compatible = "ambiq,ctimer-pwm";
 				status = "disabled";
 				#pwm-cells = <3>;
 			};
@@ -235,7 +235,7 @@
 				status = "disabled";
 			};
 			pwm {
-				compatible = "ambiq,timer-pwm";
+				compatible = "ambiq,ctimer-pwm";
 				status = "disabled";
 				#pwm-cells = <3>;
 			};
@@ -252,7 +252,7 @@
 				status = "disabled";
 			};
 			pwm {
-				compatible = "ambiq,timer-pwm";
+				compatible = "ambiq,ctimer-pwm";
 				status = "disabled";
 				#pwm-cells = <3>;
 			};

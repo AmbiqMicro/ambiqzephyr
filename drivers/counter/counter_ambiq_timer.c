@@ -59,6 +59,7 @@ static uint32_t get_clock_cycles(uint32_t clock_sel)
 {
 	uint32_t ret = 0;
 	switch (clock_sel) {
+#if defined(CONFIG_SOC_SERIES_APOLLO3X)
 	case 1:
 		ret = 12000000;
 		break;
@@ -113,6 +114,62 @@ static uint32_t get_clock_cycles(uint32_t clock_sel)
 	case 18:
 		ret = 1024;
 		break;
+#elif defined(CONFIG_SOC_SERIES_APOLLO4X)
+	case 0:
+		ret = 24000000;
+		break;
+	case 1:
+		ret = 6000000;
+		break;
+	case 2:
+		ret = 1500000;
+		break;
+	case 3:
+		ret = 375000;
+		break;
+	case 4:
+		ret = 93750;
+		break;
+	case 5:
+		ret = 1000;
+		break;
+	case 6:
+		ret = 500;
+		break;
+	case 7:
+		ret = 31;
+		break;
+	case 8:
+		ret = 1;
+		break;
+	case 9:
+		ret = 256;
+		break;
+	case 10:
+		ret = 32768;
+		break;
+	case 11:
+		ret = 16384;
+		break;
+	case 12:
+		ret = 8192;
+		break;
+	case 13:
+		ret = 4096;
+		break;
+	case 14:
+		ret = 2048;
+		break;
+	case 15:
+		ret = 1024;
+		break;
+	case 16:
+		ret = 256;
+		break;
+	case 17:
+		ret = 100;
+		break;
+#endif
 	}
 
 	return ret;
@@ -149,6 +206,8 @@ static int counter_ambiq_init(const struct device *dev)
 	tc.eInputClock = cfg->clk_src;
 	tc.eFunction = AM_HAL_TIMER_FN_UPCOUNT;
 	tc.ui32PatternLimit = 0;
+
+	data->freq = get_clock_cycles(cfg->clk_src);
 
 	am_hal_timer_config(cfg->instance, &tc);
 	cfg->irq_config_func();
