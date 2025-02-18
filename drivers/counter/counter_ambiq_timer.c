@@ -16,6 +16,11 @@
 
 LOG_MODULE_REGISTER(ambiq_counter, CONFIG_COUNTER_LOG_LEVEL);
 
+#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+#define SOC_TIMER_BASE CTIMER_BASE
+#elif defined(CONFIG_SOC_SERIES_APOLLO4X)
+#define SOC_TIMER_BASE TIMER_BASE
+#endif
 static void counter_ambiq_isr(void *arg);
 
 struct counter_ambiq_config {
@@ -429,7 +434,7 @@ static void counter_ambiq_isr(void *arg)
 	static void counter_irq_config_func_##idx(void);                                           \
 	static struct counter_ambiq_data counter_data_##idx;                                       \
 	static const struct counter_ambiq_config counter_config_##idx = {                          \
-		.instance = (DT_REG_ADDR(DT_INST_PARENT(idx)) - 0x40008000) /                      \
+		.instance = (DT_REG_ADDR(DT_INST_PARENT(idx)) - SOC_TIMER_BASE) /                      \
 			    DT_REG_SIZE(DT_INST_PARENT(idx)),                                      \
 		.clk_src = DT_PROP(DT_INST_PARENT(idx), clk_source),                               \
 		.counter_info = {.max_top_value = UINT32_MAX,                                      \
