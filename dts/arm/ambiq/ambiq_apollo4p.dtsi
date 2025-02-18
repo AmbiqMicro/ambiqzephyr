@@ -129,7 +129,7 @@
 			reg = <0x40008000 0x20>;
 			interrupts = <67 0>;
 			clk-source = <2>;
-			status = "disabled";
+
 			counter {
 				compatible = "ambiq,counter";
 				status = "disabled";
@@ -146,7 +146,7 @@
 			reg = <0x40008020 0x20>;
 			interrupts = <68 0>;
 			clk-source = <2>;
-			status = "disabled";
+
 			counter {
 				compatible = "ambiq,counter";
 				status = "disabled";
@@ -163,7 +163,7 @@
 			reg = <0x40008040 0x20>;
 			interrupts = <69 0>;
 			clk-source = <2>;
-			status = "disabled";
+
 			counter {
 				compatible = "ambiq,counter";
 				status = "disabled";
@@ -180,7 +180,7 @@
 			reg = <0x40008060 0x20>;
 			interrupts = <70 0>;
 			clk-source = <2>;
-			status = "disabled";
+
 			counter {
 				compatible = "ambiq,counter";
 				status = "disabled";
@@ -197,7 +197,7 @@
 			reg = <0x40008080 0x20>;
 			interrupts = <71 0>;
 			clk-source = <2>;
-			status = "disabled";
+
 			counter {
 				compatible = "ambiq,counter";
 				status = "disabled";
@@ -214,7 +214,7 @@
 			reg = <0x400080A0 0x20>;
 			interrupts = <72 0>;
 			clk-source = <2>;
-			status = "disabled";
+
 			counter {
 				compatible = "ambiq,counter";
 				status = "disabled";
@@ -231,7 +231,7 @@
 			reg = <0x400080C0 0x20>;
 			interrupts = <73 0>;
 			clk-source = <2>;
-			status = "disabled";
+
 			counter {
 				compatible = "ambiq,counter";
 				status = "disabled";
@@ -248,7 +248,7 @@
 			reg = <0x400080E0 0x20>;
 			interrupts = <74 0>;
 			clk-source = <2>;
-			status = "disabled";
+
 			counter {
 				compatible = "ambiq,counter";
 				status = "disabled";
@@ -265,7 +265,7 @@
 			reg = <0x40008100 0x20>;
 			interrupts = <75 0>;
 			clk-source = <2>;
-			status = "disabled";
+
 			counter {
 				compatible = "ambiq,counter";
 				status = "disabled";
@@ -282,7 +282,7 @@
 			reg = <0x40008120 0x20>;
 			interrupts = <76 0>;
 			clk-source = <2>;
-			status = "disabled";
+
 			counter {
 				compatible = "ambiq,counter";
 				status = "disabled";
@@ -299,7 +299,7 @@
 			reg = <0x40008140 0x20>;
 			interrupts = <77 0>;
 			clk-source = <2>;
-			status = "disabled";
+
 			counter {
 				compatible = "ambiq,counter";
 				status = "disabled";
@@ -316,7 +316,7 @@
 			reg = <0x40008160 0x20>;
 			interrupts = <78 0>;
 			clk-source = <2>;
-			status = "disabled";
+
 			counter {
 				compatible = "ambiq,counter";
 				status = "disabled";
@@ -333,7 +333,7 @@
 			reg = <0x40008180 0x20>;
 			interrupts = <79 0>;
 			clk-source = <2>;
-			status = "disabled";
+
 			counter {
 				compatible = "ambiq,counter";
 				status = "disabled";
@@ -350,7 +350,7 @@
 			reg = <0x400081A0 0x20>;
 			interrupts = <80 0>;
 			clk-source = <2>;
-			status = "disabled";
+
 			counter {
 				compatible = "ambiq,counter";
 				status = "disabled";
@@ -367,7 +367,7 @@
 			reg = <0x400081C0 0x20>;
 			interrupts = <81 0>;
 			clk-source = <2>;
-			status = "disabled";
+
 			counter {
 				compatible = "ambiq,counter";
 				status = "disabled";
@@ -384,7 +384,7 @@
 			reg = <0x400081E0 0x20>;
 			interrupts = <82 0>;
 			clk-source = <2>;
-			status = "disabled";
+
 			counter {
 				compatible = "ambiq,counter";
 				status = "disabled";

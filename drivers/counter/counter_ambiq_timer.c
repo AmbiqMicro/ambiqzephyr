@@ -413,23 +413,23 @@ static void counter_ambiq_isr(void *arg)
 /* Apollo3 counters share the same irq number, connect irq here will cause build error, so we
  * leave this function blank here and do it in counter_irq_config_func
  */
-#define AMBIQ_COUNTER_CONFIG_FUNC(idx) static void counter_irq_config_func_##idx(void){};
+#define AMBIQ_COUNTER_CONFIG_FUNC(idx) static void counter_irq_config_func_##idx(void){}
 #else
 #define AMBIQ_COUNTER_CONFIG_FUNC(idx)                                                             \
 	static void counter_irq_config_func_##idx(void)                                            \
 	{                                                                                          \
 		NVIC_ClearPendingIRQ(DT_IRQN(DT_INST_PARENT(idx)));                                \
 		IRQ_CONNECT(DT_IRQN(DT_INST_PARENT(idx)), DT_IRQ(DT_INST_PARENT(idx), priority),   \
-			    counter_ambiq_isr, DEVICE_DT_GET(DT_INST_PARENT(idx)), 0);             \
+			    counter_ambiq_isr, DEVICE_DT_INST_GET(idx), 0);             \
 		irq_enable(DT_IRQN(DT_INST_PARENT(idx)));                                          \
-	};
+	}
 #endif
 
 #define AMBIQ_COUNTER_INIT(idx)                                                                    \
 	static void counter_irq_config_func_##idx(void);                                           \
 	static struct counter_ambiq_data counter_data_##idx;                                       \
 	static const struct counter_ambiq_config counter_config_##idx = {                          \
-		.instance = (DT_REG_ADDR(DT_INST_PARENT(idx)) - DT_REG_ADDR(DT_INST_PARENT(0))) /  \
+		.instance = (DT_REG_ADDR(DT_INST_PARENT(idx)) - 0x40008000) /                      \
 			    DT_REG_SIZE(DT_INST_PARENT(idx)),                                      \
 		.clk_src = DT_PROP(DT_INST_PARENT(idx), clk_source),                               \
 		.counter_info = {.max_top_value = UINT32_MAX,                                      \

@@ -92,14 +92,12 @@
 };
 
 &timer0 {
-	status = "okay";
 	counter0: counter {
 		status = "okay";
 	};
 };
 
 &timer2 {
-	status = "okay";
 	pwm2: pwm {
 		clock-select = "CLK_SELECT_HFRC_DIV64";
 		pinctrl-0 = <&pwm2_default>;
