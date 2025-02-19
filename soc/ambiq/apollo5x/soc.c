@@ -22,16 +22,6 @@ void soc_early_init_hook(void)
 	/* Enable SIMOBUCK for the apollo5 Family */
 	am_hal_pwrctrl_control(AM_HAL_PWRCTRL_CONTROL_SIMOBUCK_INIT, NULL);
 
-	am_hal_cachectrl_dcache_invalidate(NULL, true);
-	am_hal_cachectrl_icache_invalidate(NULL);
-
-	/* Both Dcache and Icache will be enabled in am_hal_pwrctrl_low_power_init,
-	 * so we need to disable it here and re-enable it by Zephyr's cache interface.
-	 * If not, cache may be enabled even if CONFIG_DCACHE/CONFIG_ICACHE is not defined.
-	 */
-	am_hal_cachectrl_dcache_disable();
-	am_hal_cachectrl_icache_disable();
-
 	/* Enable Icache*/
 	sys_cache_instr_enable();
 

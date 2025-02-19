@@ -38,7 +38,7 @@
 #define EXTREFCLK_FREQ 0
 #endif
 
-static int ambiq_board_init(void)
+void board_early_init_hook(void)
 {
 	/* Set board related info into clock manager */
 	am_hal_clkmgr_board_info_t sClkmgrBoardInfo = {.sXtalHs.eXtalHsMode = XTAL_HS_MODE,
@@ -54,8 +54,4 @@ static int ambiq_board_init(void)
 	am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_HFRC2,
 				   AM_HAL_CLKMGR_HFRC2_FREQ_FREE_RUN_APPROX_250MHZ, NULL);
 
-	return 0;
 }
-
-/* needs to be done after GPIO driver init */
-SYS_INIT(ambiq_board_init, POST_KERNEL, CONFIG_KERNEL_INIT_PRIORITY_DEVICE);
