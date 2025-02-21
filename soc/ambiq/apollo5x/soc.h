@@ -9,8 +9,4 @@
 
 #include <am_mcu_apollo.h>
 
-#if defined(CONFIG_SOC_APOLLO510)
-#include <apollo510.h>
-#endif
-
 #endif /* __SOC_H__ */
