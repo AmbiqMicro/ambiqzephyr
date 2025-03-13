@@ -1,0 +1,10 @@
+# Copyright (c) 2025, Ambiq Micro Inc. <www.ambiq.com>
+# SPDX-License-Identifier: Apache-2.0
+
+config MIPI_DSI_AMBIQ
+	bool "AMBIQ APOLLO MIPI-DSI Host Controller"
+	default y
+	depends on DT_HAS_AMBIQ_APOLLO_MIPI_DSI_ENABLED
+	select AMBIQ_HAL_USE_DSI
+	help
+	  AMBIQ APOLLO MIPI DSI controller driver

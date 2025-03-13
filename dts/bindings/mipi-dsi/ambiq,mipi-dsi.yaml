@@ -1,0 +1,32 @@
+# Copyright (c) 2025 Ambiq Micro Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: Ambiq MIPI DSI host
+
+compatible: "ambiq,mipi-dsi"
+
+include: [mipi-dsi-host.yaml, pinctrl-device.yaml]
+
+properties:
+  dbi-width:
+    type: int
+    required: true
+    description:
+      DBI width to DSI.
+      
+  data-lanes:
+    type: int
+    required: true
+    description:
+      Number of data lanes.
+
+  pix-fmt:
+    type: int
+    required: true
+    description:
+      Pixel format. Available formats in dt-bindings/mipi_dsi/mipi_dsi.h.
+
+  disp-te:
+    type: boolean
+    description:
+      Enable or Disable the TE feature.

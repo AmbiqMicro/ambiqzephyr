@@ -23,6 +23,7 @@ supported:
   - clock_control
   - usbd
   - pdm
+  - dsi
 testing:
   ignore_tags:
     - net

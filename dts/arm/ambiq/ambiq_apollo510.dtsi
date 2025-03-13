@@ -761,6 +761,15 @@
 			ambiq,pwrcfg = <&pwrcfg 0xc 0x4>;
 		};
 
+		mipi_dsi: mipi_dsi@DSI_BASE_NAME {
+			compatible = "ambiq,mipi-dsi";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <DSI_REG_BASE DSI_REG_SIZE>;
+			interrupts = <29 0>;
+			status = "disabled";
+		};
+
 		pinctrl: pin-controller@GPIO_BASE_NAME {
 			compatible = "ambiq,apollo5-pinctrl";
 			reg = <GPIO_REG_BASE GPIO_REG_SIZE>;
