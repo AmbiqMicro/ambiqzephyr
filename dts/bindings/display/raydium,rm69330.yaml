@@ -1,0 +1,48 @@
+#
+# Copyright 2025, Ambiq Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+description: Raydium RM69330 Panel
+
+compatible: "raydium,rm69330"
+
+include: [mipi-dsi-device.yaml, display-controller.yaml, pinctrl-device.yaml]
+
+properties:
+  reg:
+    required: true
+
+  reset-gpios:
+    type: phandle-array
+    description: |
+      The RESETn pin is asserted to disable the sensor causing a hard
+      reset.  The sensor receives this as an active-low signal.
+
+  enable-gpios:
+    type: phandle-array
+    description: |
+      The ENn pin is asserted to enable the panel.
+      The sensor receives this as an active-high signal.
+
+  ifsel1-gpios:
+    type: phandle-array
+    description: |
+      The Interface selection1 pin.
+      
+  ifsel2-gpios:
+    type: phandle-array
+    description: |
+      The Interface selection1 pin.
+
+  rotation:
+    type: int
+    default: 0
+    enum:
+      - 0
+      - 90
+      - 180
+      - 270
+    description: |
+      Display rotation (CW) in degrees. Defaults to 0, display default.

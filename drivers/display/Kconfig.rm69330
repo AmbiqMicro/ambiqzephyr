@@ -1,0 +1,10 @@
+# Copyright (c) 2025 Ambiq Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config RM69330
+	bool "RM69330 display driver"
+	default y
+	select MIPI_DSI
+	depends on DT_HAS_RAYDIUM_RM69330_ENABLED
+	help
+	  Enable driver for RM69330 display driver.
