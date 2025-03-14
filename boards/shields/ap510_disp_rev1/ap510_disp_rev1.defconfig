@@ -1,0 +1,6 @@
+# Copyright (c) 2025 Ambiq Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+if SHIELD_AP510_DISP_REV1
+
+endif # SHIELD_AP510_DISP_REV1
