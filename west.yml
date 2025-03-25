@@ -25,6 +25,8 @@ manifest:
       url-base: https://github.com/BabbleSim
     - name: ambiqzephyr
       url-base: https://github.com/AmbiqMicro
+    - name: eembc
+      url-base: https://github.com/eembc
 
   group-filter: [-babblesim, -optional]
 
@@ -123,6 +125,12 @@ manifest:
       path: modules/hal/cmsis
       groups:
         - hal
+    - name: coremark
+      remote: eembc
+      path: modules/benchmark/coremark
+      revision: d5fad6bd094899101a4e5fd53af7298160ced6ab
+      groups:
+        - benchmark
     - name: cmsis-dsp
       revision: d80a49b2bb186317dc1db4ac88da49c0ab77e6e7
       path: modules/lib/cmsis-dsp
