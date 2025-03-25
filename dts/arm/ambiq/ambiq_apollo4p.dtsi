@@ -443,7 +443,6 @@
 			#size-cells = <0>;
 			interrupts = <6 0>;
 			status = "disabled";
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x2>;
 		};
 
 		iom0_i2c: i2c@40050000 {
@@ -453,7 +452,6 @@
 			#size-cells = <0>;
 			interrupts = <6 0>;
 			status = "disabled";
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x2>;
 		};
 
 		iom1_spi: spi@40051000 {
@@ -463,7 +461,6 @@
 			#size-cells = <0>;
 			interrupts = <7 0>;
 			status = "disabled";
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x4>;
 		};
 
 		iom1_i2c: i2c@40051000 {
@@ -473,7 +470,6 @@
 			#size-cells = <0>;
 			interrupts = <7 0>;
 			status = "disabled";
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x4>;
 		};
 
 		iom2_spi: spi@40052000 {
@@ -483,7 +479,6 @@
 			#size-cells = <0>;
 			interrupts = <8 0>;
 			status = "disabled";
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x8>;
 		};
 
 		iom2_i2c: i2c@40052000 {
@@ -493,7 +488,6 @@
 			#size-cells = <0>;
 			interrupts = <8 0>;
 			status = "disabled";
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x8>;
 		};
 
 		iom3_spi: spi@40053000 {
@@ -503,7 +497,6 @@
 			#size-cells = <0>;
 			interrupts = <9 0>;
 			status = "disabled";
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x10>;
 		};
 
 		iom3_i2c: i2c@40053000 {
@@ -513,7 +506,6 @@
 			#size-cells = <0>;
 			interrupts = <9 0>;
 			status = "disabled";
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x10>;
 		};
 
 		iom4_spi: spi@40054000 {
@@ -523,7 +515,6 @@
 			#size-cells = <0>;
 			interrupts = <10 0>;
 			status = "disabled";
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x20>;
 		};
 
 		iom4_i2c: i2c@40054000 {
@@ -533,7 +524,6 @@
 			#size-cells = <0>;
 			interrupts = <10 0>;
 			status = "disabled";
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x20>;
 		};
 
 		iom5_spi: spi@40055000 {
@@ -543,7 +533,6 @@
 			#size-cells = <0>;
 			interrupts = <11 0>;
 			status = "disabled";
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x40>;
 		};
 
 		iom5_i2c: i2c@40055000 {
@@ -553,7 +542,6 @@
 			#size-cells = <0>;
 			interrupts = <11 0>;
 			status = "disabled";
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x40>;
 		};
 
 		iom6_spi: spi@40056000 {
@@ -563,7 +551,6 @@
 			#size-cells = <0>;
 			interrupts = <12 0>;
 			status = "disabled";
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x80>;
 		};
 
 		iom6_i2c: i2c@40056000 {
@@ -573,7 +560,6 @@
 			#size-cells = <0>;
 			interrupts = <12 0>;
 			status = "disabled";
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x80>;
 		};
 
 		iom7_spi: spi@40057000 {
@@ -583,7 +569,6 @@
 			#size-cells = <0>;
 			interrupts = <13 0>;
 			status = "disabled";
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x100>;
 		};
 
 		iom7_i2c: i2c@40057000 {
@@ -593,7 +578,6 @@
 			#size-cells = <0>;
 			interrupts = <13 0>;
 			status = "disabled";
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x100>;
 		};
 
 		adc0: adc@40038000 {
@@ -605,7 +589,6 @@
 			internal-vref-mv = <1190>;
 			status = "disabled";
 			#io-channel-cells = <1>;
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x2000>;
 		};
 
 		mspi0: mspi@40060000 {
@@ -616,7 +599,6 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x4000>;
 		};
 
 		mspi1: mspi@40061000 {
@@ -627,7 +609,6 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x8000>;
 		};
 
 		mspi2: mspi@40062000 {
@@ -638,7 +619,6 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x10000>;
 		};
 
 		rtc0: rtc@40004800 {
@@ -656,7 +636,6 @@
 			num-bidir-endpoints = <6>;
 			maximum-speed = "full-speed";
 			status = "disabled";
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x400000>;
 		};
 
 		pinctrl: pin-controller@40010000 {

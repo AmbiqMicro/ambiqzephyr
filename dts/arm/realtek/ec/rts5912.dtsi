@@ -79,6 +79,14 @@
 			clock-names = "rc25m", "pll";
 		};
 
+		rtc: rtc@4000c100 {
+			compatible = "realtek,rts5912-rtc";
+			reg = <0x4000c100 0x20>;
+			clocks = <&sccon RTS5912_SCCON_PERIPH_GRP2 PERIPH_GRP2_RTC_CLKPWR>;
+			clock-names = "rtc";
+			status = "disabled";
+		};
+
 		slwtmr0: slwtmr0@4000c200 {
 			compatible = "realtek,rts5912-slwtimer";
 			reg = <0x4000c200 0x10>;
@@ -248,6 +256,15 @@
 			clocks = <&sccon RTS5912_SCCON_PERIPH_GRP2 PERIPH_GRP2_WDT_CLKPWR>;
 			clock-names = "watchdog";
 			clk-divider = <33>;
+			status = "disabled";
+		};
+
+		kbd: kbd@40010000 {
+			compatible = "realtek,rts5912-kbd";
+			reg = <0x40010000 0x10>;
+			clocks = <&sccon RTS5912_SCCON_PERIPH_GRP0 PERIPH_GRP0_KBM_CLKPWR>;
+			interrupts = <210 0>;
+			interrupt-parent = <&nvic>;
 			status = "disabled";
 		};
 	};

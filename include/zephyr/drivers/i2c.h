@@ -668,7 +668,8 @@ static inline void i2c_xfer_stats(const struct device *dev, struct i2c_msg *msgs
 	Z_DEVICE_DEFINE(node_id, Z_DEVICE_DT_DEV_ID(node_id),		\
 			DEVICE_DT_NAME(node_id),			\
 			&UTIL_CAT(Z_DEVICE_DT_DEV_ID(node_id), _init),	\
-			pm, data, config, level, prio, api,	\
+			NULL, Z_DEVICE_DT_FLAGS(node_id), pm, data,	\
+			config,	level, prio, api,			\
 			&(Z_DEVICE_STATE_NAME(Z_DEVICE_DT_DEV_ID(node_id)).devstate), \
 			__VA_ARGS__)
 
@@ -720,6 +721,25 @@ static inline int z_impl_i2c_configure(const struct device *dev,
 		(const struct i2c_driver_api *)dev->api;
 
 	return api->configure(dev, dev_config);
+}
+
+/**
+ * @brief Configure operation of a host controller.
+ *
+ * This is equivalent to:
+ *
+ *     i2c_configure(spec->bus, dev_config);
+ *
+ * @param spec I2C specification from devicetree.
+ * @param dev_config Bit-packed 32-bit value to the device runtime configuration
+ * for the I2C controller.
+ *
+ * @return a value from i2c_configure()
+ */
+static inline int i2c_configure_dt(const struct i2c_dt_spec *spec,
+						uint32_t dev_config)
+{
+	return i2c_configure(spec->bus, dev_config);
 }
 
 /**

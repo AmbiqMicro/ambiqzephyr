@@ -65,7 +65,10 @@ enum llext_mem {
 struct llext_loader;
 /** @endcond */
 
-/* Maximim number of dependency LLEXTs */
+/** Maximum length of an extension name */
+#define LLEXT_MAX_NAME_LEN 15
+
+/** Maximum number of dependency LLEXTs */
 #define LLEXT_MAX_DEPENDENCIES 8
 
 /**
@@ -86,7 +89,7 @@ struct llext {
 	/** @endcond */
 
 	/** Name of the llext */
-	char name[16];
+	char name[LLEXT_MAX_NAME_LEN + 1];
 
 	/** Lookup table of memory regions */
 	void *mem[LLEXT_MEM_COUNT];
@@ -125,6 +128,7 @@ struct llext {
 	unsigned int sect_cnt;
 	elf_shdr_t *sect_hdrs;
 	bool sect_hdrs_on_heap;
+	bool mmu_permissions_set;
 	/** @endcond */
 };
 
@@ -152,7 +156,8 @@ struct llext_load_param {
 	 * the memory buffer, when calculating relocation targets. It also
 	 * means, that the application will take care to place the extension at
 	 * those pre-defined addresses, so the LLEXT core doesn't have to do any
-	 * allocation and copying internally.
+	 * allocation and copying internally. Any MMU permission adjustment will
+	 * be done by the application too.
 	 */
 	bool pre_located;
 
