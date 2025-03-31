@@ -5,8 +5,22 @@
  */
 
  / {
+	/delete-node/ xo32m_xtal;
+
+	chosen {
+		zephyr,sram = &dtcm;
+	};
+
 	aliases {
 		button = &button0;
 		led = &led0;
 	};
  };
+
+&stimer0 {
+    status = "disabled";
+};
+
+&uart0 {
+    status = "disabled";
+};

@@ -57,6 +57,51 @@ void soc_early_init_hook(void)
 
 	/* Enable Dcache */
 	sys_cache_data_enable();
+
+	am_hal_pwrctrl_pwrmodctl_cpdlp_t sDefaultCpdlpConfig = {
+		.eRlpConfig = AM_HAL_PWRCTRL_RLP_ON,
+		.eElpConfig = AM_HAL_PWRCTRL_ELP_RET,
+		.eClpConfig = AM_HAL_PWRCTRL_CLP_ON
+	};
+
+	am_hal_pwrctrl_pwrmodctl_cpdlp_config(sDefaultCpdlpConfig);
+
+	am_hal_rtc_osc_select(AM_HAL_RTC_OSC_LFRC); // Use LFRC instead of XT
+
+	// Configure XTAL for deepsleep
+	am_hal_pwrctrl_control(AM_HAL_PWRCTRL_CONTROL_XTAL_PWDN_DEEPSLEEP, 0);
+
+	am_hal_rtc_osc_disable();
+
+	VCOMP->PWDKEY = VCOMP_PWDKEY_PWDKEY_Key;
+	// Temporary fix to set DBGCTRL Register to 0
+	MCUCTRL->DBGCTRL = 0;
+
+	// Powering down various peripheral power domains
+	am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_DEBUG);
+	am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_CRYPTO);
+	am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_OTP);
+
+	am_hal_pwrctrl_mcu_memory_config_t McuMemCfg = {
+		.eROMMode = AM_HAL_PWRCTRL_ROM_AUTO,
+		.eDTCMCfg = AM_HAL_PWRCTRL_ITCM32K_DTCM128K,
+		.eRetainDTCM = AM_HAL_PWRCTRL_MEMRETCFG_TCMPWDSLP_NORETAIN,
+		.eNVMCfg = AM_HAL_PWRCTRL_NVM0_ONLY,
+		.bKeepNVMOnInDeepSleep = false};
+
+	am_hal_pwrctrl_sram_memcfg_t SRAMMemCfg = {.eSRAMCfg = AM_HAL_PWRCTRL_SRAM_NONE,
+						   .eActiveWithMCU = AM_HAL_PWRCTRL_SRAM_NONE,
+						   .eActiveWithGFX = AM_HAL_PWRCTRL_SRAM_NONE,
+						   .eActiveWithDISP = AM_HAL_PWRCTRL_SRAM_NONE,
+						   .eSRAMRetain = AM_HAL_PWRCTRL_SRAM_NONE};
+
+	am_hal_pwrctrl_mcu_memory_config(&McuMemCfg);
+
+	MCUCTRL->MRAMCRYPTOPWRCTRL_b.MRAM0LPREN = 1;
+	MCUCTRL->MRAMCRYPTOPWRCTRL_b.MRAM0SLPEN = 0;
+	MCUCTRL->MRAMCRYPTOPWRCTRL_b.MRAM0PWRCTRL = 1;
+
+	am_hal_pwrctrl_sram_config(&SRAMMemCfg);
 }
 
 #if CONFIG_CACHE_MANAGEMENT
@@ -78,8 +123,8 @@ bool buf_in_nocache(uintptr_t buf, size_t len_bytes)
 #endif /* CONFIG_NOCACHE_MEMORY */
 
 	/* Check if buffer is in nocache memory region defined in DT */
-	buf_within_nocache = mem_attr_check_buf((void *)buf, len_bytes,
-						DT_MEM_ARM(ATTR_MPU_RAM_NOCACHE)) == 0;
+	buf_within_nocache =
+		mem_attr_check_buf((void *)buf, len_bytes, DT_MEM_ARM(ATTR_MPU_RAM_NOCACHE)) == 0;
 
 	return buf_within_nocache;
 }
