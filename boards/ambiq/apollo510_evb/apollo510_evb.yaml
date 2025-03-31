@@ -23,6 +23,7 @@ supported:
   - clock_control
   - usbd
   - pdm
+  - ble
 testing:
   ignore_tags:
     - net

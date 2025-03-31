@@ -4290,14 +4290,15 @@ void bt_testing_set_iso_mtu(uint16_t mtu)
 int bt_enable(bt_ready_cb_t cb)
 {
 	int err;
+	printf("bt_enable\r\n");
 
 	if (IS_ENABLED(CONFIG_ZTEST) && bt_dev.hci == NULL) {
-		LOG_ERR("No DT chosen property for HCI");
+		printf("No DT chosen property for HCI");
 		return -ENODEV;
 	}
 
 	if (!device_is_ready(bt_dev.hci)) {
-		LOG_ERR("HCI driver is not ready");
+		printf("HCI driver is not ready");
 		return -ENODEV;
 	}
 
@@ -4345,7 +4346,7 @@ int bt_enable(bt_ready_cb_t cb)
 
 	err = bt_hci_open(bt_dev.hci, bt_hci_recv);
 	if (err) {
-		LOG_ERR("HCI driver open failed (%d)", err);
+		printf("HCI driver open failed (%d)", err);
 		return err;
 	}
 

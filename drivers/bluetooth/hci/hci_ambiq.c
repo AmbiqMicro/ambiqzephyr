@@ -54,12 +54,14 @@ LOG_MODULE_REGISTER(bt_hci_driver);
 
 static uint8_t __noinit rxmsg[SPI_MAX_RX_MSG_LEN];
 
+
+#if 1
 static struct spi_dt_spec spi_bus =
 	SPI_DT_SPEC_GET(DT_DRV_INST(0),
-			     SPI_OP_MODE_MASTER | SPI_HALF_DUPLEX | SPI_TRANSFER_MSB |
-				     SPI_MODE_CPOL | SPI_MODE_CPHA | SPI_WORD_SET(8),
-			     0);
-
+			     SPI_OP_MODE_MASTER| SPI_TRANSFER_MSB |
+				 SPI_WORD_SET(8),
+					0);
+#endif
 static K_KERNEL_STACK_DEFINE(spi_rx_stack, CONFIG_BT_DRV_RX_STACK_SIZE);
 static struct k_thread spi_rx_thread_data;
 
@@ -378,8 +380,9 @@ static int bt_apollo_open(const struct device *dev, bt_hci_recv_t recv)
 {
 	struct bt_apollo_data *hci = dev->data;
 	int ret;
-
+	printf("bt_apollo_open\r\n");
 	ret = bt_hci_transport_setup(spi_bus.bus);
+	printf("bt_hci_transport_setup, ret:%d\r\n", ret);
 	if (ret) {
 		return ret;
 	}
@@ -390,6 +393,7 @@ static int bt_apollo_open(const struct device *dev, bt_hci_recv_t recv)
 			K_PRIO_COOP(CONFIG_BT_DRIVER_RX_HIGH_PRIO), 0, K_NO_WAIT);
 
 	ret = bt_apollo_controller_init(spi_send_packet);
+	printf("controller init, ret:%d\r\n", ret);
 	if (ret == 0) {
 		hci->recv = recv;
 	}

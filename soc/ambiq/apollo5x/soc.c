@@ -17,7 +17,7 @@ void soc_early_init_hook(void)
 	__ISB();
 
 	/* Initialize for low power in the power control block */
-	am_hal_pwrctrl_low_power_init();
+	//am_hal_pwrctrl_low_power_init();
 
 	/* Enable SIMOBUCK for the apollo5 Family */
 	am_hal_pwrctrl_control(AM_HAL_PWRCTRL_CONTROL_SIMOBUCK_INIT, NULL);
