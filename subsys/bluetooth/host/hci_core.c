@@ -380,6 +380,8 @@ int bt_hci_cmd_send_sync(uint16_t opcode, struct net_buf *buf,
 	uint8_t status;
 	int err;
 
+	printf("hci cmd send sync , opcode:0x%x\n", opcode);
+
 	if (!buf) {
 		buf = bt_hci_cmd_create(opcode, 0);
 		if (!buf) {
@@ -4336,6 +4338,7 @@ int bt_enable(bt_ready_cb_t cb)
 	k_fifo_init(&bt_dev.cmd_tx_queue);
 
 #if defined(CONFIG_BT_RECV_WORKQ_BT)
+
 	/* RX thread */
 	k_work_queue_init(&bt_workq);
 	k_work_queue_start(&bt_workq, rx_thread_stack,
