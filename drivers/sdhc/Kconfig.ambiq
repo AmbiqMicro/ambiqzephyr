@@ -22,9 +22,16 @@ config AMBIQ_SDIO_ASYNC
 	help
 	  This option enables Ambiq SDIO Async Mode.
 
+config SDHC_AMBIQ_HANDLE_CACHE
+	bool "Enable cache handling in SDHC driver"
+	default y
+	depends on CACHE_MANAGEMENT
+	help
+	  Disable this if cache has been handled in upper layers.
+
 config SDHC_BUFFER_ALIGNMENT
-	default 32 if DCACHE
 	default 1
+	default DCACHE_LINE_SIZE if DCACHE
 	help
 	  SDHC buffer should be 32bytes aligned when placed in cachable region.
 
