@@ -95,7 +95,8 @@ static bool irq_pin_state(void)
 
 	pin_state = gpio_pin_get_dt(&irq_gpio);
 	//LOG_DBG("IRQ Pin: %d", pin_state);
-	return pin_state > 0;
+	printf("IRQ Pin: %d\r\n", pin_state);
+	return pin_state>0;
 }
 
 static void bt_em9305_cs_set(void)
@@ -114,6 +115,7 @@ static void bt_em9305_wait_ready(void)
 	{
 		if (irq_pin_state())
 		{
+			printf("wait till irq high, i:%d\n", i);
 			break;
 		}
 		k_busy_wait(100);
@@ -138,12 +140,14 @@ am_devices_em9305_tx_starts(bt_spi_transceive_fun transceive)
 	bt_em9305_wait_ready();
 	//check ready again
 
+	printf("tx start, irq pin state:%d\r\n", irq_pin_state());
+
 	if (!irq_pin_state())
     {
         //bt_em9305_cs_release();
 		bt_em9305_cs_set();
         spiTxInProgress = false;
-        LOG_ERR("wait em9305 ready timeout");
+        printf("wait em9305 ready timeout\r\n");
         return ret;
     }
 
@@ -233,8 +237,13 @@ int bt_apollo_spi_send(uint8_t *pui8Values, uint16_t ui32NumBytes, bt_spi_transc
 					LOG_ERR("bt_apollo_spi_send ret= %d", ret);
                 }
             }
-            am_devices_em9305_tx_ends();
+			else
+			{
+				break;
+			}
+            //am_devices_em9305_tx_ends();
         }
+		am_devices_em9305_tx_ends();
     }
     else
     {

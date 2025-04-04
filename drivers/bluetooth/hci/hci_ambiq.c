@@ -378,8 +378,12 @@ static int bt_apollo_send(const struct device *dev, struct net_buf *buf)
 		return -EINVAL;
 	}
 
+	printf("bt_apollo_send, len:%d\r\n", buf->len);
+
 	/* Send the SPI packet */
 	ret = spi_send_packet(buf->data, buf->len);
+
+	printf("spi send packet, ret:%d\r\n", ret);
 
 	net_buf_unref(buf);
 
