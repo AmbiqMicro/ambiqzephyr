@@ -380,8 +380,6 @@ int bt_hci_cmd_send_sync(uint16_t opcode, struct net_buf *buf,
 	uint8_t status;
 	int err;
 
-	printf("hci cmd send sync , opcode:0x%x\n", opcode);
-
 	if (!buf) {
 		buf = bt_hci_cmd_create(opcode, 0);
 		if (!buf) {
@@ -3063,7 +3061,7 @@ static void hci_core_send_cmd(void)
 
 	err = bt_send(buf);
 	if (err) {
-		LOG_ERR("Unable to send to driver (err %d)", err);
+		printf("Unable to send to driver (err %d)\r\n", err);
 		k_sem_give(&bt_dev.ncmd_sem);
 		hci_cmd_done(cmd(buf)->opcode, BT_HCI_ERR_UNSPECIFIED, buf);
 		net_buf_unref(buf);
