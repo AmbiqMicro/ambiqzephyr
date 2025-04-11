@@ -1,0 +1,9 @@
+# Copyright (c) 2018, NXP
+# SPDX-License-Identifier: Apache-2.0
+
+description: APS6404L FLASH
+
+compatible: "apm,aps6404l"
+
+include: spi-device.yaml
+
