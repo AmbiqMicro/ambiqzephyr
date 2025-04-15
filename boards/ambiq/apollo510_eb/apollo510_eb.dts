@@ -66,6 +66,7 @@
 };
 
 &iom0 {
+	dma-mode;
 	cmdq-buffer-location = "SRAM_NO_CACHE";
 	cmdq-buffer-size = <256>;
 
