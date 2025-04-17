@@ -128,14 +128,14 @@
         pinctrl-0 = <&spi2_default>;
         pinctrl-names = "default";
         clock-frequency = <DT_FREQ_M(8)>;
-        cs-gpios = <&gpio160_191 27 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+        cs-gpios = <&gpio96_127 21 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 
         bt_hci: bt_hci@0 {
             compatible = "ambiq,bt-hci-spi";
             reg = <0>; // SPI chip select index
             spi-max-frequency = <DT_FREQ_M(8)>;
             irq-gpios = <&gpio128_159 21 GPIO_ACTIVE_HIGH>;
-            reset-gpios = <&gpio64_95 29 GPIO_ACTIVE_LOW>;
+            reset-gpios = <&gpio128_159 11 GPIO_ACTIVE_LOW>;
             cm-gpios = <&gpio0_31 15 GPIO_ACTIVE_LOW>;
             status = "okay";
         };

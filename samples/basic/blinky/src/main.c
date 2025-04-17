@@ -25,6 +25,8 @@ int main(void)
 	int ret;
 	bool led_state = true;
 
+	printk("blinky main \r\n");
+
 	if (!gpio_is_ready_dt(&led)) {
 		return 0;
 	}

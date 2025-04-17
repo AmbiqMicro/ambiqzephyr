@@ -96,6 +96,7 @@
 		group1 {
 			pinmux = <M2SCK_P25>, <M2MISO_P27>, <M2MOSI_P26>;
 		};
+		
 	};
 	spi3_default: spi3_default {
 		group1 {
