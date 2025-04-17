@@ -222,7 +222,7 @@ static struct bt_le_ext_adv *adv_new(void)
 {
 	struct bt_le_ext_adv *adv = NULL;
 	int i;
-
+    printf("adv_new\n");
 	for (i = 0; i < ARRAY_SIZE(adv_pool); i++) {
 		if (!atomic_test_bit(adv_pool[i].flags, BT_ADV_CREATED)) {
 			adv = &adv_pool[i];
@@ -289,6 +289,8 @@ static int adv_create_legacy(void)
 		return -EALREADY;
 	}
 
+	printf("adv_create_legacy\r\n");
+
 	bt_dev.adv = adv_new();
 	if (bt_dev.adv == NULL) {
 		return -ENOMEM;
@@ -321,6 +323,8 @@ int bt_le_adv_set_enable_legacy(struct bt_le_ext_adv *adv, bool enable)
 	struct net_buf *buf;
 	struct bt_hci_cmd_state_set state;
 	int err;
+
+	printf("bt_le_adv_set_enable_legacy\n");
 
 	buf = bt_hci_cmd_create(BT_HCI_OP_LE_SET_ADV_ENABLE, 1);
 	if (!buf) {
@@ -380,6 +384,7 @@ int bt_le_adv_set_enable_ext(struct bt_le_ext_adv *adv,
 
 int bt_le_adv_set_enable(struct bt_le_ext_adv *adv, bool enable)
 {
+	printf("bt_le_adv_set_enable, ext_adv:%d, feature ext:%d\n", IS_ENABLED(CONFIG_BT_EXT_ADV), BT_DEV_FEAT_LE_EXT_ADV(bt_dev.le.features));
 	if (IS_ENABLED(CONFIG_BT_EXT_ADV) &&
 	    BT_DEV_FEAT_LE_EXT_ADV(bt_dev.le.features)) {
 		return bt_le_adv_set_enable_ext(adv, enable, NULL);
@@ -498,6 +503,8 @@ static int set_data_add_complete(uint8_t *set_data, uint8_t set_data_len_max,
 {
 	uint8_t set_data_len = 0;
 
+	printf("set_data_add_complete, ad_len:%d, max:%d\r\n", ad_len, set_data_len_max);
+#if 1
 	for (size_t i = 0; i < ad_len; i++) {
 		const struct bt_data *data = ad[i].data;
 
@@ -529,6 +536,7 @@ static int set_data_add_complete(uint8_t *set_data, uint8_t set_data_len_max,
 	}
 
 	*data_len = set_data_len;
+	#endif
 	return 0;
 }
 
@@ -538,7 +546,10 @@ static int hci_set_ad(uint16_t hci_op, const struct bt_ad *ad, size_t ad_len)
 	struct net_buf *buf;
 	int err;
 
+	printf("hci_set_ad\r\n");
+
 	buf = bt_hci_cmd_create(hci_op, sizeof(*set_data));
+	printf("set ad cmd create, buf:%d, ad_len:%d\r\n", buf, ad_len);
 	if (!buf) {
 		return -ENOBUFS;
 	}
@@ -552,7 +563,7 @@ static int hci_set_ad(uint16_t hci_op, const struct bt_ad *ad, size_t ad_len)
 		net_buf_unref(buf);
 		return err;
 	}
-
+	//return 0;
 	return bt_hci_cmd_send_sync(hci_op, buf, NULL);
 }
 
@@ -800,8 +811,11 @@ static int le_adv_update(struct bt_le_ext_adv *adv,
 	size_t d_len;
 	int err;
 
+	printf("le_adv_update, name_type:%d\r\n", name_type);
+
 	if (name_type != ADV_NAME_TYPE_NONE) {
 		const char *name = bt_get_name();
+		printf("name: %s\r\n", name);
 
 		if ((ad && ad_has_name(ad, ad_len)) ||
 		    (sd && ad_has_name(sd, sd_len))) {
@@ -826,6 +840,7 @@ static int le_adv_update(struct bt_le_ext_adv *adv,
 		}
 
 		err = set_ad(adv, d, d_len);
+		printf("set_ad, err:%d\r\n", err);
 		if (err) {
 			return err;
 		}
@@ -1044,6 +1059,7 @@ int bt_le_adv_start_legacy(struct bt_le_ext_adv *adv,
 	}
 
 	buf = bt_hci_cmd_create(BT_HCI_OP_LE_SET_ADV_PARAM, sizeof(set_param));
+	printf("bt_le_adv_start_legacy, cmd create:0x%x\r\n", buf);
 	if (!buf) {
 		return -ENOBUFS;
 	}
@@ -1051,21 +1067,26 @@ int bt_le_adv_start_legacy(struct bt_le_ext_adv *adv,
 	net_buf_add_mem(buf, &set_param, sizeof(set_param));
 
 	err = bt_hci_cmd_send_sync(BT_HCI_OP_LE_SET_ADV_PARAM, buf, NULL);
+	printf("set adv param cmd, err:%d, dir_adv:%d\n", err, dir_adv);
 	if (err) {
 		return err;
 	}
-
+#if 0
 	if (!dir_adv) {
 		err = le_adv_update(adv, ad, ad_len, sd, sd_len, false,
 				    scannable, name_type);
+		printf("le_adv_update, err:%d\n", err);
 		if (err) {
 			return err;
 		}
 	}
+	#endif
 
 	if (IS_ENABLED(CONFIG_BT_PERIPHERAL) &&
 	    (param->options & _BT_LE_ADV_OPT_CONNECTABLE)) {
+	    printf("going to start add con \r\n");
 		err = le_adv_start_add_conn(adv, &conn);
+		printf("start add conn, err:%d\n", err);
 		if (err) {
 			if (err == -ENOMEM && !dir_adv &&
 			    !(param->options & _BT_LE_ADV_OPT_ONE_TIME)) {
@@ -1077,6 +1098,7 @@ int bt_le_adv_start_legacy(struct bt_le_ext_adv *adv,
 	}
 
 	err = bt_le_adv_set_enable(adv, true);
+	printf("set enable, err:%d\n", err);
 	if (err) {
 		LOG_ERR("Failed to start advertiser");
 		if (IS_ENABLED(CONFIG_BT_PERIPHERAL) && conn) {
@@ -1399,6 +1421,7 @@ int bt_le_adv_start(const struct bt_le_adv_param *param,
 	int err;
 
 	err = adv_create_legacy();
+	printf("create legacy err:%d, ad_len:%d, sd_len:%d\r\n", err, ad_len, sd_len);
 	if (err) {
 		return err;
 	}
