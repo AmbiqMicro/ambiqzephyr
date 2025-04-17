@@ -302,6 +302,47 @@ static struct net_buf *bt_hci_acl_recv(uint8_t *data, size_t len)
 	return buf;
 }
 
+static struct net_buf *bt_hci_iso_recv(uint8_t *data, size_t len)
+{
+	struct bt_hci_iso_hdr hdr = {0};
+	struct net_buf *buf;
+	size_t buf_tailroom;
+
+	if (len < sizeof(hdr)) {
+		LOG_ERR("Not enough data for ISO header");
+		return NULL;
+	}
+
+	buf = bt_buf_get_rx(BT_BUF_ISO_IN, K_NO_WAIT);
+	if (buf) {
+		memcpy((void *)&hdr, data, sizeof(hdr));
+		data += sizeof(hdr);
+		len -= sizeof(hdr);
+	} else {
+		LOG_ERR("No available ISO buffers!");
+		return NULL;
+	}
+
+	if (len != bt_iso_hdr_len(sys_le16_to_cpu(hdr.len))) {
+		LOG_ERR("ISO payload length is not correct");
+		net_buf_unref(buf);
+		return NULL;
+	}
+
+	net_buf_add_mem(buf, &hdr, sizeof(hdr));
+	buf_tailroom = net_buf_tailroom(buf);
+	if (buf_tailroom < len) {
+		LOG_ERR("Not enough space in buffer %zu/%zu", len, buf_tailroom);
+		net_buf_unref(buf);
+		return NULL;
+	}
+
+	//LOG_WRN("len %zu", len);
+	net_buf_add_mem(buf, data, len);
+
+	return buf;
+}
+
 static void bt_spi_rx_thread(void *p1, void *p2, void *p3)
 {
 	const struct device *dev = p1;
@@ -341,6 +382,9 @@ static void bt_spi_rx_thread(void *p1, void *p2, void *p3)
 				buf = bt_hci_acl_recv(&rxmsg[PACKET_TYPE + PACKET_TYPE_SIZE],
 						      (len - PACKET_TYPE_SIZE));
 				break;
+			case BT_HCI_H4_ISO:
+			buf = bt_hci_iso_recv(&rxmsg[PACKET_TYPE + PACKET_TYPE_SIZE],
+						      (len - PACKET_TYPE_SIZE));
 			default:
 				buf = NULL;
 				LOG_WRN("Unknown BT buf type %d", rxmsg[PACKET_TYPE]);
@@ -371,6 +415,9 @@ static int bt_apollo_send(const struct device *dev, struct net_buf *buf)
 		break;
 	case BT_BUF_CMD:
 		net_buf_push_u8(buf, BT_HCI_H4_CMD);
+		break;
+	case BT_BUF_ISO_OUT:
+		net_buf_push_u8(buf, BT_HCI_H4_ISO);
 		break;
 	default:
 		LOG_ERR("Unsupported type");
