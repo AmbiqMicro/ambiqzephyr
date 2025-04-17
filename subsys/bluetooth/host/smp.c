@@ -1899,6 +1899,7 @@ static void smp_pairing_complete(struct bt_smp *smp, uint8_t status)
 		status = BT_SMP_ERR_UNSPECIFIED;
 	}
 
+
 	if (!status) {
 #if defined(CONFIG_BT_CLASSIC)
 		/*
@@ -1911,6 +1912,11 @@ static void smp_pairing_complete(struct bt_smp *smp, uint8_t status)
 			sc_derive_link_key(smp);
 		}
 #endif /* CONFIG_BT_CLASSIC */
+		printk("LTK : ");
+		for(uint8_t i=0; i<16; i++)
+			printk("%02x ", conn->le.keys->ltk.val[i]);
+		printk("\r\n");
+
 		bool bond_flag = atomic_test_bit(smp->flags, SMP_FLAG_BOND);
 		struct bt_conn_auth_info_cb *listener, *next;
 

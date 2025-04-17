@@ -363,17 +363,17 @@ static int bap_stream_send(struct bt_bap_stream *stream, struct net_buf *buf, ui
 	int ret;
 
 	if (stream == NULL) {
-		LOG_DBG("stream is NULL");
+		printf("stream is NULL");
 		return -EINVAL;
 	}
 
 	if (stream->ep == NULL) {
-		LOG_DBG("stream->ep %p is NULL", stream);
+		printf("stream->ep %p is NULL", stream);
 		return -EINVAL;
 	}
 
 	if (!bt_bap_stream_can_send(stream)) {
-		LOG_DBG("Stream is not configured for TX");
+		printf("Stream is not configured for TX");
 
 		return -EINVAL;
 	}
@@ -381,7 +381,7 @@ static int bap_stream_send(struct bt_bap_stream *stream, struct net_buf *buf, ui
 	ep = stream->ep;
 
 	if (ep->status.state != BT_BAP_EP_STATE_STREAMING) {
-		LOG_DBG("Channel %p not ready for streaming (state: %s)", stream,
+		printf("Channel %p not ready for streaming (state: %s)", stream,
 			bt_bap_ep_state_str(ep->status.state));
 		return -EBADMSG;
 	}
@@ -395,24 +395,33 @@ static int bap_stream_send(struct bt_bap_stream *stream, struct net_buf *buf, ui
 	}
 
 	if (ret < 0) {
+		printf("ret<0, ret.%d...\r\n", ret);
 		return ret;
 	}
 
 #if defined(CONFIG_BT_BAP_DEBUG_STREAM_SEQ_NUM)
+	
 	if (stream->_prev_seq_num != 0U && seq_num != 0U &&
 	    (stream->_prev_seq_num + 1U) != seq_num) {
 		LOG_WRN("Unexpected seq_num diff between %u and %u for %p", stream->_prev_seq_num,
 			seq_num, stream);
 	}
+	else
+	{
+		//LOG_WRN("seq_num:%d, pre_seq_num:%d", seq_num, stream->_prev_seq_num);
+	}
 
 	stream->_prev_seq_num = seq_num;
 #endif /* CONFIG_BT_BAP_DEBUG_STREAM_SEQ_NUM */
-
+if (ret < 0) {
+	printf("222 ret<0, %d....\r\n", ret);
+}
 	return ret;
 }
 
 int bt_bap_stream_send(struct bt_bap_stream *stream, struct net_buf *buf, uint16_t seq_num)
 {
+	//printf("bt bap stream send, seq num:%d\r\n", seq_num);
 	return bap_stream_send(stream, buf, seq_num, 0, false);
 }
 
@@ -684,7 +693,7 @@ int bt_bap_stream_enable(struct bt_bap_stream *stream, const uint8_t meta[], siz
 	uint8_t role;
 	int err;
 
-	LOG_DBG("stream %p", stream);
+	printf("bt_bap_stream_enable, stream %p\n", stream);
 
 	if (stream == NULL || stream->ep == NULL || stream->conn == NULL) {
 		LOG_DBG("Invalid stream");

@@ -173,6 +173,7 @@ int bt_bap_unicast_client_connect(struct bt_bap_stream *stream)
 
 	if (stream->ep != NULL && stream->ep->dir == BT_AUDIO_DIR_SINK) {
 		/* Mocking that the unicast server automatically starts the stream */
+		printf("bt_bap_unicast_client_connect, stream:0x%x BT_BAP_EP_STATE_STREAMING\r\n", stream);
 		stream->ep->status.state = BT_BAP_EP_STATE_STREAMING;
 
 		if (stream->ops != NULL && stream->ops->started != NULL) {
@@ -203,6 +204,7 @@ int bt_bap_unicast_client_start(struct bt_bap_stream *stream)
 	}
 
 	stream->ep->status.state = BT_BAP_EP_STATE_STREAMING;
+	printf("bt_bap_unicast_client_start, state STREAMING \r\n");
 
 	if (stream->ops != NULL && stream->ops->started != NULL) {
 		stream->ops->started(stream);
@@ -214,6 +216,7 @@ int bt_bap_unicast_client_start(struct bt_bap_stream *stream)
 int bt_bap_unicast_client_disable(struct bt_bap_stream *stream)
 {
 	printk("%s %p %d\n", __func__, stream, stream->ep->dir);
+	printf("%s %p %d\n", __func__, stream, stream->ep->dir);
 
 	if (stream == NULL || stream->ep == NULL) {
 		return -EINVAL;
@@ -266,7 +269,7 @@ int bt_bap_unicast_client_disable(struct bt_bap_stream *stream)
 int bt_bap_unicast_client_stop(struct bt_bap_stream *stream)
 {
 	printk("%s %p\n", __func__, stream);
-
+	printf("%s %p\n", __func__, stream);
 	/* As per the ASCS spec, only source streams can be stopped by the client */
 	if (stream == NULL || stream->ep == NULL || stream->ep->dir == BT_AUDIO_DIR_SINK) {
 		return -EINVAL;

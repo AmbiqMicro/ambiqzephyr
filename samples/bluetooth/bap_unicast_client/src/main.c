@@ -194,7 +194,7 @@ static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
 
 	/* connect only to devices in close proximity */
 	if (rssi < -50) {
-		return;
+	//	return;
 	}
 
 	bt_data_parse(ad, check_audio_support_and_connect, (void *)addr);
@@ -698,6 +698,8 @@ static int create_group(void)
 	param.params_count = params_count;
 	param.packing = BT_ISO_PACKING_SEQUENTIAL;
 
+	printk("create group, params_count:%d\n", params_count);
+
 	err = bt_bap_unicast_group_create(&param, &unicast_group);
 	if (err != 0) {
 		printk("Could not create unicast group (err %d)\n", err);
@@ -769,6 +771,8 @@ static int connect_streams(void)
 	for (size_t i = 0U; i < configured_stream_count; i++) {
 		int err;
 
+		printk("connect_streams, i:%d\n", i);
+
 		k_sem_reset(&sem_stream_connected);
 
 		err = bt_bap_stream_connect(&streams[i]);
@@ -784,6 +788,10 @@ static int connect_streams(void)
 		if (err != 0) {
 			printk("failed to take sem_stream_connected (err %d)\n", err);
 			return err;
+		}
+		else
+		{
+			printk("connect stream ok, stream: 0x%x\n", streams[i]);
 		}
 	}
 
@@ -811,6 +819,8 @@ static int start_streams(void)
 	for (size_t i = 0U; i < configured_stream_count; i++) {
 		struct bt_bap_stream *stream = &streams[i];
 		int err;
+
+		printk("start streams, i:%d\r\n");
 
 		if (stream_dir(stream) == BT_AUDIO_DIR_SOURCE) {
 			err = bt_bap_stream_start(&streams[i]);
@@ -859,7 +869,7 @@ int main(void)
 	if (err != 0) {
 		return 0;
 	}
-	printk("Initialized\n");
+	printk(" unicast_client Initialized\n");
 
 	err = bt_bap_unicast_client_register_cb(&unicast_client_cbs);
 	if (err != 0) {

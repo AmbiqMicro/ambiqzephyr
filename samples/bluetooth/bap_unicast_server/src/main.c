@@ -222,6 +222,8 @@ static void audio_timer_timeout(struct k_work *work)
 		data_initialized = true;
 	}
 
+	printk("audio_timer_timeout\n");
+
 	/* We configured the sink streams to be first in `streams`, so that
 	 * we can use `stream[i]` to select sink streams (i.e. streams with
 	 * data going to the server)
@@ -240,6 +242,7 @@ static void audio_timer_timeout(struct k_work *work)
 		net_buf_add_mem(buf, buf_data, ++source_streams[i].len_to_send);
 
 		ret = bt_bap_stream_send(stream, buf, get_and_incr_seq_num(stream));
+		
 		if (ret < 0) {
 			printk("Failed to send audio data on streams[%zu] (%p): (%d)\n",
 			       i, stream, ret);
@@ -544,7 +547,7 @@ static void stream_recv(struct bt_bap_stream *stream,
 			struct net_buf *buf)
 {
 	if (info->flags & BT_ISO_FLAGS_VALID) {
-		printk("Incoming audio on stream %p len %u\n", stream, buf->len);
+		//printk("Incoming audio on stream %p len %u\n", stream, buf->len);
 	}
 }
 
@@ -739,13 +742,14 @@ int main(void)
 		return 0;
 	}
 
-	printk("Bluetooth initialized\n");
-
+	printk("unicase Server  Bluetooth initialized\n");
+#if 1
 	err = bt_pacs_register(&pacs_param);
 	if (err) {
 		printk("Could not register PACS (err %d)\n", err);
 		return 0;
 	}
+	#endif
 
 	bt_bap_unicast_server_register(&param);
 	bt_bap_unicast_server_register_cb(&unicast_server_cb);
@@ -799,11 +803,11 @@ int main(void)
 			return 0;
 		}
 
-		printk("Advertising successfully started\n");
+		printk("Advertising successfully started, CONFIG_BT_ASCS_MAX_ASE_SRC_COUNT:%d\n", CONFIG_BT_ASCS_MAX_ASE_SRC_COUNT);
 
 		if (CONFIG_BT_ASCS_MAX_ASE_SRC_COUNT > 0) {
 			/* Start send timer */
-			k_work_init_delayable(&audio_send_work, audio_timer_timeout);
+			//k_work_init_delayable(&audio_send_work, audio_timer_timeout);
 		}
 
 		err = k_sem_take(&sem_disconnected, K_FOREVER);

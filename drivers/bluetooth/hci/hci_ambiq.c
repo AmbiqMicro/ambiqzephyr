@@ -319,7 +319,7 @@ static struct net_buf *bt_hci_iso_recv(uint8_t *data, size_t len)
 		data += sizeof(hdr);
 		len -= sizeof(hdr);
 	} else {
-		LOG_ERR("No available ISO buffers!");
+		LOG_ERR("bt_hci_iso_recv No available ISO buffers!");
 		return NULL;
 	}
 
@@ -362,7 +362,19 @@ static void bt_spi_rx_thread(void *p1, void *p2, void *p3)
 		do {
 			/* Recevive the HCI packet via SPI */
 			ret = spi_receive_packet(&rxmsg[0], &len);
-			if (ret) {
+            #if 0
+			printf("HCI Rx :%d, ", len);
+			uint16_t log_len = len;
+			if(len > 14){
+				log_len = 14;
+			}
+
+			for(uint16_t i=0; i<log_len; i++)
+				printf("%02x ", rxmsg[i]);
+			printf("\r\n");
+			#endif
+			//if (ret || (len==0)) {
+			if(ret) {
 				break;
 			}
 
@@ -385,6 +397,7 @@ static void bt_spi_rx_thread(void *p1, void *p2, void *p3)
 			case BT_HCI_H4_ISO:
 			buf = bt_hci_iso_recv(&rxmsg[PACKET_TYPE + PACKET_TYPE_SIZE],
 						      (len - PACKET_TYPE_SIZE));
+			break;
 			default:
 				buf = NULL;
 				LOG_WRN("Unknown BT buf type %d", rxmsg[PACKET_TYPE]);

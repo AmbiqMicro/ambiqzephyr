@@ -454,7 +454,7 @@ void bt_iso_connected(struct bt_conn *iso)
 static void bt_iso_chan_disconnected(struct bt_iso_chan *chan, uint8_t reason)
 {
 	const uint8_t conn_type = chan->iso->iso.info.type;
-	LOG_DBG("%p, reason 0x%02x", chan, reason);
+	printf("bt_iso_chan_disconnected, %p, reason 0x%02x\r\n", chan, reason);
 
 	__ASSERT(chan->iso != NULL, "NULL conn for iso chan %p", chan);
 
@@ -949,7 +949,7 @@ int bt_iso_chan_send(struct bt_iso_chan *chan, struct net_buf *buf, uint16_t seq
 
 	iso_conn = chan->iso;
 
-	BT_ISO_DATA_DBG("send-iso (no ts)");
+	//printf("send-iso (no ts), sn:0x%x, slen:0x%x, len:%d\n", hdr->sn, hdr->slen, net_buf_frags_len(buf));
 	return conn_iso_send(iso_conn, buf, BT_ISO_TS_ABSENT);
 }
 
@@ -1114,6 +1114,8 @@ int bt_iso_chan_disconnect(struct bt_iso_chan *chan)
 	if (chan->state == BT_ISO_STATE_ENCRYPT_PENDING) {
 		LOG_DBG("Channel already disconnected");
 		bt_iso_chan_set_state(chan, BT_ISO_STATE_DISCONNECTED);
+
+		printf("bt_iso_chan_disconnect, 111, disconnected:%d\r\n", chan->ops->disconnected);
 
 		if (chan->ops->disconnected) {
 			chan->ops->disconnected(chan, BT_HCI_ERR_LOCALHOST_TERM_CONN);
@@ -2126,12 +2128,12 @@ int bt_iso_cig_create(const struct bt_iso_cig_param *param, struct bt_iso_cig **
 	int i;
 
 	CHECKIF(param == NULL) {
-		LOG_DBG("param is NULL");
+		printf("param is NULL");
 		return -EINVAL;
 	}
 
 	CHECKIF(out_cig == NULL) {
-		LOG_DBG("out_cig is NULL");
+		printf("out_cig is NULL");
 		return -EINVAL;
 	}
 
@@ -2144,12 +2146,12 @@ int bt_iso_cig_create(const struct bt_iso_cig_param *param, struct bt_iso_cig **
 
 	/* TBD: Should we allow creating empty CIGs? */
 	CHECKIF(param->cis_channels == NULL) {
-		LOG_DBG("NULL CIS channels");
+		printf("NULL CIS channels");
 		return -EINVAL;
 	}
 
 	CHECKIF(param->num_cis == 0) {
-		LOG_DBG("Invalid number of CIS %u", param->num_cis);
+		printf("Invalid number of CIS %u", param->num_cis);
 		return -EINVAL;
 	}
 
@@ -2158,7 +2160,7 @@ int bt_iso_cig_create(const struct bt_iso_cig_param *param, struct bt_iso_cig **
 #endif /* CONFIG_BT_ISO_TEST_PARAMS */
 
 	CHECKIF(!valid_cig_param(param, advanced, NULL)) {
-		LOG_DBG("Invalid CIG params");
+		printf("Invalid CIG params");
 		return -EINVAL;
 	}
 

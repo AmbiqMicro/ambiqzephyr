@@ -863,7 +863,7 @@ static void unicast_client_ep_config_state(struct bt_bap_ep *ep, struct net_buf_
 	ep->receiver_ready = false;
 
 	if (client_ep->release_requested) {
-		LOG_DBG("Released was requested, change local state to idle");
+		printf("Released was requested, change local state to idle\r\n");
 		ep->reason = BT_HCI_ERR_LOCALHOST_TERM_CONN;
 		unicast_client_ep_set_local_idle_state(ep);
 		return;

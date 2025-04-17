@@ -49,9 +49,7 @@ LOG_MODULE_REGISTER(bt_apollox_driver);
 #define SPI_WRITE_TIMEOUT 200
 
 #define SPI_MAX_RX_MSG_LEN 258
-#endif
 
-#if (CONFIG_SOC_SERIES_APOLLO5X)
 #define EM9305_STS_CHK_CNT_MAX                  10		//! check EM9305 status cnt
 #define WAIT_EM9305_RDY_TIMEOUT               	12000   //! EM9305 timeout value. Assume worst case cold start counter (1.2 sec)
 #define EM9305_BUFFER_SIZE                      256		//! Length of RX buffer
@@ -196,7 +194,12 @@ int bt_apollo_spi_send(uint8_t *pui8Values, uint16_t ui32NumBytes, bt_spi_transc
 	int ret = -ENOTSUP;
 	uint8_t data[EM9305_BUFFER_SIZE];
 	uint8_t em9305BufSize = 0;
-
+/*
+	printf("bt_apollo_spi_send len:%d: ", ui32NumBytes);
+	for(uint8_t idx=0; idx<ui32NumBytes; idx++)
+		printf("%02x ", pui8Values[idx]);
+	printf("\r\n");
+*/
     if (ui32NumBytes <= EM9305_BUFFER_SIZE)
     {
         for ( uint32_t i = 0; i < ui32NumBytes; )
@@ -220,7 +223,8 @@ int bt_apollo_spi_send(uint8_t *pui8Values, uint16_t ui32NumBytes, bt_spi_transc
                 //
                 // Write to the IOM.
                 //
-				/* Transmit the message */
+				/* Transmit the message */				
+				
 				ret = transceive(data, len, NULL, 0);
 
                 if (AM_HAL_STATUS_SUCCESS != ret)

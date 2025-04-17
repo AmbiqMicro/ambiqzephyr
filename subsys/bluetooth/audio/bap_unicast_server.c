@@ -137,6 +137,7 @@ int bt_bap_unicast_server_start(struct bt_bap_stream *stream)
 	 * else wait for ISO to be connected
 	 */
 	if (ep->iso->chan.state == BT_ISO_STATE_CONNECTED) {
+		printf("bt_bap_unicast_server_start, set state BT_BAP_EP_STATE_STREAMING\n");
 		return ascs_ep_set_state(ep, BT_BAP_EP_STATE_STREAMING);
 	}
 

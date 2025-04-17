@@ -1261,6 +1261,7 @@ void bt_conn_set_state(struct bt_conn *conn, bt_conn_state_t state)
 		 */
 		switch (old_state) {
 		case BT_CONN_DISCONNECT_COMPLETE:
+			printf("BT_CONN_DISCONNECT_COMPLETE\n");
 			/* Any previously scheduled deferred work now becomes invalid
 			 * so cancel it here, before we yield to tx thread.
 			 */
@@ -1270,7 +1271,7 @@ void bt_conn_set_state(struct bt_conn *conn, bt_conn_state_t state)
 
 			bt_conn_reset_rx_state(conn);
 
-			LOG_DBG("trigger disconnect work");
+			printf("trigger disconnect work\r\n");
 			k_work_reschedule(&conn->deferred_work, K_NO_WAIT);
 
 			/* The last ref will be dropped during cleanup */
@@ -2170,7 +2171,7 @@ static void deferred_work(struct k_work *work)
 	struct bt_conn *conn = CONTAINER_OF(dwork, struct bt_conn, deferred_work);
 	const struct bt_le_conn_param *param;
 
-	LOG_DBG("conn %p", conn);
+	printf("deferred_work, conn %p, conn->type:%d, conn->state:%d\r\n", conn, conn->type, conn->state);
 
 	if (conn->state == BT_CONN_DISCONNECTED) {
 #if defined(CONFIG_BT_ISO_UNICAST)
