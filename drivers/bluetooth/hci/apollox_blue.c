@@ -95,17 +95,17 @@ static bool irq_pin_state(void)
 
 	pin_state = gpio_pin_get_dt(&irq_gpio);
 	//LOG_DBG("IRQ Pin: %d", pin_state);
-	return pin_state > 0;
+	return pin_state>0;
 }
 
 static void bt_em9305_cs_set(void)
 {
-	gpio_pin_set_dt(&cs_gpio, 0);
+	gpio_pin_set_dt(&cs_gpio, 1);
 }
 
 static void bt_em9305_cs_release(void)
 {
-	gpio_pin_set_dt(&cs_gpio, 1);
+	gpio_pin_set_dt(&cs_gpio, 0);
 }
 
 static void bt_em9305_wait_ready(void)
@@ -132,18 +132,17 @@ am_devices_em9305_tx_starts(bt_spi_transceive_fun transceive)
     sCommand[1] = 0x00;
     uint8_t ret=0;
     // Select the EM9305
-    //bt_em9305_cs_set();
-	bt_em9305_cs_release();
+    bt_em9305_cs_set();
 	// wait em9305 ready
 	bt_em9305_wait_ready();
 	//check ready again
 
+
 	if (!irq_pin_state())
     {
-        //bt_em9305_cs_release();
-		bt_em9305_cs_set();
+        bt_em9305_cs_release();
         spiTxInProgress = false;
-        LOG_ERR("wait em9305 ready timeout");
+        printf("wait em9305 ready timeout\r\n");
         return ret;
     }
 
@@ -152,8 +151,7 @@ am_devices_em9305_tx_starts(bt_spi_transceive_fun transceive)
         //
         // Select the EM9305
         //
-        //bt_em9305_cs_set();	
-		bt_em9305_cs_release();
+        bt_em9305_cs_set();	
 		ret = transceive(sCommand, 2, sStas, 2);		
 		if(ret)
 		{
@@ -175,8 +173,7 @@ am_devices_em9305_tx_starts(bt_spi_transceive_fun transceive)
         }
         else
         {
-            //bt_em9305_cs_release();
-			bt_em9305_cs_set();
+            bt_em9305_cs_release();
         }
 
     }
@@ -188,8 +185,7 @@ static void
 am_devices_em9305_tx_ends(void)
 {
     // Deselect the EM9305
-   	//bt_em9305_cs_release();
-	   bt_em9305_cs_set();
+   	bt_em9305_cs_release();
     // Indicates that the SPI transfer is finished
     spiTxInProgress = false;
 }
@@ -414,7 +410,6 @@ int bt_apollo_spi_rcv(uint8_t *data, uint16_t *len, bt_spi_transceive_fun transc
     // Check if the SPI is free
     //
 
-	printf("bt_apollo_spi_rcv\n");
     if (spiTxInProgress)
     {
         //
@@ -430,7 +425,6 @@ int bt_apollo_spi_rcv(uint8_t *data, uint16_t *len, bt_spi_transceive_fun transc
     if (!irq_pin_state())
     {
         // No data
-        printf("BLE SPI No data\n");
         return AM_DEVICES_EM9305_NO_DATA_TX;
     }
 
@@ -441,8 +435,7 @@ int bt_apollo_spi_rcv(uint8_t *data, uint16_t *len, bt_spi_transceive_fun transc
             //
             // Select the EM9305
             //
-            //bt_em9305_cs_set();
-			bt_em9305_cs_release();
+            bt_em9305_cs_set();
             ret = transceive(sCommand, 2, sStas, 2);
             
             if (AM_HAL_STATUS_SUCCESS != ret)
@@ -461,8 +454,7 @@ int bt_apollo_spi_rcv(uint8_t *data, uint16_t *len, bt_spi_transceive_fun transc
             }
             else
             {
-				bt_em9305_cs_set();
-                //bt_em9305_cs_release();
+                bt_em9305_cs_release();
             }
         }
 
@@ -471,8 +463,7 @@ int bt_apollo_spi_rcv(uint8_t *data, uint16_t *len, bt_spi_transceive_fun transc
         //
         if (( sStas[0] != EM9305_STS1_READY_VALUE ) || ( sStas[1] == 0x00))
         {
-            //bt_em9305_cs_release();
-			bt_em9305_cs_set();
+            bt_em9305_cs_release();
             printf("EM9305 Not Ready sStas.byte0 = 0x%02x, sStas.byte1 = 0x%02x\n", sStas[0], sStas[1]);
             return AM_DEVICES_EM9305_NOT_READY;
         }
@@ -502,18 +493,15 @@ int bt_apollo_spi_rcv(uint8_t *data, uint16_t *len, bt_spi_transceive_fun transc
 
             if (AM_HAL_STATUS_SUCCESS != ret)
             {
-                printf(" bt_apollo_spi_rcv ret =%d\n", ret);
                 return AM_DEVICES_EM9305_DATA_TRANSFER_ERROR;
             }
             else
             {
-				printf("ui8RxBytes:%d\r\n", ui8RxBytes);
                 *len += ui8RxBytes;
             }
         }
         // Deselect the EM9305
-        //bt_em9305_cs_release();
-		bt_em9305_cs_set();
+        bt_em9305_cs_release();
 
     }while(irq_pin_state());
 
@@ -582,12 +570,6 @@ int bt_apollo_spi_rcv(uint8_t *data, uint16_t *len, bt_spi_transceive_fun transc
 
 bool bt_apollo_vnd_rcv_ongoing(uint8_t *data, uint16_t len)
 {
-	printf("bt_apollo_vnd_rcv_ongoing, len:%d\r\n", len);
-#if 1
-	for(uint8_t j=0; j<len; j++)
-		    printf("0x%x ", data[j]);
-	    printf("\r\n");
-		#endif
 #if (CONFIG_SOC_SERIES_APOLLO4X)
 	/* The vendor specific handshake command/response is incompatible with
 	 * standard Bluetooth HCI format, need to handle the received packets
@@ -603,13 +585,6 @@ bool bt_apollo_vnd_rcv_ongoing(uint8_t *data, uint16_t len)
 	bool ret = false;
 	//if(am_devices_em9305_get_reset_state())
 	{
-		uint8_t i = 0;
-		//printf("rcv , len: %d ", len);
-		#if 0
-		for(i=0; i<len; i++)
-		    printf("0x%x ", data[i]);
-	    printf("\r\n");
-		#endif
 		if(memcmp(data, active_state_entered_evt, sizeof(active_state_entered_evt)) == 0) 
 		{
 			//am_devices_em9305_set_reset_state(false);
