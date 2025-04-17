@@ -10,5 +10,6 @@ config SOC_FAMILY
 
 config SOC_AMBIQ_BT_SUPPORTED
 	bool
+	default y
 
 rsource "*/Kconfig.soc"

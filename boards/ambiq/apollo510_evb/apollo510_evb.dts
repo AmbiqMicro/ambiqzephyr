@@ -18,6 +18,7 @@
 		ambiq,xo32m = &xo32m_xtal;
 		ambiq,xo32k = &xo32k_xtal;
 		ambiq,extrefclk = &extrefclk;
+		zephyr,bt-hci = &bt_hci;
 	};
 
 	aliases {
@@ -122,11 +123,28 @@
 };
 
 &iom2 {
-	cmdq-buffer-location = "SRAM_NO_CACHE";
-	cmdq-buffer-size = <256>;
+	spi2: spi {
+        status = "okay";
+        pinctrl-0 = <&spi2_default>;
+        pinctrl-names = "default";
+        clock-frequency = <DT_FREQ_M(8)>;
+        cs-gpios = <&gpio160_191 27 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 
-	i2c2: i2c {
-		pinctrl-0 = <&i2c2_default>;
+        bt_hci: bt_hci@0 {
+            compatible = "ambiq,bt-hci-spi";
+            reg = <0>; // SPI chip select index
+            spi-max-frequency = <DT_FREQ_M(8)>;
+            irq-gpios = <&gpio128_159 21 GPIO_ACTIVE_HIGH>;
+            reset-gpios = <&gpio64_95 29 GPIO_ACTIVE_LOW>;
+            cm-gpios = <&gpio0_31 15 GPIO_ACTIVE_LOW>;
+            status = "okay";
+        };
+    };
+};
+
+&iom0 {
+	i2c0: i2c {
+		pinctrl-0 = <&i2c0_default>;
 		pinctrl-names = "default";
 		clock-frequency = <I2C_BITRATE_STANDARD>;
 		scl-gpios = <&gpio0_31 25 (GPIO_OPEN_DRAIN | GPIO_PULL_UP)>;
