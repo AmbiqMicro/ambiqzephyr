@@ -90,7 +90,7 @@ static inline int bt_spi_transceive(void *tx, uint32_t tx_len, void *rx, uint32_
 	spi_tx_buf.len = (size_t)tx_len;
 	spi_rx_buf.buf = rx;
 	spi_rx_buf.len = (size_t)rx_len;
-#if !defined(CONFIG_SOC_SERIES_APOLLO5X)
+#if 1//!defined(CONFIG_SOC_SERIES_APOLLO5X)
 	/* Before sending packet to controller the host needs to poll the status of
 	 * controller to know it's ready, or before reading packets from controller
 	 * the host needs to get the payload size of coming packets by sending specific
@@ -108,7 +108,17 @@ static inline int bt_spi_transceive(void *tx, uint32_t tx_len, void *rx, uint32_
 
 static int spi_send_packet(uint8_t *data, uint16_t len)
 {
-	int ret;
+	int ret = 0;
+	
+	#if (CONFIG_SOC_SERIES_APOLLO5X)
+	/* Wait for SPI bus to be available */
+	k_sem_take(&sem_spi_available, K_FOREVER);
+	/* Send the SPI packet to controller */
+	ret = bt_apollo_spi_send(data, len, bt_spi_transceive);
+
+	/* Free the SPI bus */
+	k_sem_give(&sem_spi_available);
+	#else
 	uint16_t fail_count = 0;
 
 	do {
@@ -130,7 +140,7 @@ static int spi_send_packet(uint8_t *data, uint16_t len)
 			break;
 		}
 	} while (fail_count++ < SPI_BUSY_TX_ATTEMPTS);
-
+#endif
 	return ret;
 }
 

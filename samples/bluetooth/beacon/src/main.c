@@ -51,11 +51,13 @@ static void bt_ready(int err)
 		return;
 	}
 
-	printk("Bluetooth initialized\n");
+	printf("......Bluetooth initialized, CONFIG_MAIN_STACK_SIZE:%d\n", CONFIG_MAIN_STACK_SIZE);
+	printf("DEVICE_NAME:%s, len:%d\n", DEVICE_NAME, DEVICE_NAME_LEN);
 
-	/* Start advertising */
+	/* Start advertising BT_LE_ADV_CONN_FAST_1 */
 	err = bt_le_adv_start(BT_LE_ADV_NCONN_IDENTITY, ad, ARRAY_SIZE(ad),
 			      sd, ARRAY_SIZE(sd));
+	printf("adv start err:%d\r\n", err);
 	if (err) {
 		printk("Advertising failed to start (err %d)\n", err);
 		return;
