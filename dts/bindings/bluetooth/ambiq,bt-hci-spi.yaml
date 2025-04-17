@@ -38,3 +38,7 @@ properties:
 
   bt-hci-bus:
     default: "spi"
+
+  cm-gpios:
+    type: phandle-array
+    description: GPIO specifier for configure mode pin.

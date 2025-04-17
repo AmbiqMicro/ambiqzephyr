@@ -21,4 +21,9 @@
 			pinmux = <SWO_P28>;
 		};
 	};
+	spi2_default: spi2_default {
+		group1 {
+			pinmux = <M2SCK_P25>, <M2MISO_P27>, <M2MOSI_P26>;
+		};
+	};
 };

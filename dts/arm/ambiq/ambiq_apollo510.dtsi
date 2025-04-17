@@ -138,7 +138,26 @@
 			clock-frequency = <16>;
 			status = "disabled";
 		};
+		iom2: iom@IOM2_BASE_NAME {
+			compatible = "ambiq,iom";
+			reg = <IOM2_REG_BASE IOM2_REG_SIZE>;
+			interrupts = <8 0>;
 
+			spi {
+				compatible = "ambiq,spi";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				status = "disabled";
+				zephyr,pm-device-runtime-auto;
+			};
+			i2c {
+				compatible = "ambiq,i2c";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				status = "disabled";
+				zephyr,pm-device-runtime-auto;
+			};
+		};
 		uart0: uart@UART0_BASE_NAME {
 			compatible = "ambiq,uart", "arm,pl011";
 			reg = <UART0_REG_BASE UART0_REG_SIZE>;
