@@ -25,13 +25,11 @@ properties:
     description: |
       This reset gpio is used to reset the Bluetooth controller.
 
-  clkreq-gpios:
+  cm-gpios:
     type: phandle-array
     description: |
-      This clkreq gpio is used to send the XO32MHz clock request to host from
-      controller. The host needs to enable XO32MHz when receiving low to high
-      edge interrupts and disable XO32MHz when receiving high to low edge
-      interrupts.
+      This cm gpio is used to control em9305 enter firmware update mode.  
+
 
   bt-hci-name:
     default: "ambiq hci"
