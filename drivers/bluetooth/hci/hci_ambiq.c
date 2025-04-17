@@ -90,7 +90,7 @@ static inline int bt_spi_transceive(void *tx, uint32_t tx_len, void *rx, uint32_
 	spi_tx_buf.len = (size_t)tx_len;
 	spi_rx_buf.buf = rx;
 	spi_rx_buf.len = (size_t)rx_len;
-#if 1//!defined(CONFIG_SOC_SERIES_APOLLO5X)
+
 	/* Before sending packet to controller the host needs to poll the status of
 	 * controller to know it's ready, or before reading packets from controller
 	 * the host needs to get the payload size of coming packets by sending specific
@@ -102,7 +102,7 @@ static inline int bt_spi_transceive(void *tx, uint32_t tx_len, void *rx, uint32_
 	} else {
 		spi_bus.config.operation &= ~SPI_HOLD_ON_CS;
 	}
-#endif
+
 	return spi_transceive_dt(&spi_bus, &spi_tx, &spi_rx);
 }
 
@@ -378,8 +378,10 @@ static int bt_apollo_send(const struct device *dev, struct net_buf *buf)
 		return -EINVAL;
 	}
 
+
 	/* Send the SPI packet */
 	ret = spi_send_packet(buf->data, buf->len);
+
 
 	net_buf_unref(buf);
 

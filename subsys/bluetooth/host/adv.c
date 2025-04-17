@@ -524,6 +524,7 @@ static int set_data_add_complete(uint8_t *set_data, uint8_t set_data_len_max,
 		for (size_t j = 0; j < ad[i].len; j++) {
 			size_t len = data[j].data_len;
 			uint8_t type = data[j].type;
+			printf("===len:%d, type:%d,set_data_len:%d\n", len, type, set_data_len);
 
 			/* Check if ad fit in the remaining buffer */
 			if ((set_data_len + len + 2) > set_data_len_max) {
@@ -549,6 +550,7 @@ static int set_data_add_complete(uint8_t *set_data, uint8_t set_data_len_max,
 	}
 
 	*data_len = set_data_len;
+	printf("*data_len:%d\r\n", set_data_len);
 	#endif
 	return 0;
 }
@@ -559,10 +561,8 @@ static int hci_set_ad(uint16_t hci_op, const struct bt_ad *ad, size_t ad_len)
 	struct net_buf *buf;
 	int err;
 
-	printf("hci_set_ad\r\n");
 
 	buf = bt_hci_cmd_create(hci_op, sizeof(*set_data));
-	printf("set ad cmd create, buf:%d, ad_len:%d\r\n", buf, ad_len);
 	if (!buf) {
 		return -ENOBUFS;
 	}
@@ -576,7 +576,7 @@ static int hci_set_ad(uint16_t hci_op, const struct bt_ad *ad, size_t ad_len)
 		net_buf_unref(buf);
 		return err;
 	}
-	//return 0;
+
 	return bt_hci_cmd_send_sync(hci_op, buf, NULL);
 }
 
@@ -1084,7 +1084,7 @@ int bt_le_adv_start_legacy(struct bt_le_ext_adv *adv,
 	if (err) {
 		return err;
 	}
-#if 0
+#if 1
 	if (!dir_adv) {
 		err = le_adv_update(adv, ad, ad_len, sd, sd_len, false,
 				    scannable, name_type);
