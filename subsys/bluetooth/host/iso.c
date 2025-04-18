@@ -132,10 +132,10 @@ void hci_iso(struct net_buf *buf)
 	iso(buf)->handle = bt_iso_handle(handle);
 	iso(buf)->index = BT_CONN_INDEX_INVALID;
 
-	BT_ISO_DATA_DBG("handle %u len %u flags %u", iso(buf)->handle, len, flags);
+	printf("handle %u len %u flags %u\r\n", iso(buf)->handle, len, flags);
 
 	if (buf->len != len) {
-		LOG_ERR("ISO data length mismatch (%u != %u)", buf->len, len);
+		printf("ISO data length mismatch (%u != %u)", buf->len, len);
 		net_buf_unref(buf);
 		return;
 	}

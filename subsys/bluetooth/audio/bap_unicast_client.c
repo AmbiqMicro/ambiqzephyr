@@ -3401,7 +3401,7 @@ int bt_bap_unicast_client_connect(struct bt_bap_stream *stream)
 		}
 
 		/* unknown return value*/
-		LOG_DBG("Unexpected err %d from bt_iso_chan_connect", err);
+		printf("Unexpected err %d from bt_iso_chan_connect\r\n", err);
 
 		return -ENOEXEC;
 	} else if (iso_state == BT_ISO_STATE_CONNECTING || iso_state == BT_ISO_STATE_CONNECTED) {

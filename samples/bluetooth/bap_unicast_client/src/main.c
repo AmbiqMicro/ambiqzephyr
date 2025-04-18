@@ -820,7 +820,7 @@ static int start_streams(void)
 		struct bt_bap_stream *stream = &streams[i];
 		int err;
 
-		printk("start streams, i:%d\r\n");
+		printk("start streams, i:%d\r\n", i);
 
 		if (stream_dir(stream) == BT_AUDIO_DIR_SOURCE) {
 			err = bt_bap_stream_start(&streams[i]);

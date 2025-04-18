@@ -4096,15 +4096,16 @@ static void rx_queue_put(struct net_buf *buf)
 	net_buf_slist_put(&bt_dev.rx_queue, buf);
 
 #if defined(CONFIG_BT_RECV_WORKQ_SYS)
+11
 	const int err = k_work_submit(&rx_work);
 #elif defined(CONFIG_BT_RECV_WORKQ_BT)
 	const int err = k_work_submit_to_queue(&bt_workq, &rx_work);
 #endif /* CONFIG_BT_RECV_WORKQ_SYS */
 	if (err < 0) {
-		LOG_ERR("Could not submit rx_work: %d", err);
+		printf("Could not submit rx_work: %d", err);
 	}
 }
-
+uint16_t iso_in_cnt;
 static int bt_recv_unsafe(struct net_buf *buf)
 {
 	bt_monitor_send(bt_monitor_opcode(buf), buf->data, buf->len);
@@ -4134,11 +4135,12 @@ static int bt_recv_unsafe(struct net_buf *buf)
 	}
 #if defined(CONFIG_BT_ISO)
 	case BT_BUF_ISO_IN:
+	//    / printf("IOS in cnt:%d \r\n", iso_in_cnt++);
 		rx_queue_put(buf);
 		return 0;
 #endif /* CONFIG_BT_ISO */
 	default:
-		LOG_ERR("Invalid buf type %u", bt_buf_get_type(buf));
+		printf("Invalid buf type %u", bt_buf_get_type(buf));
 		net_buf_unref(buf);
 		return -EINVAL;
 	}

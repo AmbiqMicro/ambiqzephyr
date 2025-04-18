@@ -546,9 +546,9 @@ static void stream_recv(struct bt_bap_stream *stream,
 			const struct bt_iso_recv_info *info,
 			struct net_buf *buf)
 {
-	if (info->flags & BT_ISO_FLAGS_VALID) {
-		//printk("Incoming audio on stream %p len %u\n", stream, buf->len);
-	}
+	 if (info->flags & BT_ISO_FLAGS_VALID) {
+		    printk("Incoming audio on stream %p len %u\n", stream, buf->len);
+	 }
 }
 
 #endif
@@ -736,13 +736,15 @@ int main(void)
 	};
 	int err;
 
+	am_hal_gpio_pinconfig(49, am_hal_gpio_pincfg_output);
+
 	err = bt_enable(NULL);
 	if (err != 0) {
 		printk("Bluetooth init failed (err %d)\n", err);
 		return 0;
 	}
 
-	printk("unicase Server  Bluetooth initialized\n");
+	printk("unicase Server  Bluetooth initialized, CONFIG_BT_RX_STACK_SIZE:%d\n", CONFIG_BT_RX_STACK_SIZE);
 #if 1
 	err = bt_pacs_register(&pacs_param);
 	if (err) {
