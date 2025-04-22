@@ -14,6 +14,43 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+enum EM9305_STATUS
+{
+
+    AM_DEVICES_EM9305_STATUS_SUCCESS = 0,
+    AM_DEVICES_EM9305_STATUS_ERROR,
+    AM_DEVICES_EM9305_STATUS_BUS_BUSY,
+    AM_DEVICES_EM9305_TX_BUSY,
+    AM_DEVICES_EM9305_NOT_READY,
+    AM_DEVICES_EM9305_NO_DATA_TX,
+    AM_DEVICES_EM9305_RX_FULL,
+    AM_DEVICES_EM9305_DATA_LENGTH_ERROR,
+    AM_DEVICES_EM9305_CMD_TRANSFER_ERROR,
+    AM_DEVICES_EM9305_DATA_TRANSFER_ERROR,
+    AM_DEVICES_EM9305_STATUS_INVALID_OPERATION
+};
+
+typedef struct
+{   
+    /**
+     *************************************************************************************
+     * @brief Starts a data transmission via IOM
+     *
+     * @param[in]  data        Pointer to the TX buffer
+     * @param[in]  size        Size of the transmission
+     * @return                 Status of data transmission, 0 is success.
+     *************************************************************************************
+     */
+    int (*write)(uint8_t *data, uint16_t len);
+
+    /**
+     *************************************************************************************
+     * @brief Reset the BLE controller via RESET GPIO.
+     *
+     *************************************************************************************
+     */
+    void (*reset)(void);
+} am_devices_em9305_callback_t;
 
 /**
  * @typedef bt_spi_transceive_fun
@@ -111,6 +148,7 @@ bool bt_apollo_vnd_rcv_ongoing(uint8_t *data, uint16_t len);
  */
 void bt_apollo_rcv_isr_preprocess(void);
 
+bool bt_apollo_em9305_enabled(void);
 #ifdef __cplusplus
 }
 #endif
