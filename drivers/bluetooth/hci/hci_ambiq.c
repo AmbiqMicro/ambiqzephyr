@@ -55,9 +55,9 @@ LOG_MODULE_REGISTER(bt_hci_driver);
 static uint8_t __noinit rxmsg[SPI_MAX_RX_MSG_LEN];
 
 static struct spi_dt_spec spi_bus =
-	SPI_DT_SPEC_INST_GET(0,
-			     SPI_OP_MODE_MASTER | SPI_HALF_DUPLEX | SPI_TRANSFER_MSB |
-				     SPI_MODE_CPOL | SPI_MODE_CPHA | SPI_WORD_SET(8),
+	SPI_DT_SPEC_GET(DT_DRV_INST(0),
+			     SPI_OP_MODE_MASTER| SPI_TRANSFER_MSB |
+				 SPI_WORD_SET(8),
 			     0);
 
 static K_KERNEL_STACK_DEFINE(spi_rx_stack, CONFIG_BT_DRV_RX_STACK_SIZE);
@@ -105,7 +105,17 @@ static inline int bt_spi_transceive(void *tx, uint32_t tx_len, void *rx, uint32_
 
 static int spi_send_packet(uint8_t *data, uint16_t len)
 {
-	int ret;
+	int ret = 0;
+	
+	#if (CONFIG_SOC_SERIES_APOLLO5X)
+	/* Wait for SPI bus to be available */
+	k_sem_take(&sem_spi_available, K_FOREVER);
+	/* Send the SPI packet to controller */
+	ret = bt_apollo_spi_send(data, len, bt_spi_transceive);
+
+	/* Free the SPI bus */
+	k_sem_give(&sem_spi_available);
+	#else
 	uint16_t fail_count = 0;
 
 	do {
@@ -127,7 +137,7 @@ static int spi_send_packet(uint8_t *data, uint16_t len)
 			break;
 		}
 	} while (fail_count++ < SPI_BUSY_TX_ATTEMPTS);
-
+#endif
 	return ret;
 }
 
