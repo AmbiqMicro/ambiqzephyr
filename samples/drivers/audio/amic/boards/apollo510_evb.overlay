@@ -1,0 +1,5 @@
+amic_dev: &audadc0 {
+    audadc-buffer-location = "SRAM_NO_CACHE";
+    audadc-buffer-size = <1280>;
+	status = "okay";
+};

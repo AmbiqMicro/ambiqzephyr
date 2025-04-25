@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 NXP
+ * Copyright (c) 2025 Ambiq Micro Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */

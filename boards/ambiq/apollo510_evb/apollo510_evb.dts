@@ -176,6 +176,11 @@ zephyr_udc0: &usb {
 	status = "okay";
 };
 
+&audadc0 {
+	audadc-buffer-location = "SRAM_NO_CACHE";
+	status = "okay";
+};
+
 &i2s0 {
 	pinctrl-0 = <&i2s0_default>;
 	pinctrl-names = "default";
