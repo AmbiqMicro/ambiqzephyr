@@ -13,6 +13,9 @@
 #include <zephyr/irq.h>
 #include <zephyr/audio/dmic.h>
 #include <zephyr/cache.h>
+#include <zephyr/pm/device.h>
+#include <zephyr/pm/policy.h>
+#include <zephyr/pm/device_runtime.h>
 #include <am_mcu_apollo.h>
 
 #define DT_DRV_COMPAT ambiq_pdm
@@ -30,6 +33,7 @@ struct dmic_ambiq_pdm_data {
 	uint8_t frame_size_bytes;
 	am_hal_pdm_config_t pdm_cfg;
 	am_hal_pdm_transfer_t pdm_transfer;
+	bool pm_policy_state_on;
 
 	enum dmic_state dmic_state;
 };
@@ -38,6 +42,32 @@ struct dmic_ambiq_pdm_cfg {
 	void (*irq_config_func)(void);
 	const struct pinctrl_dev_config *pcfg;
 };
+
+static void dmic_ambiq_pdm_pm_policy_state_lock_get(const struct device *dev)
+{
+	if (IS_ENABLED(CONFIG_PM)) {
+		struct dmic_ambiq_pdm_data *data = dev->data;
+
+		if (!data->pm_policy_state_on) {
+			data->pm_policy_state_on = true;
+			pm_policy_state_lock_get(PM_STATE_SUSPEND_TO_RAM, PM_ALL_SUBSTATES);
+			pm_device_runtime_get(dev);
+		}
+	}
+}
+
+static void dmic_ambiq_pdm_pm_policy_state_lock_put(const struct device *dev)
+{
+	if (IS_ENABLED(CONFIG_PM)) {
+		struct dmic_ambiq_pdm_data *data = dev->data;
+
+		if (data->pm_policy_state_on) {
+			data->pm_policy_state_on = false;
+			pm_device_runtime_put(dev);
+			pm_policy_state_lock_put(PM_STATE_SUSPEND_TO_RAM, PM_ALL_SUBSTATES);
+		}
+	}
+}
 
 static void dmic_ambiq_pdm_isr(const struct device *dev)
 {
@@ -217,6 +247,7 @@ static int dmic_ambiq_pdm_read(const struct device *dev, uint8_t stream, void **
 	}
 
 	ret = k_sem_take(&data->dma_done_sem, SYS_TIMEOUT_MS(timeout));
+	dmic_ambiq_pdm_pm_policy_state_lock_get(dev);
 
 	if (ret != 0) {
 		LOG_DBG("No audio data to be read %d", ret);
@@ -255,8 +286,39 @@ static int dmic_ambiq_pdm_read(const struct device *dev, uint8_t stream, void **
 		*buffer = data->mem_slab_buffer;
 	}
 
+	dmic_ambiq_pdm_pm_policy_state_lock_put(dev);
 	return ret;
 }
+
+#ifdef CONFIG_PM_DEVICE
+static int dmic_ambiq_pdm_pm_action(const struct device *dev, enum pm_device_action action)
+{
+	struct dmic_ambiq_pdm_data *data = dev->data;
+	uint32_t ret;
+	am_hal_sysctrl_power_state_e status;
+
+	switch (action) {
+		case PM_DEVICE_ACTION_RESUME:
+			status = AM_HAL_SYSCTRL_WAKE;
+			break;
+		case PM_DEVICE_ACTION_SUSPEND:
+			status = AM_HAL_SYSCTRL_DEEPSLEEP;
+			break;
+		default:
+			return -ENOTSUP;
+	}
+
+	ret = am_hal_pdm_power_control(data->pdm_handler, status, true);
+
+	if (ret != AM_HAL_STATUS_SUCCESS) {
+		LOG_ERR("am_hal_pdm_power_control failed: %d", ret);
+		return -EPERM;
+	}
+	else {
+		return 0;
+	}
+}
+#endif /* CONFIG_PM_DEVICE */
 
 static const struct _dmic_ops dmic_ambiq_ops = {
 	.configure = dmic_ambiq_pdm_configure,
@@ -287,6 +349,7 @@ static const struct _dmic_ops dmic_ambiq_ops = {
 		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                         \
 		.irq_config_func = pdm_irq_config_func_##n,                                        \
 	};                                                                                         \
+	PM_DEVICE_DT_INST_DEFINE(n, dmic_ambiq_pdm_pm_action);                                     \
 	DEVICE_DT_INST_DEFINE(n, dmic_ambiq_pdm_init, NULL, &dmic_ambiq_pdm_data##n,               \
 			      &dmic_ambiq_pdm_cfg##n, POST_KERNEL,                                 \
 			      CONFIG_AUDIO_DMIC_INIT_PRIORITY, &dmic_ambiq_ops);
