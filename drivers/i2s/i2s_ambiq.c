@@ -13,6 +13,9 @@
 #include <zephyr/irq.h>
 #include <zephyr/drivers/i2s.h>
 #include <zephyr/cache.h>
+#include <zephyr/pm/device.h>
+#include <zephyr/pm/policy.h>
+#include <zephyr/pm/device_runtime.h>
 
 #include <am_mcu_apollo.h>
 
@@ -36,6 +39,7 @@ struct i2s_ambiq_data {
 	struct i2s_config i2s_user_config;
 	uint32_t *dma_tcb_tx_buf;
 	uint32_t *dma_tcb_rx_buf;
+	bool pm_policy_state_on;
 
 	enum i2s_state i2s_state;
 };
@@ -44,6 +48,32 @@ struct i2s_ambiq_cfg {
 	void (*irq_config_func)(void);
 	const struct pinctrl_dev_config *pcfg;
 };
+
+static void i2s_ambiq_pm_policy_state_lock_get(const struct device *dev)
+{
+	if (IS_ENABLED(CONFIG_PM)) {
+		struct i2s_ambiq_data *data = dev->data;
+
+		if (!data->pm_policy_state_on) {
+			data->pm_policy_state_on = true;
+			pm_policy_state_lock_get(PM_STATE_SUSPEND_TO_RAM, PM_ALL_SUBSTATES);
+			pm_device_runtime_get(dev);
+		}
+	}
+}
+
+static void i2s_ambiq_pm_policy_state_lock_put(const struct device *dev)
+{
+	if (IS_ENABLED(CONFIG_PM)) {
+		struct i2s_ambiq_data *data = dev->data;
+
+		if (data->pm_policy_state_on) {
+			data->pm_policy_state_on = false;
+			pm_device_runtime_put(dev);
+			pm_policy_state_lock_put(PM_STATE_SUSPEND_TO_RAM, PM_ALL_SUBSTATES);
+		}
+	}
+}
 
 static am_hal_i2s_data_format_t i2s_data_format = {
 	.ePhase = AM_HAL_I2S_DATA_PHASE_SINGLE,
@@ -297,6 +327,8 @@ static int i2s_ambiq_write(const struct device *dev, void *buffer, size_t size)
 
 	ret = k_sem_take(&(data->tx_ready_sem), K_MSEC(100));
 
+	i2s_ambiq_pm_policy_state_lock_get(dev);
+
 	uint32_t i2s_data_buf_ptr =
 		am_hal_i2s_dma_get_buffer(data->i2s_handler, AM_HAL_I2S_XFER_TX);
 
@@ -325,6 +357,7 @@ static int i2s_ambiq_write(const struct device *dev, void *buffer, size_t size)
 #endif /* CONFIG_I2S_AMBIQ_HANDLE_CACHE */
 
 	k_mem_slab_free(data->mem_slab, buffer);
+	i2s_ambiq_pm_policy_state_lock_put(dev);
 
 	return ret;
 }
@@ -344,7 +377,13 @@ static int i2s_ambiq_read(const struct device *dev, void **buffer, size_t *size)
 	if (ret != 0) {
 		LOG_DBG("No audio data to be read %d", ret);
 	} else {
+		i2s_ambiq_pm_policy_state_lock_get(dev);
+
 		ret = k_mem_slab_alloc(data->mem_slab, &data->mem_slab_buffer, K_NO_WAIT);
+		if (ret != 0) {
+			LOG_ERR("Fail to allocate memory slab");
+			return -ENOMEM;
+		}
 
 		uint32_t *i2s_data_buf = (uint32_t *)am_hal_i2s_dma_get_buffer(data->i2s_handler,
 									       AM_HAL_I2S_XFER_RX);
@@ -363,8 +402,40 @@ static int i2s_ambiq_read(const struct device *dev, void **buffer, size_t *size)
 		*buffer = data->mem_slab_buffer;
 	}
 
+	i2s_ambiq_pm_policy_state_lock_put(dev);
+
 	return ret;
 }
+
+#ifdef CONFIG_PM_DEVICE
+static int i2s_ambiq_pm_action(const struct device *dev, enum pm_device_action action)
+{
+	struct i2s_ambiq_data *data = dev->data;
+	uint32_t ret;
+	am_hal_sysctrl_power_state_e status;
+
+	switch (action) {
+		case PM_DEVICE_ACTION_RESUME:
+			status = AM_HAL_SYSCTRL_WAKE;
+			break;
+		case PM_DEVICE_ACTION_SUSPEND:
+			status = AM_HAL_SYSCTRL_DEEPSLEEP;
+			break;
+		default:
+			return -ENOTSUP;
+	}
+
+	ret = am_hal_i2s_power_control(data->i2s_handler, status, true);
+
+	if (ret != AM_HAL_STATUS_SUCCESS) {
+		LOG_ERR("am_hal_i2s_power_control failed: %d", ret);
+		return -EPERM;
+	}
+	else {
+		return 0;
+	}
+}
+#endif /* CONFIG_PM_DEVICE */
 
 static DEVICE_API(i2s, i2s_ambiq_driver_api) = {
 	.configure = i2s_ambiq_configure,
@@ -378,7 +449,7 @@ static DEVICE_API(i2s, i2s_ambiq_driver_api) = {
 	PINCTRL_DT_INST_DEFINE(n);                                                                 \
 	static void i2s_irq_config_func_##n(void)                                                  \
 	{                                                                                          \
-		IRQ_CONNECT(DT_INST_IRQN(n), DT_INST_IRQ(n, priority), i2s_ambiq_isr,          \
+		IRQ_CONNECT(DT_INST_IRQN(n), DT_INST_IRQ(n, priority), i2s_ambiq_isr,              \
 			    DEVICE_DT_INST_GET(n), 0);                                             \
 		irq_enable(DT_INST_IRQN(n));                                                       \
 	}                                                                                          \
@@ -399,6 +470,7 @@ static DEVICE_API(i2s, i2s_ambiq_driver_api) = {
 		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                         \
 		.irq_config_func = i2s_irq_config_func_##n,                                        \
 	};                                                                                         \
+	PM_DEVICE_DT_INST_DEFINE(n, i2s_ambiq_pm_action);                                          \
 	DEVICE_DT_INST_DEFINE(n, i2s_ambiq_init, NULL, &i2s_ambiq_data##n, &i2s_ambiq_cfg##n,      \
 			      POST_KERNEL, CONFIG_I2S_INIT_PRIORITY, &i2s_ambiq_driver_api);
 
