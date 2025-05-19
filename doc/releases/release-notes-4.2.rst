@@ -103,11 +103,16 @@ Deprecated APIs and options
   deprecated, because support for anonymous authentication had been removed from the
   hawkBit server in version 0.8.0.
 
+* The :kconfig:option:`CONFIG_BT_CONN_TX_MAX` Kconfig option has been deprecated. The number of
+  pending TX buffers is now aligned with the :kconfig:option:`CONFIG_BT_BUF_ACL_TX_COUNT` Kconfig
+  option.
+
 New APIs and options
 ====================
 
 * Architectures
 
+  * NIOS2 Architecture was removed from Zephyr.
   * :kconfig:option:`ARCH_HAS_VECTOR_TABLE_RELOCATION`
   * :kconfig:option:`CONFIG_SRAM_VECTOR_TABLE` moved from ``zephyr/Kconfig.zephyr`` to
     ``zephyr/arch/Kconfig`` and added dependencies to it.
@@ -222,9 +227,30 @@ New APIs and options
 
    * :kconfig:option:`CONFIG_NVME_PRP_PAGE_SIZE`
 
+* Debug
+
+  * Core Dump
+
+    * :kconfig:option:`CONFIG_DEBUG_COREDUMP_THREAD_STACK_TOP`, enabled by default for ARM Cortex M when :kconfig:option:`CONFIG_DEBUG_COREDUMP_MEMORY_DUMP_MIN` is selected.
+    * :kconfig:option:`CONFIG_DEBUG_COREDUMP_BACKEND_IN_MEMORY`
+    * :kconfig:option:`CONFIG_DEBUG_COREDUMP_BACKEND_IN_MEMORY_SIZE`
+
 * Other
 
   * :kconfig:option:`CONFIG_LV_Z_COLOR_MONO_HW_INVERSION`
+
+* ZBus
+
+  * Runtime observers can work without heap. Now it is possible to choose between static, dynamic,
+    and none allocation for the runtime observers nodes.
+  * Runtime observers using :kconfig:option:`CONFIG_ZBUS_RUNTIME_OBSERVERS_NODE_ALLOC_NONE` must use
+    the new function :c:func:`zbus_chan_add_obs_with_node`.
+
+  * :kconfig:option:`CONFIG_ZBUS_RUNTIME_OBSERVERS_NODE_ALLOC_DYNAMIC`
+  * :kconfig:option:`CONFIG_ZBUS_RUNTIME_OBSERVERS_NODE_ALLOC_STATIC`
+  * :kconfig:option:`CONFIG_ZBUS_RUNTIME_OBSERVERS_NODE_ALLOC_NONE`
+  * :kconfig:option:`CONFIG_ZBUS_RUNTIME_OBSERVERS_NODE_POOL_SIZE`
+
 
 New Boards
 **********
@@ -246,6 +272,10 @@ New Boards
 * Advanced Micro Devices (AMD), Inc.
 
    * :zephyr:board:`versalnet_rpu` (``versalnet_rpu``)
+
+* Aesc Silicon
+
+   * :zephyr:board:`elemrv` (``elemrv``)
 
 * aithinker
 
@@ -664,6 +694,7 @@ New Drivers
    * :dtcompatible:`pixart,pat9136`
    * :dtcompatible:`st,lsm6dsv32x`
    * :dtcompatible:`vishay,veml6031`
+   * :dtcompatible:`we,wsen-itds-2533020201601`
 
 * Serial controller
 

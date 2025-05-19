@@ -95,6 +95,7 @@ int main(void)
 	struct video_caps caps;
 	struct video_frmival frmival;
 	struct video_frmival_enum fie;
+	enum video_buf_type type = VIDEO_BUF_TYPE_OUTPUT;
 	unsigned int frame = 0;
 	size_t bsize;
 	int i = 0;
@@ -119,7 +120,8 @@ int main(void)
 	LOG_INF("Video device: %s", video_dev->name);
 
 	/* Get capabilities */
-	if (video_get_caps(video_dev, VIDEO_EP_OUT, &caps)) {
+	caps.type = type;
+	if (video_get_caps(video_dev, &caps)) {
 		LOG_ERR("Unable to retrieve video capabilities");
 		return 0;
 	}
@@ -136,7 +138,8 @@ int main(void)
 	}
 
 	/* Get default/native format */
-	if (video_get_format(video_dev, VIDEO_EP_OUT, &fmt)) {
+	fmt.type = type;
+	if (video_get_format(video_dev, &fmt)) {
 		LOG_ERR("Unable to retrieve video format");
 		return 0;
 	}
@@ -157,12 +160,12 @@ int main(void)
 	LOG_INF("- Video format: %s %ux%u",
 		VIDEO_FOURCC_TO_STR(fmt.pixelformat), fmt.width, fmt.height);
 
-	if (video_set_format(video_dev, VIDEO_EP_OUT, &fmt)) {
+	if (video_set_format(video_dev, &fmt)) {
 		LOG_ERR("Unable to set format");
 		return 0;
 	}
 
-	if (!video_get_frmival(video_dev, VIDEO_EP_OUT, &frmival)) {
+	if (!video_get_frmival(video_dev, &frmival)) {
 		LOG_INF("- Default frame rate : %f fps",
 		       1.0 * frmival.denominator / frmival.numerator);
 	}
@@ -170,7 +173,7 @@ int main(void)
 	LOG_INF("- Supported frame intervals for the default format:");
 	memset(&fie, 0, sizeof(fie));
 	fie.format = &fmt;
-	while (video_enum_frmival(video_dev, VIDEO_EP_OUT, &fie) == 0) {
+	while (video_enum_frmival(video_dev, &fie) == 0) {
 		if (fie.type == VIDEO_FRMIVAL_TYPE_DISCRETE) {
 			LOG_INF("   %u/%u ", fie.discrete.numerator, fie.discrete.denominator);
 		} else {
@@ -238,12 +241,12 @@ int main(void)
 			LOG_ERR("Unable to alloc video buffer");
 			return 0;
 		}
-
-		video_enqueue(video_dev, VIDEO_EP_OUT, buffers[i]);
+		buffers[i]->type = type;
+		video_enqueue(video_dev, buffers[i]);
 	}
 
 	/* Start video capture */
-	if (video_stream_start(video_dev)) {
+	if (video_stream_start(video_dev, type)) {
 		LOG_ERR("Unable to start capture (interface)");
 		return 0;
 	}
@@ -251,8 +254,9 @@ int main(void)
 	LOG_INF("Capture started");
 
 	/* Grab video frames */
+	vbuf->type = type;
 	while (1) {
-		err = video_dequeue(video_dev, VIDEO_EP_OUT, &vbuf, K_FOREVER);
+		err = video_dequeue(video_dev, &vbuf, K_FOREVER);
 		if (err) {
 			LOG_ERR("Unable to dequeue video buf");
 			return 0;
@@ -271,7 +275,7 @@ int main(void)
 		video_display_frame(display_dev, vbuf, fmt);
 #endif
 
-		err = video_enqueue(video_dev, VIDEO_EP_OUT, vbuf);
+		err = video_enqueue(video_dev, vbuf);
 		if (err) {
 			LOG_ERR("Unable to requeue video buf");
 			return 0;

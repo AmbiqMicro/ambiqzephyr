@@ -42,6 +42,7 @@ int main(void)
 	int i, ret, sock, client;
 	struct video_format fmt;
 	struct video_caps caps;
+	enum video_buf_type type = VIDEO_BUF_TYPE_OUTPUT;
 #if DT_HAS_CHOSEN(zephyr_camera)
 	const struct device *const video = DEVICE_DT_GET(DT_CHOSEN(zephyr_camera));
 
@@ -83,13 +84,15 @@ int main(void)
 	}
 
 	/* Get capabilities */
-	if (video_get_caps(video, VIDEO_EP_OUT, &caps)) {
+	caps.type = type;
+	if (video_get_caps(video, &caps)) {
 		LOG_ERR("Unable to retrieve video capabilities");
 		return 0;
 	}
 
 	/* Get default/native format */
-	if (video_get_format(video, VIDEO_EP_OUT, &fmt)) {
+	fmt.type = type;
+	if (video_get_format(video, &fmt)) {
 		LOG_ERR("Unable to retrieve video format");
 		return 0;
 	}
@@ -109,6 +112,7 @@ int main(void)
 			LOG_ERR("Unable to alloc video buffer");
 			return 0;
 		}
+		buffers[i]->type = type;
 	}
 
 	/* Connection loop */
@@ -125,11 +129,11 @@ int main(void)
 
 		/* Enqueue Buffers */
 		for (i = 0; i < ARRAY_SIZE(buffers); i++) {
-			video_enqueue(video, VIDEO_EP_OUT, buffers[i]);
+			video_enqueue(video, buffers[i]);
 		}
 
 		/* Start video capture */
-		if (video_stream_start(video)) {
+		if (video_stream_start(video, type)) {
 			LOG_ERR("Unable to start video");
 			return 0;
 		}
@@ -138,8 +142,9 @@ int main(void)
 
 		/* Capture loop */
 		i = 0;
+		vbuf->type = type;
 		do {
-			ret = video_dequeue(video, VIDEO_EP_OUT, &vbuf, K_FOREVER);
+			ret = video_dequeue(video, &vbuf, K_FOREVER);
 			if (ret) {
 				LOG_ERR("Unable to dequeue video buf");
 				return 0;
@@ -155,18 +160,18 @@ int main(void)
 				close(client);
 			}
 
-			(void)video_enqueue(video, VIDEO_EP_OUT, vbuf);
+			(void)video_enqueue(video, vbuf);
 		} while (!ret);
 
 		/* stop capture */
-		if (video_stream_stop(video)) {
+		if (video_stream_stop(video, type)) {
 			LOG_ERR("Unable to stop video");
 			return 0;
 		}
 
 		/* Flush remaining buffers */
 		do {
-			ret = video_dequeue(video, VIDEO_EP_OUT, &vbuf, K_NO_WAIT);
+			ret = video_dequeue(video, &vbuf, K_NO_WAIT);
 		} while (!ret);
 
 	} while (1);
