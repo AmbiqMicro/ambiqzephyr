@@ -11,6 +11,7 @@
 #include <zephyr/pm/device.h>
 #include <zephyr/pm/device_runtime.h>
 #include <zephyr/kernel.h>
+#include <zephyr/cache.h>
 
 #define ADC_CONTEXT_USES_KERNEL_TIMER
 #include "adc_context.h"
@@ -22,7 +23,8 @@
 LOG_MODULE_REGISTER(adc_ambiq, CONFIG_ADC_LOG_LEVEL);
 
 /* Number of slots available. */
-#define AMBIQ_ADC_SLOT_NUMBER AM_HAL_ADC_MAX_SLOTS
+#define AMBIQ_ADC_SLOT_NUMBER     AM_HAL_ADC_MAX_SLOTS
+#define ADC_TRANSFER_TIMEOUT_MSEC 500
 
 struct adc_ambiq_config {
 	uint32_t base;
@@ -38,6 +40,10 @@ struct adc_ambiq_data {
 	uint16_t *buffer;
 	uint16_t *repeat_buffer;
 	uint8_t active_channels;
+	struct k_sem dma_done_sem;
+	am_hal_adc_dma_config_t dma_cfg;
+	am_hal_adc_sample_t *sample_buf;
+	bool dma_mode;
 };
 
 static int adc_ambiq_set_resolution(am_hal_adc_slot_prec_e *prec, uint8_t adc_resolution)
@@ -117,6 +123,14 @@ static void adc_ambiq_isr(const struct device *dev)
 		am_hal_adc_disable(data->adcHandle);
 		adc_context_on_sampling_done(&data->ctx, dev);
 	}
+
+	if (data->dma_mode) {
+		if (((ui32IntMask & AM_HAL_ADC_INT_FIFOOVR1) && (ADCn(0)->DMASTAT_b.DMACPL)) ||
+		    (ui32IntMask & AM_HAL_ADC_INT_DCMP)) {
+			k_sem_give(&data->dma_done_sem);
+		}
+	}
+
 	/* Clear the ADC interrupt.*/
 	am_hal_adc_interrupt_clear(data->adcHandle, ui32IntMask);
 }
@@ -183,12 +197,57 @@ static int adc_ambiq_start_read(const struct device *dev, const struct adc_seque
 	}
 	__ASSERT_NO_MSG(channels == 0);
 
+	if (data->dma_mode) {
+		/* Configure DMA.*/
+		if (AM_HAL_STATUS_SUCCESS !=
+		    am_hal_adc_configure_dma(data->adcHandle, &data->dma_cfg)) {
+			LOG_ERR("Error - configuring DMA failed.\n");
+			return -EINVAL;
+		}
+
+		am_hal_adc_interrupt_clear(data->adcHandle, AM_HAL_ADC_INT_DERR |
+								    AM_HAL_ADC_INT_DCMP |
+								    AM_HAL_ADC_INT_FIFOOVR1);
+		am_hal_adc_interrupt_enable(data->adcHandle, AM_HAL_ADC_INT_DERR |
+								     AM_HAL_ADC_INT_DCMP |
+								     AM_HAL_ADC_INT_FIFOOVR1);
+	}
+
 	data->active_channels = active_channels;
 	data->buffer = sequence->buffer;
 	/* Start ADC conversion */
 	adc_context_start_read(&data->ctx, sequence);
-	error = adc_context_wait_for_completion(&data->ctx);
 
+	if (data->dma_mode) {
+		if (k_sem_take(&data->dma_done_sem, K_MSEC(ADC_TRANSFER_TIMEOUT_MSEC))) {
+			LOG_ERR("Timeout waiting for transfer complete");
+			/* cancel timed out transaction */
+			ADCn(0)->DMACFG_b.DMAEN = 0;
+			am_hal_adc_disable(data->adcHandle);
+			/* clean up for next xfer */
+			k_sem_reset(&data->dma_done_sem);
+			return -ETIMEDOUT;
+		} else {
+#if CONFIG_ADC_AMBIQ_HANDLE_CACHE
+			if (!buf_in_nocache((uintptr_t)data->dma_cfg.ui32TargetAddress,
+					    data->dma_cfg.ui32SampleCount)) {
+				/* Invalidate Dcache after DMA read */
+				sys_cache_data_invd_range((void *)data->dma_cfg.ui32TargetAddress,
+							  data->dma_cfg.ui32SampleCount);
+			}
+#endif /* CONFIG_ADC_AMBIQ_HANDLE_CACHE */
+
+			am_hal_adc_samples_read(data->adcHandle, false,
+						(uint32_t *)data->dma_cfg.ui32TargetAddress,
+						&data->dma_cfg.ui32SampleCount, data->sample_buf);
+
+			ADCn(0)->DMACFG_b.DMAEN = 0;
+			am_hal_adc_disable(data->adcHandle);
+			adc_context_on_sampling_done(&data->ctx, dev);
+		}
+	} else {
+		error = adc_context_wait_for_completion(&data->ctx);
+	}
 	return error;
 }
 
@@ -279,8 +338,7 @@ static int adc_ambiq_init(const struct device *dev)
 	int ret;
 
 	/* Initialize the ADC and get the handle*/
-	if (AM_HAL_STATUS_SUCCESS !=
-		am_hal_adc_initialize(0, &data->adcHandle)) {
+	if (AM_HAL_STATUS_SUCCESS != am_hal_adc_initialize(0, &data->adcHandle)) {
 		ret = -ENODEV;
 		LOG_ERR("Failed to initialize ADC, code:%d", ret);
 		return ret;
@@ -398,6 +456,12 @@ static int adc_ambiq_pm_action(const struct device *dev, enum pm_device_action a
 	};
 #endif
 
+#define ADC_DMA_CFG(n, buf, size)                                                                  \
+	{                                                                                          \
+		.bDynamicPriority = true, .ePriority = AM_HAL_ADC_PRIOR_SERVICE_IMMED,             \
+		.bDMAEnable = true, .ui32SampleCount = size, .ui32TargetAddress = (uint32_t)buf,   \
+	}
+
 #define ADC_AMBIQ_INIT(n)                                                                          \
 	PINCTRL_DT_INST_DEFINE(n);                                                                 \
 	ADC_AMBIQ_DRIVER_API(n);                                                                   \
@@ -407,15 +471,32 @@ static int adc_ambiq_pm_action(const struct device *dev, enum pm_device_action a
 			    DEVICE_DT_INST_GET(n), 0);                                             \
 		irq_enable(DT_INST_IRQN(n));                                                       \
 	};                                                                                         \
+	IF_ENABLED(DT_INST_PROP(n, dma_mode),                                           \
+	(static uint32_t adc_ambiq_dma_buf##n[DT_INST_PROP_OR(n, dma_buffer_size, 1024)]  \
+	 __attribute__((section(DT_INST_PROP_OR(n,                                      \
+					  dma_buffer_location, ".nocache"))));)                   \
+	)         \
+	IF_ENABLED(DT_INST_PROP(n, dma_mode),                                           \
+	(static am_hal_adc_sample_t adc_sample_buf##n[DT_INST_PROP_OR(n, dma_buffer_size, 1024)];))         \
 	static struct adc_ambiq_data adc_ambiq_data_##n = {                                        \
 		ADC_CONTEXT_INIT_TIMER(adc_ambiq_data_##n, ctx),                                   \
 		ADC_CONTEXT_INIT_LOCK(adc_ambiq_data_##n, ctx),                                    \
 		ADC_CONTEXT_INIT_SYNC(adc_ambiq_data_##n, ctx),                                    \
+		.dma_cfg = ADC_DMA_CFG(                                                            \
+			n, COND_CODE_1(DT_INST_PROP(n, dma_mode), (adc_ambiq_dma_buf##n), \
+									    (NULL)),                                \
+				    COND_CODE_1(DT_INST_PROP(n, dma_mode),              \
+					(DT_INST_PROP_OR(n, dma_buffer_size, 1024)), (0))),    \
+						.dma_mode = DT_INST_PROP(n, dma_mode),             \
+						.dma_done_sem = Z_SEM_INITIALIZER(                 \
+							adc_ambiq_data_##n.dma_done_sem, 0, 1),    \
+						.sample_buf = COND_CODE_1(DT_INST_PROP(n, dma_mode), (adc_sample_buf##n), \
+									    (NULL)),              \
 	};                                                                                         \
 	const static struct adc_ambiq_config adc_ambiq_config_##n = {                              \
 		.base = DT_INST_REG_ADDR(n),                                                       \
 		.size = DT_INST_REG_SIZE(n),                                                       \
-		.num_channels = DT_PROP(DT_DRV_INST(n), channel_count),                            \
+		.num_channels = DT_INST_PROP(n, channel_count),                                    \
 		.irq_config_func = adc_irq_config_func_##n,                                        \
 		.pin_cfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                      \
 	};                                                                                         \

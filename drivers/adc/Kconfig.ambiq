@@ -10,3 +10,14 @@ config ADC_AMBIQ
 	select AMBIQ_HAL_USE_ADC
 	help
 	  Enables the Adc driver for Ambiq devices.
+
+if ADC_AMBIQ
+
+config ADC_AMBIQ_HANDLE_CACHE
+	bool "Turn on cache handling in adc driver"
+	default y
+	depends on CACHE_MANAGEMENT && DCACHE
+	help
+	  Disable this if cache has been handled in upper layers.
+
+endif # ADC_AMBIQ
