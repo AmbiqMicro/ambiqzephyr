@@ -461,6 +461,13 @@ static int i2c_ambiq_pm_action(const struct device *dev, enum pm_device_action a
 		.ui32NBTxnBufLength = cmdq_size,                                                   \
 	}
 
+#if CONFIG_I2C_AMBIQ_HANDLE_CACHE
+#define __I2C_NOCACHE(n)                                                                           \
+	__attribute__((section(DT_PROP_OR(DT_INST_PARENT(n), cmdq_buffer_location, ".nocache"))))
+#else
+#define __I2C_NOCACHE(n)
+#endif /* CONFIG_I2C_AMBIQ_HANDLE_CACHE */
+
 #define AMBIQ_I2C_DEFINE(n)                                                                        \
 	BUILD_ASSERT(DT_CHILD_NUM_STATUS_OKAY(DT_INST_PARENT(n)) == 1,                             \
 		     "Too many children for IOM, either SPI or I2C should be enabled!");           \
@@ -473,8 +480,7 @@ static int i2c_ambiq_pm_action(const struct device *dev, enum pm_device_action a
 	};                                                                                         \
 	IF_ENABLED(DT_PROP(DT_INST_PARENT(n), dma_mode),                                           \
 	(static uint32_t i2c_ambiq_cmdq##n[DT_PROP_OR(DT_INST_PARENT(n), cmdq_buffer_size, 1024)]  \
-	 __attribute__((section(DT_PROP_OR(DT_INST_PARENT(n),                                      \
-					  cmdq_buffer_location, ".nocache"))));)                   \
+	 __I2C_NOCACHE(n);)                   \
 	)                                                                                          \
 	static struct i2c_ambiq_data i2c_ambiq_data##n = {                                         \
 		.iom_cfg = IOM_HAL_CFG(                                                            \
