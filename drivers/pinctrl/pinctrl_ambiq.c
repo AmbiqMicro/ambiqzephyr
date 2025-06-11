@@ -7,7 +7,7 @@
 #include <zephyr/drivers/pinctrl.h>
 
 /* ambiq-sdk includes */
-#include <am_mcu_apollo.h>
+#include <soc.h>
 
 static void pinctrl_configure_pin(const pinctrl_soc_pin_t *pin)
 {
@@ -26,7 +26,7 @@ static void pinctrl_configure_pin(const pinctrl_soc_pin_t *pin)
 	pin_config.eCEpol = pin->nce_pol;
 #if defined(CONFIG_SOC_APOLLO3P_BLUE)
 	pin_config.bIomMSPIn = pin->iom_mspi;
-#endif /* CONFIG_SOC_APOLLO3P_BLUE */
+#endif
 	pin_config.uIOMnum = pin->iom_num;
 
 	if (pin->bias_pull_up) {
@@ -45,6 +45,17 @@ static void pinctrl_configure_pin(const pinctrl_soc_pin_t *pin)
 	pin_config.GP.cfg_b.eDriveStrength = pin->drive_strength;
 #if defined(CONFIG_SOC_SERIES_APOLLO4X)
 	pin_config.GP.cfg_b.uSlewRate = pin->slew_rate;
+	switch (pin->sdif_cdwp) {
+	case 1:
+		am_hal_gpio_cd_pin_config(pin->pin_num);
+		break;
+	case 2:
+		am_hal_gpio_wp_pin_config(pin->pin_num);
+		break;
+	default:
+		/* not a sdif pin */
+		break;
+	}
 #else
 	switch (pin->sdif_cdwp) {
 	case 1:
@@ -63,7 +74,7 @@ static void pinctrl_configure_pin(const pinctrl_soc_pin_t *pin)
 		/* not a sdif pin */
 		break;
 	}
-#endif /* CONFIG_SOC_SERIES_APOLLO4X */
+#endif
 	pin_config.GP.cfg_b.uNCE = pin->nce;
 	pin_config.GP.cfg_b.eCEpol = pin->nce_pol;
 
@@ -72,7 +83,7 @@ static void pinctrl_configure_pin(const pinctrl_soc_pin_t *pin)
 	} else if (pin->bias_pull_down) {
 		pin_config.GP.cfg_b.ePullup = AM_HAL_GPIO_PIN_PULLDOWN_50K;
 	}
-#endif /* CONFIG_SOC_SERIES_APOLLO3X */
+#endif
 	am_hal_gpio_pinconfig(pin->pin_num, pin_config);
 }
 
