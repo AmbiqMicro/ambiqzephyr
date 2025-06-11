@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Ambiq Micro Inc.
+ * Copyright 2025 Ambiq Micro Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,18 +16,19 @@ LOG_MODULE_REGISTER(dmic_i2s_sample, LOG_LEVEL_INF);
 #define I2S_TX DT_ALIAS(i2s_tx)
 #define I2S_RX DT_ALIAS(i2s_rx)
 
-#define SAMPLE_FREQUENCY 16000
+#define SAMPLE_FREQUENCY CONFIG_SAMPLE_FREQ
 
-#define SAMPLE_BIT_WIDTH (24U) // 16U, 24U or 32U
+#define SAMPLE_BIT_WIDTH (24U) /* 16U, 24U or 32U */
 
-#define NUMBER_OF_CHANNELS 2 // 1 or 2 channels supported
-
-#define DMIC_INPUT_ENABLE  1
+#define DMIC_INPUT_ENABLE  CONFIG_USE_DMIC
 #define I2S_TX_RX_LOOPBACK 0
 
-#if (!DMIC_INPUT_ENABLE)
-#define SINE_WAVE_DATA_IN 0
-#define SEQ_NUM_DATA_IN   1
+#if DMIC_INPUT_ENABLE
+#define NUMBER_OF_CHANNELS CONFIG_DMIC_CHANNELS /* 1 or 2 channels supported (PDM to I2S mode) */
+#else
+#define NUMBER_OF_CHANNELS 2 /* 1 or 2 channels supported (I2S only mode) */
+#define SINE_WAVE_DATA_IN  0
+#define SEQ_NUM_DATA_IN    1
 #endif
 
 #if (SAMPLE_BIT_WIDTH == 16)
@@ -47,20 +48,19 @@ K_MEM_SLAB_DEFINE_STATIC(mem_slab, BLOCK_SIZE, BLOCK_COUNT, 4);
 
 #if I2S_TX_RX_LOOPBACK
 uint8_t rx_temp_buf[BLOCK_SIZE * 100];
-uint32_t rx_buf_index = 0;
 
 static bool check_i2s_data(uint32_t rxtx_sample_num, void *rx_databuf)
 {
 	int i, index_0 = 0;
 
-	//
-	// Find the first element of Tx buffer in Rx buffer, and return the index.
-	// Rx will delay N samples.
-	//
+	/*
+	 * Find the first element of Tx buffer in Rx buffer, and return the index.
+	 * Rx will delay N samples.
+	 */
 #if (SAMPLE_BIT_WIDTH == 16)
 	uint16_t *rx_databuf_16 = (uint16_t *)rx_databuf;
 
-    	for (i = 0; i < rxtx_sample_num; i++) {
+	for (i = 0; i < rxtx_sample_num; i++) {
 		if (rx_databuf_16[i] == 0xCD00) {
 			index_0 = i;
 			break;
@@ -78,7 +78,7 @@ static bool check_i2s_data(uint32_t rxtx_sample_num, void *rx_databuf)
 #else
 	uint32_t *rx_databuf_32 = (uint32_t *)rx_databuf;
 
-    	for (i = 0; i < rxtx_sample_num; i++) {
+	for (i = 0; i < rxtx_sample_num; i++) {
 		if (rx_databuf_32[i] == 0xCD0000) {
 			index_0 = i;
 			break;
@@ -104,9 +104,13 @@ int main(void)
 	const struct device *const i2s_dev = DEVICE_DT_GET(I2S_TX);
 #if I2S_TX_RX_LOOPBACK
 	const struct device *const i2s_rx_dev = DEVICE_DT_GET(I2S_RX);
+	uint32_t rx_buf_index = 0;
 #endif
 #if DMIC_INPUT_ENABLE
 	const struct device *const dmic_dev = DEVICE_DT_GET(DT_NODELABEL(dmic_dev));
+#endif
+#if SINE_WAVE_DATA_IN
+	uint32_t ti = 0;
 #endif
 
 	struct i2s_config i2s_config_param;
@@ -141,8 +145,7 @@ int main(void)
 		.mem_slab = &mem_slab,
 	};
 	struct dmic_cfg dmic_config_param = {
-		.io =
-			{
+		.io = {
 				/* These fields can be used to limit the PDM clock
 				 * configurations that the driver is allowed to use
 				 * to those supported by the microphone.
@@ -153,8 +156,7 @@ int main(void)
 				.max_pdm_clk_dc = 60,
 			},
 		.streams = &stream,
-		.channel =
-			{
+		.channel = {
 				.req_num_streams = 1,
 			},
 	};
@@ -214,6 +216,7 @@ int main(void)
 #endif
 
 	bool started = false;
+
 	LOG_INF("start streams\n");
 
 #if DMIC_INPUT_ENABLE
@@ -246,13 +249,13 @@ int main(void)
 		ret = i2s_write(i2s_dev, buffer, BLOCK_SIZE);
 #else
 		void *mem_block;
+
 		ret = k_mem_slab_alloc(&mem_slab, &mem_block, Z_TIMEOUT_TICKS(TIMEOUT));
 		if (ret < 0) {
 			LOG_ERR("Failed to allocate TX block\n");
 			return 0;
 		}
 #if SINE_WAVE_DATA_IN
-		static uint32_t ti = 0;
 		const float M_PI = 3.14159265358979323846f;
 		const uint32_t f = 2000;
 		const uint32_t fs = i2s_config_param.frame_clk_freq;
@@ -260,6 +263,7 @@ int main(void)
 		if (i2s_config_param.word_size == 16) {
 			const uint32_t amp = 0x4000;
 			int16_t *i2s_data_buf_16bit = (int16_t *)mem_block;
+
 			for (size_t i = 0; i < SAMPLES_PER_BLOCK; i++) {
 				i2s_data_buf_16bit[i] =
 					(int16_t)(amp * sinf(2 * M_PI * f * ((ti++) % fs) / fs));
@@ -269,6 +273,7 @@ int main(void)
 			   (i2s_config_param.word_size == 32)) {
 			const uint32_t amp = 0x400000;
 			int32_t *i2s_data_buf_32bit = (int32_t *)mem_block;
+
 			for (size_t i = 0; i < SAMPLES_PER_BLOCK; i++) {
 				i2s_data_buf_32bit[i] =
 					((int32_t)(amp * sinf(2 * M_PI * f * ((ti++) % fs) / fs))) &
@@ -278,11 +283,13 @@ int main(void)
 #elif SEQ_NUM_DATA_IN
 		if (i2s_config_param.word_size == 16) {
 			int16_t *i2s_data_buf_16bit = (int16_t *)mem_block;
+
 			for (int i = 0; i < SAMPLES_PER_BLOCK; i++) {
 				i2s_data_buf_16bit[i] = (i & 0xFF) | 0xCD00;
 			}
 		} else {
 			int32_t *i2s_data_buf_32bit = (int32_t *)mem_block;
+
 			for (int i = 0; i < SAMPLES_PER_BLOCK; i++) {
 				i2s_data_buf_32bit[i] = (i & 0xFF) | 0xCD0000;
 			}
@@ -307,6 +314,7 @@ int main(void)
 #if I2S_TX_RX_LOOPBACK
 		void *rx_buffer;
 		uint32_t rx_size = 0;
+
 		ret = i2s_read(i2s_rx_dev, &rx_buffer, &rx_size);
 
 		if (ret < 0) {

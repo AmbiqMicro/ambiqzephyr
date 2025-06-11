@@ -3261,10 +3261,21 @@ __syscall int k_condvar_wait(struct k_condvar *condvar, struct k_mutex *mutex,
  */
 
 /**
- * @cond INTERNAL_HIDDEN
+ * @defgroup semaphore_apis Semaphore APIs
+ * @ingroup kernel_apis
+ * @{
  */
 
+/**
+ * @brief Semaphore structure
+ *
+ * This structure is used to represent a semaphore.
+ * All the members are internal and should not be accessed directly.
+ */
 struct k_sem {
+	/**
+	 * @cond INTERNAL_HIDDEN
+	 */
 	_wait_q_t wait_q;
 	unsigned int count;
 	unsigned int limit;
@@ -3276,7 +3287,12 @@ struct k_sem {
 #ifdef CONFIG_OBJ_CORE_SEM
 	struct k_obj_core  obj_core;
 #endif
+	/** @endcond */
 };
+
+/**
+ * @cond INTERNAL_HIDDEN
+ */
 
 #define Z_SEM_INITIALIZER(obj, initial_count, count_limit) \
 	{ \
@@ -3287,13 +3303,7 @@ struct k_sem {
 	}
 
 /**
- * INTERNAL_HIDDEN @endcond
- */
-
-/**
- * @defgroup semaphore_apis Semaphore APIs
- * @ingroup kernel_apis
- * @{
+ * @endcond
  */
 
 /**
@@ -3624,6 +3634,18 @@ void k_work_queue_init(struct k_work_q *queue);
 void k_work_queue_start(struct k_work_q *queue,
 			k_thread_stack_t *stack, size_t stack_size,
 			int prio, const struct k_work_queue_config *cfg);
+
+/** @brief Run work queue using calling thread
+ *
+ * This will run the work queue forever unless stopped by @ref k_work_queue_stop.
+ *
+ * @param queue the queue to run
+ *
+ * @param cfg optional additional configuration parameters.  Pass @c
+ * NULL if not required, to use the defaults documented in
+ * k_work_queue_config.
+ */
+void k_work_queue_run(struct k_work_q *queue, const struct k_work_queue_config *cfg);
 
 /** @brief Access the thread that animates a work queue.
  *
@@ -4197,12 +4219,27 @@ struct k_work_queue_config {
 	 * essential thread.
 	 */
 	bool essential;
+
+	/** Controls whether work queue monitors work timeouts.
+	 *
+	 * If non-zero, and CONFIG_WORKQUEUE_WORK_TIMEOUT is enabled,
+	 * the work queue will monitor the duration of each work item.
+	 * If the work item handler takes longer than the specified
+	 * time to execute, the work queue thread will be aborted, and
+	 * an error will be logged if CONFIG_LOG is enabled.
+	 */
+	uint32_t work_timeout_ms;
 };
 
 /** @brief A structure used to hold work until it can be processed. */
 struct k_work_q {
 	/* The thread that animates the work. */
 	struct k_thread thread;
+
+	/* The thread ID that animates the work. This may be an external thread
+	 * if k_work_queue_run() is used.
+	 */
+	k_tid_t thread_id;
 
 	/* All the following fields must be accessed only while the
 	 * work module spinlock is held.
@@ -4219,6 +4256,12 @@ struct k_work_q {
 
 	/* Flags describing queue state. */
 	uint32_t flags;
+
+#if defined(CONFIG_WORKQUEUE_WORK_TIMEOUT)
+	struct _timeout work_timeout_record;
+	struct k_work *work;
+	k_timeout_t work_timeout;
+#endif /* defined(CONFIG_WORKQUEUE_WORK_TIMEOUT) */
 };
 
 /* Provide the implementation for inline functions declared above */
@@ -4254,7 +4297,7 @@ static inline k_ticks_t k_work_delayable_remaining_get(
 
 static inline k_tid_t k_work_queue_thread_get(struct k_work_q *queue)
 {
-	return &queue->thread;
+	return queue->thread_id;
 }
 
 /** @} */
