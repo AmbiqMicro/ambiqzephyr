@@ -86,7 +86,6 @@ VosThfInfo g_sVosThf = {
 errors_t SensoryInitialize(void)
 {
     unsigned int ww_spp_size = 0; // size of spp
-    unsigned int cmd_spp_size = 0;
 
     errors_t result;
 
@@ -147,7 +146,7 @@ errors_t SensoryInitialize(void)
 
     // allocate the persistent structure memory
     if(ww_spp_size > THF_STATIC_MEM_SIZE) {
-        LOG_INF("[AM-VoS] THF heap memory is not enough!!\n", ww_spp_size);
+        LOG_INF("[AM-VoS] THF heap memory is not enough!! %d\n", ww_spp_size);
         return ERR_NOT_OK;
     }
     t->spp = g_sVosThf.pui8ThfHeap;
@@ -246,7 +245,6 @@ void am_vos_engine_process(int16_t *frame, int16_t i16InputLength, uint8_t *pui8
     appStruct_T *ap = &(g_sVosThf.sAppStruct);
 
     t2siStruct *t = &ap->_t;
-    unsigned int size;
 
     result = SensoryProcessBrick(frame, ap, false);
     if(result == ERR_OK)

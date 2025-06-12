@@ -23,9 +23,6 @@ LOG_MODULE_REGISTER(dmic_sample);
 /* Size of a block for 15 ms of audio data. */
 #define BLOCK_SIZE(_sample_rate, _number_of_channels) \
 	(BYTES_PER_SAMPLE * (_sample_rate / 200) * 3 * _number_of_channels)
-/* Size of a block for 100 ms of audio data. */
-//#define BLOCK_SIZE(_sample_rate, _number_of_channels) \
-//	(BYTES_PER_SAMPLE * (_sample_rate / 10) * _number_of_channels)
 
 /* Driver will allocate blocks from this slab to receive audio data into them.
  * Application, after getting a given block from the driver and processing its
