@@ -37,10 +37,10 @@ manifest:
     - name: acpica
       revision: 8d24867bc9c9d81c81eeac59391cda59333affd4
       path: modules/lib/acpica
-    - name: ambiqhal_ambiq
+    - name: ambiqhal_ambiq_alpha
       remote: github_ambiqmicro
       path: modules/hal/ambiq
-      revision: e3a37c2e245dec1b9ba71f79fc967394a630acb1
+      revision: cdf34319c73b7af5debfafd793051eb17c602f25
       groups:
         - hal
     - name: babblesim_base

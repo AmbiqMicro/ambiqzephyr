@@ -29,7 +29,7 @@ config SOC_AMBIQ_HAS_PUF
 
 config SOC_AMBIQ_DCACHE_SIZE
 	int
-	default 65536 if SOC_APOLLO510
+	default 65536
 
 config SOC_AMBIQ_DMA_BUFF_LOCATION
 	hex "Byte offset to SRAM_BASE_ADDRESS"

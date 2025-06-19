@@ -12,3 +12,4 @@ family:
   - name: apollo5x
     socs:
     - name: apollo510
+    - name: apollo510L
