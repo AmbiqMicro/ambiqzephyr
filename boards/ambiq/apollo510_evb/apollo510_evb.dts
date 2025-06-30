@@ -120,6 +120,10 @@
 	status = "okay";
 };
 
+&audadc0 {
+	status = "okay";
+};
+
 &mspi0 {
 	pinctrl-0 = <&mspi0_default>;
 	pinctrl-1 = <&mspi0_sleep>;
