@@ -1,0 +1,6 @@
+board:
+  name: apollo510L_eb
+  full_name: Apollo510 Lite SOC Evaluation Board
+  vendor: ambiq
+  socs:
+  - name: apollo510L
