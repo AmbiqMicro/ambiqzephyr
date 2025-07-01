@@ -149,6 +149,13 @@ New APIs and options
 * I2C
 
   * :c:func:`i2c_configure_dt`.
+  * :c:macro:`I2C_DEVICE_DT_DEINIT_DEFINE`
+  * :c:macro:`I2C_DEVICE_DT_INST_DEINIT_DEFINE`
+
+* SPI
+
+  * :c:macro:`SPI_DEVICE_DT_DEINIT_DEFINE`
+  * :c:macro:`SPI_DEVICE_DT_INST_DEINIT_DEFINE`
 
 ..
   Link to new APIs here, in a group if you think it's necessary, no need to get
@@ -283,6 +290,10 @@ New APIs and options
     * :kconfig:option:`CONFIG_DEBUG_COREDUMP_THREAD_STACK_TOP`, enabled by default for ARM Cortex M when :kconfig:option:`CONFIG_DEBUG_COREDUMP_MEMORY_DUMP_MIN` is selected.
     * :kconfig:option:`CONFIG_DEBUG_COREDUMP_BACKEND_IN_MEMORY`
     * :kconfig:option:`CONFIG_DEBUG_COREDUMP_BACKEND_IN_MEMORY_SIZE`
+
+* UpdateHub
+
+  * :c:func:`updatehub_report_error`
 
 * Other
 
@@ -1036,3 +1047,9 @@ Other notable changes
 
 * Updated TF-M to version 2.1.2 (from 2.1.1). The release notes can be found at:
   https://trustedfirmware-m.readthedocs.io/en/tf-mv2.1.2/releases/2.1.2.html
+
+* Updated all boards with an external I2C connectors (Qwiic, Stemma, Grove...)
+  to use the ``zephyr_i2c`` devicetree label. This allows using the existing
+  :ref:`shields` build system feature (``west build --shield``) to interface
+  any connectorized i2c module to any board with a compatible i2c port,
+  regardless of the specific i2c connector branding.
