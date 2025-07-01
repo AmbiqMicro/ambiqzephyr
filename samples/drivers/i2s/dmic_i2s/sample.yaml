@@ -4,7 +4,7 @@ tests:
   sample.drivers.i2s.dmic_i2s:
     tags: i2s
     platform_allow:
-      - apollo510_evb/apollo510/cm55
+      - apollo510_evb/apollo510
     harness: console
     harness_config:
       type: one_line
