@@ -11,6 +11,7 @@ on:
       - main
       - v*-branch
       - collab-*
+      - apollo510-*
   schedule:
     # Run at 02:00 UTC on every Sunday
     - cron: '0 2 * * 0'
@@ -24,7 +25,6 @@ concurrency:
 
 jobs:
   twister-build-prep:
-    if: github.repository_owner == 'zephyrproject-rtos'
     runs-on: ubuntu-24.04
     outputs:
       subset: ${{ steps.output-services.outputs.subset }}

@@ -38,7 +38,6 @@ concurrency:
 
 jobs:
   bsim-test:
-    if: github.repository_owner == 'zephyrproject-rtos'
     runs-on:
       group: zephyr-runner-v2-linux-x64-4xlarge
     container:
