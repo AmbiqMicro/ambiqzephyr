@@ -11,6 +11,7 @@ on:
       - main
       - v*-branch
       - collab-*
+      - apollo510-*
   schedule:
     # Run at 02:00 UTC on every Sunday
     - cron: '0 2 * * 0'
@@ -24,21 +25,19 @@ concurrency:
 
 jobs:
   twister-build-prep:
-    if: github.repository_owner == 'zephyrproject-rtos'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     outputs:
       subset: ${{ steps.output-services.outputs.subset }}
       size: ${{ steps.output-services.outputs.size }}
       fullrun: ${{ steps.output-services.outputs.fullrun }}
     env:
-      MATRIX_SIZE: 10
-      PUSH_MATRIX_SIZE: 20
-      WEEKLY_MATRIX_SIZE: 200
-      BSIM_OUT_PATH: /opt/bsim/
-      BSIM_COMPONENTS_PATH: /opt/bsim/components
-      TESTS_PER_BUILDER: 900
+      MATRIX_SIZE: 20
+      PUSH_MATRIX_SIZE: 25
+      WEEKLY_MATRIX_SIZE: 30
+      TESTS_PER_BUILDER: 200
+      FIXED_MATRIX_SIZE: 20
       COMMIT_RANGE: ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
-      BASE_REF: ${{ github.base_ref }}
+      BASE_REF: ${{ github.event.pull_request.base.ref }}
     steps:
       - name: Checkout
         if: github.event_name == 'pull_request'
@@ -61,7 +60,17 @@ jobs:
         working-directory: zephyr
         if: github.event_name == 'pull_request'
         run: |
+          pip install --user west
           pip install -r scripts/requirements-actions.txt --require-hashes
+          pip install -r scripts/requirements.txt
+
+          export PATH=$HOME/.local/bin:$PATH
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+          echo "PATH is $PATH"
+          pip show west
+          which west
+          west --version
 
       - name: Setup Zephyr project
         if: github.event_name == 'pull_request'
@@ -82,6 +91,21 @@ jobs:
           git clean -f -d
           git log  --pretty=oneline | head -n 10
 
+          # west setup
+          west init -l . || true
+          west config manifest.group-filter -- +ci,+optional
+          west config --global update.narrow true
+          west update || (rm -rf ../modules ../bootloader ../tools && west update)
+
+          west forall -c 'git reset --hard HEAD'
+
+          echo "ZEPHYR_SDK_INSTALL_DIR=/opt/toolchains/zephyr-sdk-0.16.5" >> $GITHUB_ENV
+
+      - name: Set Zephyr SDK environment variables
+        run: |
+          echo "ZEPHYR_SDK_INSTALL_DIR=$HOME/zephyr-sdk" >> $GITHUB_ENV
+          echo "CMAKE_PREFIX_PATH=$HOME/zephyr-sdk" >> $GITHUB_ENV
+
       - name: Generate Test Plan with Twister
         working-directory: zephyr
         if: github.event_name == 'pull_request'
@@ -89,87 +113,68 @@ jobs:
         run: |
           export ZEPHYR_BASE=${PWD}
           export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
-          python3 ./scripts/ci/test_plan.py -c origin/${BASE_REF}.. --pull-request -t $TESTS_PER_BUILDER
-          if [ -s .testplan ]; then
-            cat .testplan >> $GITHUB_ENV
-          else
-            echo "TWISTER_NODES=${MATRIX_SIZE}" >> $GITHUB_ENV
-          fi
+          python3 ./scripts/ci/test_plan.py -c origin/${BASE_REF}.. --no-detailed-test-id --pull-request -t $TESTS_PER_BUILDER -p apollo510_eb -p apollo510_evb -T samples/hello_world
+
+          TWISTER_NODES=$FIXED_MATRIX_SIZE
+
+          echo "TWISTER_NODES=$TWISTER_NODES"
+          echo "TWISTER_NODES=${TWISTER_NODES}" >> $GITHUB_ENV
+          echo "TWISTER_NODES=${TWISTER_NODES}" >> $GITHUB_OUTPUT
+
           rm -f testplan.json .testplan
 
       - name: Determine matrix size
         id: output-services
         run: |
-          if [ "${{github.event_name}}" = "push" ]; then
-            subset="[$(seq -s',' 1 ${PUSH_MATRIX_SIZE})]"
-            size=${MATRIX_SIZE}
-          elif [ "${{github.event_name}}" = "pull_request" ]; then
-            if [ -n "${TWISTER_NODES}" ]; then
-              subset="[$(seq -s',' 1 ${TWISTER_NODES})]"
-            else
-              subset="[$(seq -s',' 1 ${MATRIX_SIZE})]"
-            fi
-            size=${TWISTER_NODES}
-          elif [ "${{github.event_name}}" = "schedule" -a "${{github.repository}}" = "zephyrproject-rtos/zephyr" ]; then
-            subset="[$(seq -s',' 1 ${WEEKLY_MATRIX_SIZE})]"
-            size=${WEEKLY_MATRIX_SIZE}
-          else
-            size=0
+          RAW_NODES="${{ steps.test-plan.outputs.TWISTER_NODES }}"
+          MATRIX_LIMIT=${{ env.MATRIX_SIZE }}
+
+          if [[ -z "$RAW_NODES" || "$RAW_NODES" -eq 0 ]]; then
+            echo "No tests to run."
+            echo "subset=[]" >> $GITHUB_OUTPUT
+            echo "size=0" >> $GITHUB_OUTPUT
+            echo "fullrun=false" >> $GITHUB_OUTPUT
+            exit 0
           fi
 
+          if (( RAW_NODES > MATRIX_LIMIT )); then
+            TWISTER_NODES=$MATRIX_LIMIT
+          else
+            TWISTER_NODES=$RAW_NODES
+          fi
+
+          subset="[$(seq -s',' 1 ${TWISTER_NODES})]"
           echo "subset=${subset}" >> $GITHUB_OUTPUT
-          echo "size=${size}" >> $GITHUB_OUTPUT
+          echo "size=${TWISTER_NODES}" >> $GITHUB_OUTPUT
           echo "fullrun=${TWISTER_FULL}" >> $GITHUB_OUTPUT
 
+          echo "💡 TWISTER_NODES (capped by MATRIX_SIZE): $TWISTER_NODES"
+          echo "🧪 Subset: $subset"
+
   twister-build:
-    runs-on:
-      group: zephyr-runner-v2-linux-x64-4xlarge
+    runs-on: ubuntu-latest
     needs: twister-build-prep
     if: needs.twister-build-prep.outputs.size != 0
-    container:
-      image: ghcr.io/zephyrproject-rtos/ci-repo-cache:v0.28.1.20250624
-      options: '--entrypoint /bin/bash'
     strategy:
       fail-fast: false
       matrix:
         subset: ${{fromJSON(needs.twister-build-prep.outputs.subset)}}
     timeout-minutes: 1440
     env:
-      CCACHE_DIR: /node-cache/ccache-zephyr
+      CCACHE_DIR: $HOME/.cache/ccache-zephyr
       CCACHE_REMOTE_STORAGE: "redis://cache-*.keydb-cache.svc.cluster.local|shards=1,2,3"
       CCACHE_REMOTE_ONLY: "true"
-      # `--specs` is ignored because ccache is unable to resolve the toolchain specs file path.
+      # --specs is ignored because ccache is unable to resolve the toolchain specs file path.
       CCACHE_IGNOREOPTIONS: '-specs=* --specs=*'
-      BSIM_OUT_PATH: /opt/bsim/
-      BSIM_COMPONENTS_PATH: /opt/bsim/components
-      TWISTER_COMMON: ' --test-config tests/test_config_ci.yaml --force-color --inline-logs -v -N -M --retry-failed 3 --timeout-multiplier 2 '
+      TWISTER_COMMON: ' --test-config tests/test_config_ci.yaml --no-detailed-test-id --force-color --inline-logs -v -N -M --retry-failed 3 --timeout-multiplier 2 '
       WEEKLY_OPTIONS: ' -M --build-only --all --show-footprint --report-filtered -j 32'
       PR_OPTIONS: ' --clobber-output --integration -j 16'
       PUSH_OPTIONS: ' --clobber-output -M --show-footprint --report-filtered -j 16'
       COMMIT_RANGE: ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
-      BASE_REF: ${{ github.base_ref }}
+      BASE_REF: ${{ github.event.pull_request.base.ref }}
       LLVM_TOOLCHAIN_PATH: /usr/lib/llvm-20
+      TARGET_PLATFORMS: "apollo510_eb apollo510_evb"
     steps:
-      - name: Print cloud service information
-        run: |
-          echo "ZEPHYR_RUNNER_CLOUD_PROVIDER = ${ZEPHYR_RUNNER_CLOUD_PROVIDER}"
-          echo "ZEPHYR_RUNNER_CLOUD_NODE = ${ZEPHYR_RUNNER_CLOUD_NODE}"
-          echo "ZEPHYR_RUNNER_CLOUD_POD = ${ZEPHYR_RUNNER_CLOUD_POD}"
-
-      - name: Apply container owner mismatch workaround
-        run: |
-          # FIXME: The owner UID of the GITHUB_WORKSPACE directory may not
-          #        match the container user UID because of the way GitHub
-          #        Actions runner is implemented. Remove this workaround when
-          #        GitHub comes up with a fundamental fix for this problem.
-          git config --global --add safe.directory ${GITHUB_WORKSPACE}
-
-      - name: Clone cached Zephyr repository
-        continue-on-error: true
-        run: |
-          git clone --shared /repo-cache/zephyrproject/zephyr .
-          git remote set-url origin ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}
-
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -177,27 +182,98 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Clean up disk space before build
+        run: |
+          echo "Before cleanup:"
+          df -h
+
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf /usr/share/swift
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/hostedtoolcache/
+          sudo rm -rf /usr/lib/jvm
+          sudo rm -rf /usr/lib/google-cloud-sdk
+          sudo apt-get clean
+          sudo apt-get autoremove -y
+
+          echo "After cleanup:"
+          df -h
+
+      - name: Install Zephyr SDK
+        run: |
+          wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.5/zephyr-sdk-0.16.5_linux-x86_64.tar.xz
+          tar xf zephyr-sdk-0.16.5_linux-x86_64.tar.xz
+          mv zephyr-sdk-0.16.5 $HOME/zephyr-sdk
+          $HOME/zephyr-sdk/setup.sh -t all -c
+
+      - name: Set Zephyr SDK environment variables
+        run: |
+          echo "ZEPHYR_SDK_INSTALL_DIR=$HOME/zephyr-sdk" >> $GITHUB_ENV
+          echo "CMAKE_PREFIX_PATH=$HOME/zephyr-sdk" >> $GITHUB_ENV
+          echo "$HOME/zephyr-sdk/cmake" >> $GITHUB_PATH
+
+      - name: Install Python packages
+        run: |
+          pip install --user west
+          pip install -r scripts/requirements-actions.txt
+          pip install -r scripts/requirements.txt
+          pip install protobuf grpcio-tools
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
       - name: Environment Setup
         run: |
-          if [ "${{github.event_name}}" = "pull_request" ]; then
+          set -euo pipefail
+
+          export ZEPHYR_BASE=${PWD}
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
             git config --global user.email "bot@zephyrproject.org"
             git config --global user.name "Zephyr Builder"
-            rm -fr ".git/rebase-apply"
-            rm -fr ".git/rebase-merge"
-            git rebase origin/${BASE_REF}
+            rm -fr ".git/rebase-apply" ".git/rebase-merge"
+            git fetch origin ${BASE_REF}
+
+            if ! git rebase origin/${BASE_REF}; then
+              echo "Rebase failed, aborting..."
+              git rebase --abort
+              exit 1
+            fi
+
             git clean -f -d
-            git log  --pretty=oneline | head -n 10
+            git log --pretty=oneline | head -n 10 || true
           fi
+
           echo "$HOME/.local/bin" >> $GITHUB_PATH
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-          west init -l . || true
-          west config manifest.group-filter -- +ci,+optional
-          west config --global update.narrow true
-          west update --path-cache /repo-cache/zephyrproject 2>&1 1> west.update.log || west update --path-cache /repo-cache/zephyrproject 2>&1 1> west.update.log || ( rm -rf ../modules ../bootloader ../tools && west update --path-cache /repo-cache/zephyrproject)
-          west forall -c 'git reset --hard HEAD'
+          echo "Initializing west..."
+          if [ ! -d .west ]; then
+            west init -l .
+          else
+            echo "West already initialized."
+          fi
 
-          echo "ZEPHYR_SDK_INSTALL_DIR=/opt/toolchains/zephyr-sdk-$( cat SDK_VERSION )" >> $GITHUB_ENV
+          west config manifest.group-filter -- +zephyr_default,+ci,+optional
+          if ! west update; then
+            echo "west update failed, retrying after cleaning modules"
+            rm -rf modules/ bootloader/ tools/
+            west update
+          fi
+
+          west list
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ccache gcc-multilib device-tree-compiler gperf protobuf-compiler
+
+      - name: Set up ccache
+        run: |
+          mkdir -p ${CCACHE_DIR}
+          ccache -M 10G
+          ccache -p
+          ccache -z -s -vv
 
       - name: Check Environment
         run: |
@@ -210,39 +286,23 @@ jobs:
           echo "github.base_ref: ${{ github.base_ref }}"
           echo "github.ref_name: ${{ github.ref_name }}"
 
-      - name: Install Python packages
-        run: |
-          pip install -r scripts/requirements-actions.txt --require-hashes
-          west packages pip --install
-
-      - name: Set up ccache
-        run: |
-          mkdir -p ${CCACHE_DIR}
-          ccache -M 10G
-          ccache -p
-          ccache -z -s -vv
-
-      - name: Update BabbleSim to manifest revision
-        run: |
-          export BSIM_VERSION=$( west list bsim -f {revision} )
-          echo "Manifest points to bsim sha $BSIM_VERSION"
-          cd /opt/bsim_west/bsim
-          git fetch -n origin ${BSIM_VERSION}
-          git -c advice.detachedHead=false checkout ${BSIM_VERSION}
-          west update
-          make everything -s -j 8
-
       - if: github.event_name == 'push'
         name: Run Tests with Twister (Push)
         id: run_twister
         run: |
+          set -euo pipefail
           export ZEPHYR_BASE=${PWD}
           export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
-          ./scripts/twister --subset ${{matrix.subset}}/${{ strategy.job-total }} ${TWISTER_COMMON} ${PUSH_OPTIONS}
-          if [ "${{matrix.subset}}" = "1" ]; then
+          export ZEPHYR_SDK_INSTALL_DIR=$HOME/zephyr-sdk
+
+          ./scripts/twister $(for p in $TARGET_PLATFORMS; do echo -n "-p $p "; done) \
+            --subset ${{ matrix.subset }}/${{ strategy.job-total }} \
+            ${TWISTER_COMMON} ${PUSH_OPTIONS}
+
+          if [[ "${{ matrix.subset }}" == "1" ]]; then
             ./scripts/zephyr_module.py --twister-out module_tests.args
             if [ -s module_tests.args ]; then
-              ./scripts/twister +module_tests.args --outdir module_tests ${TWISTER_COMMON} ${PUSH_OPTIONS}
+              ./scripts/twister $(for p in $TARGET_PLATFORMS; do echo -n "-p $p "; done) +module_tests.args --outdir module_tests ${TWISTER_COMMON} ${PUSH_OPTIONS}
             fi
           fi
 
@@ -250,15 +310,22 @@ jobs:
         name: Run Tests with Twister (Pull Request)
         id: run_twister_pr
         run: |
-          rm -f testplan.json
+          set -euo pipefail
+          rm -rf twister-out module_tests testplan.json
           export ZEPHYR_BASE=${PWD}
           export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
-          python3 ./scripts/ci/test_plan.py -c origin/${BASE_REF}.. --pull-request
-          ./scripts/twister --subset ${{matrix.subset}}/${{ strategy.job-total }} --load-tests testplan.json ${TWISTER_COMMON} ${PR_OPTIONS}
-          if [ "${{matrix.subset}}" = "1" -a ${{needs.twister-build-prep.outputs.fullrun}} = 'True' ]; then
+          export ZEPHYR_SDK_INSTALL_DIR=$HOME/zephyr-sdk
+
+          python3 ./scripts/ci/test_plan.py -c origin/${BASE_REF}.. --pull-request --no-detailed-test-id $(for p in $TARGET_PLATFORMS; do echo -n "-p $p "; done)
+
+          ./scripts/twister $(for p in $TARGET_PLATFORMS; do echo -n "-p $p "; done) \
+            --subset ${{ matrix.subset }}/${{ strategy.job-total }} \
+            --load-tests testplan.json ${TWISTER_COMMON} ${PR_OPTIONS}
+
+          if [[ "${{ matrix.subset }}" == "1" ]] && [ "${{ needs.twister-build-prep.outputs.fullrun }}" = "True" ]; then
             ./scripts/zephyr_module.py --twister-out module_tests.args
             if [ -s module_tests.args ]; then
-              ./scripts/twister +module_tests.args --outdir module_tests ${TWISTER_COMMON} ${PR_OPTIONS}
+              ./scripts/twister $(for p in $TARGET_PLATFORMS; do echo -n "-p $p "; done) +module_tests.args --outdir module_tests ${TWISTER_COMMON} ${PR_OPTIONS}
             fi
           fi
 
@@ -266,13 +333,19 @@ jobs:
         name: Run Tests with Twister (Weekly)
         id: run_twister_sched
         run: |
+          set -euo pipefail
           export ZEPHYR_BASE=${PWD}
           export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
-          ./scripts/twister --subset ${{matrix.subset}}/${{ strategy.job-total }} ${TWISTER_COMMON} ${WEEKLY_OPTIONS}
-          if [ "${{matrix.subset}}" = "1" ]; then
+          export ZEPHYR_SDK_INSTALL_DIR=$HOME/zephyr-sdk
+
+          ./scripts/twister $(for p in $TARGET_PLATFORMS; do echo -n "-p $p "; done) \
+            --subset ${{ matrix.subset }}/${{ strategy.job-total }} \
+            ${TWISTER_COMMON} ${WEEKLY_OPTIONS}
+
+          if [[ "${{ matrix.subset }}" == "1" ]]; then
             ./scripts/zephyr_module.py --twister-out module_tests.args
             if [ -s module_tests.args ]; then
-              ./scripts/twister +module_tests.args --outdir module_tests ${TWISTER_COMMON} ${WEEKLY_OPTIONS}
+              ./scripts/twister $(for p in $TARGET_PLATFORMS; do echo -n "-p $p "; done) +module_tests.args --outdir module_tests ${TWISTER_COMMON} ${WEEKLY_OPTIONS}
             fi
           fi
 
@@ -315,7 +388,7 @@ jobs:
     name: "Publish Unit Tests Results"
     needs:
       - twister-build
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     permissions:
       checks: write # to create the check run entry with Twister test results
     # the build-and-test job might be skipped, we don't need to run this job then
