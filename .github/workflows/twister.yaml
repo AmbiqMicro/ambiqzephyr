@@ -11,6 +11,7 @@ on:
       - main
       - v*-branch
       - collab-*
+      - apollo510-*
   schedule:
     # Run at 02:00 UTC on every Sunday
     - cron: '0 2 * * 0'
@@ -24,7 +25,6 @@ concurrency:
 
 jobs:
   twister-build-prep:
-    if: github.repository_owner == 'zephyrproject-rtos'
     runs-on: ubuntu-24.04
     outputs:
       subset: ${{ steps.output-services.outputs.subset }}
@@ -38,7 +38,7 @@ jobs:
       BSIM_COMPONENTS_PATH: /opt/bsim/components
       TESTS_PER_BUILDER: 900
       COMMIT_RANGE: ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
-      BASE_REF: ${{ github.base_ref }}
+      BASE_REF: ${{ github.event.pull_request.base.ref }}
     steps:
       - name: Checkout
         if: github.event_name == 'pull_request'
@@ -91,39 +91,30 @@ jobs:
           export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
           python3 ./scripts/ci/test_plan.py -c origin/${BASE_REF}.. --no-detailed-test-id --pull-request -t $TESTS_PER_BUILDER
           if [ -s .testplan ]; then
-            cat .testplan >> $GITHUB_ENV
+            TWISTER_NODES=$(grep -c . .testplan)
           else
-            echo "TWISTER_NODES=${MATRIX_SIZE}" >> $GITHUB_ENV
+            TWISTER_NODES=${MATRIX_SIZE}
           fi
+
+          echo "TWISTER_NODES=$TWISTER_NODES"
+          echo "TWISTER_NODES=${TWISTER_NODES}" >> $GITHUB_ENV
+          echo "TWISTER_NODES=${TWISTER_NODES}" >> $GITHUB_OUTPUT
+
           rm -f testplan.json .testplan
 
       - name: Determine matrix size
         id: output-services
         run: |
-          if [ "${{github.event_name}}" = "push" ]; then
-            subset="[$(seq -s',' 1 ${PUSH_MATRIX_SIZE})]"
-            size=${MATRIX_SIZE}
-          elif [ "${{github.event_name}}" = "pull_request" ]; then
-            if [ -n "${TWISTER_NODES}" ]; then
-              subset="[$(seq -s',' 1 ${TWISTER_NODES})]"
-            else
-              subset="[$(seq -s',' 1 ${MATRIX_SIZE})]"
-            fi
-            size=${TWISTER_NODES}
-          elif [ "${{github.event_name}}" = "schedule" -a "${{github.repository}}" = "zephyrproject-rtos/zephyr" ]; then
-            subset="[$(seq -s',' 1 ${WEEKLY_MATRIX_SIZE})]"
-            size=${WEEKLY_MATRIX_SIZE}
-          else
-            size=0
-          fi
+          TWISTER_NODES=${{ steps.test-plan.outputs.TWISTER_NODES }}
+          echo "Using TWISTER_NODES=${TWISTER_NODES}"
 
+          subset="[$(seq -s',' 1 ${TWISTER_NODES})]"
           echo "subset=${subset}" >> $GITHUB_OUTPUT
-          echo "size=${size}" >> $GITHUB_OUTPUT
+          echo "size=${TWISTER_NODES}" >> $GITHUB_OUTPUT
           echo "fullrun=${TWISTER_FULL}" >> $GITHUB_OUTPUT
 
   twister-build:
-    runs-on:
-      group: zephyr-runner-v2-linux-x64-4xlarge
+    runs-on: ubuntu-latest
     needs: twister-build-prep
     if: needs.twister-build-prep.outputs.size != 0
     container:
@@ -147,7 +138,7 @@ jobs:
       PR_OPTIONS: ' --clobber-output --integration -j 16'
       PUSH_OPTIONS: ' --clobber-output -M --show-footprint --report-filtered -j 16'
       COMMIT_RANGE: ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
-      BASE_REF: ${{ github.base_ref }}
+      BASE_REF: ${{ github.event.pull_request.base.ref }}
       LLVM_TOOLCHAIN_PATH: /usr/lib/llvm-20
     steps:
       - name: Print cloud service information
