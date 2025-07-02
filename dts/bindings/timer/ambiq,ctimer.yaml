@@ -1,0 +1,53 @@
+# Copyright (c) 2023 Antmicro <www.antmicro.com>
+# SPDX-License-Identifier: Apache-2.0
+
+description: Ambiq CTIMER
+
+compatible: "ambiq,ctimer"
+
+include: base.yaml
+
+properties:
+  reg:
+    required: true
+
+  interrupts:
+    required: true
+
+  clk-source:
+    type: int
+    required: true
+    description: |
+      clk-source specifies the clock source that used by the system timer.
+      For Apollo3:
+      0, : TMRPIN : Clock source is TMRPINA
+      1, : HFRC_DIV4 : Clock source is the HFRC / 4
+      2, : HFRC_DIV16 : Clock source is HFRC / 16   
+      3, : HFRC_DIV256 : Clock source is HFRC / 256
+      4, : HFRC_DIV1024 : Clock source is HFRC / 1024
+      5, : HFRC_DIV4K : Clock source is HFRC / 4096
+      6, : XT : Clock source is the XT (uncalibrated)
+      7, : XT_DIV2 : Clock source is XT / 2
+      8, : XT_DIV16 : Clock source is XT / 16
+      9 : XT_DIV128 : Clock source is XT / 128
+      10 : LFRC_DIV2 : Clock source is LFRC / 2
+      11 : LFRC_DIV32 : Clock source is LFRC / 32
+      12 : LFRC_DIV1K : Clock source is LFRC / 1024
+      13 : LFRC : Clock source is LFRC
+      14 : RTC_100HZ : Clock source is 100 Hz from the current RTC oscillator
+      15 : HCLK_DIV4 : Clock source is HCLK / 4 (note: this clock is only available when MCU is in active mode)
+      16 : XT_DIV4 : Clock source is XT / 4
+      17 : XT_DIV8 : Clock source is XT / 8
+      18 : XT_DIV32 : Clock source is XT / 32
+      20 : CTMRB0 : Clock source is CTIMERB0 OUT
+      21 : CTMRA1 : Clock source is CTIMERA1 OUT
+      22 : CTMRB1 : Clock source is CTIMERB1 OUT
+      23 : CTMRA2 : Clock source is CTIMERA2 OUT
+      24 : CTMRB2 : Clock source is CTIMERB2 OUT
+      25 : CTMRB3 : Clock source is CTIMERB3 OUT
+      26 : CTMRB4 : Clock source is CTIMERB4 OUT
+      27 : CTMRB5 : Clock source is CTIMERB5 OUT
+      28 : CTMRB6 : Clock source is CTIMERB6 OUT
+      29 : BUCKBLE : Clock source is BLE buck converter TON pulses
+      30 : BUCKB : Clock source is Memory buck converter TON pulses
+      31 : BUCKA : Clock source is CPU buck converter TON pulses
