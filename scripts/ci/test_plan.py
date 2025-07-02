@@ -410,7 +410,7 @@ def parse_args():
             help="JSON file with the test plan to be passed to twister")
     parser.add_argument('-P', '--pull-request', action="store_true",
             help="This is a pull request")
-    parser.add_argument('-p', '--platform', action="append",
+    parser.add_argument('-p', '--platform', nargs='+',
             help="Limit this for a platform or a list of platforms.")
     parser.add_argument('-t', '--tests_per_builder', default=700, type=int,
             help="Number of tests per builder")
