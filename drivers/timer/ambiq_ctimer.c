@@ -50,7 +50,7 @@ static uint32_t g_last_time_stamp;
 /* Spinlock to sync between Compare ISR and update of Compare register */
 static struct k_spinlock g_lock;
 
-static inline void update_tick_counter(void)
+static ALWAYS_INLINE void update_tick_counter(void)
 {
 
 	/* Read current cycle count. */
@@ -68,7 +68,7 @@ static inline void update_tick_counter(void)
 	/* Get elapsed ticks. */
 	uint32_t dticks = elapsed_cycle / CYC_PER_TICK;
 
-	g_last_time_stamp += dticks * CYC_PER_TICK;
+	g_last_time_stamp += elapsed_cycle;
 	g_tick_elapsed += dticks;
 }
 
@@ -140,6 +140,7 @@ void sys_clock_set_timeout(int32_t ticks, bool idle)
 	/* Get current hardware counter value.*/
 	uint32_t now = am_hal_ctimer_read_both();
 
+	k_spin_unlock(&g_lock, key);
 	/* last: the last recorded counter value.
 	 * now_64: current counter value. Extended to uint64_t to easy the handing of hardware
 	 *         counter overflow.
@@ -162,8 +163,6 @@ void sys_clock_set_timeout(int32_t ticks, bool idle)
 	} else {
 		ambiq_ctimer_delta_set(delta);
 	}
-
-	k_spin_unlock(&g_lock, key);
 }
 
 uint32_t sys_clock_elapsed(void)
