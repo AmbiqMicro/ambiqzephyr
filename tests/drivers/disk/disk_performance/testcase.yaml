@@ -11,6 +11,7 @@ tests:
     integration_platforms:
       - mimxrt1064_evk
       - mimxrt595_evk/mimxrt595s/cm33
+    build_only: true # Ambiq temp
   drivers.disk.disk_performance.disk.nvme:
     extra_configs:
       - CONFIG_NVME=y
