@@ -36,6 +36,18 @@
 const int32_t z_sys_timer_irq_for_test = CTIMER_IRQn;
 #endif
 
+/* Timer configuration */
+am_hal_ctimer_config_t s_continuous_timer = {
+	/* Create 32-bit timer by linking timers A and Bb */
+	.ui32Link = 1,
+	/* Set up TimerA. */
+	.ui32TimerAConfig = (AM_HAL_CTIMER_FN_CONTINUOUS | AM_HAL_CTIMER_INT_ENABLE |
+				       AM_HAL_CTIMER_XT_32_768KHZ),
+	/* Set up TimerB. */
+	/* TimerB should be 0 when running in 32-bit 'linked' mode */
+	.ui32TimerBConfig = 0,
+};
+
 /* Elapsed ticks since the previous kernel tick was announced, It will get accumulated every time
  * ctimer_isr is triggered, or sys_clock_set_timeout/sys_clock_elapsed API is called.
  * It will be cleared after sys_clock_announce is called,.
@@ -53,17 +65,8 @@ static struct k_spinlock g_lock;
 static ALWAYS_INLINE void update_tick_counter(void)
 {
 
-	/* Read current cycle count. */
-	uint32_t now = am_hal_ctimer_read_both();
-
-	/* If current cycle count is smaller than the last time stamp, a counter overflow happened.
-	 * We need to extend the current counter value to 64 bits and add it with 0xFFFFFFFF
-	 * to get the correct elapsed cycles.
-	 */
-	uint64_t now_64 = (g_last_time_stamp <= now) ? (uint64_t)now : (uint64_t)now + COUNTER_MAX;
-
 	/* Get elapsed cycles */
-	uint32_t elapsed_cycle = (now_64 - g_last_time_stamp);
+	uint32_t elapsed_cycle = am_hal_ctimer_read_both();
 
 	/* Get elapsed ticks. */
 	uint32_t dticks = elapsed_cycle / CYC_PER_TICK;
@@ -90,6 +93,8 @@ static void ctimer_isr(const void *arg)
 		k_spinlock_key_t key = k_spin_lock(&g_lock);
 
 		/*Calculate the elapsed ticks based on the current cycle count*/
+    	am_hal_ctimer_stop(0, AM_HAL_CTIMER_BOTH);
+
 		update_tick_counter();
 
 		if (!IS_ENABLED(CONFIG_TICKLESS_KERNEL)) {
@@ -112,6 +117,10 @@ static void ctimer_isr(const void *arg)
 			/* Set delta. */
 			ambiq_ctimer_delta_set(delta);
 		}
+
+		am_hal_ctimer_clear(0, AM_HAL_CTIMER_BOTH);
+		am_hal_ctimer_config(0, &s_continuous_timer);
+    	am_hal_ctimer_start(0, AM_HAL_CTIMER_TIMERA);
 
 		k_spin_unlock(&g_lock, key);
 
@@ -137,32 +146,24 @@ void sys_clock_set_timeout(int32_t ticks, bool idle)
 	/* Update the internal tick counter*/
 	update_tick_counter();
 
-	/* Get current hardware counter value.*/
-	uint32_t now = am_hal_ctimer_read_both();
-
 	k_spin_unlock(&g_lock, key);
-	/* last: the last recorded counter value.
-	 * now_64: current counter value. Extended to uint64_t to easy the handing of hardware
-	 *         counter overflow.
-	 * next: counter values where to trigger the scheduled timeout.
-	 * last < now_64 < next
-	 */
-	uint64_t last = (uint64_t)g_last_time_stamp;
-	uint64_t now_64 = (g_last_time_stamp <= now) ? (uint64_t)now : (uint64_t)now + COUNTER_MAX;
-	uint64_t next = now_64 + ticks * CYC_PER_TICK;
 
-	uint32_t gap = next - last;
-	uint32_t gap_aligned = (gap / CYC_PER_TICK) * CYC_PER_TICK;
-	uint64_t next_aligned = last + gap_aligned;
+	uint64_t next = ticks * CYC_PER_TICK;
 
-	uint32_t delta = next_aligned - now_64;
+	uint32_t delta = (next / CYC_PER_TICK) * CYC_PER_TICK;
+
+    am_hal_ctimer_stop(0, AM_HAL_CTIMER_BOTH);
+	am_hal_ctimer_clear(0, AM_HAL_CTIMER_BOTH);
+	am_hal_ctimer_config(0, &s_continuous_timer);
 
 	if (delta <= MIN_DELAY) {
-		/*If the delta value is smaller than MIN_DELAY, trigger a interrupt immediately*/
+		/*If the delta value is smaller than or equal to MIN_DELAY, trigger a interrupt immediately*/
 		am_hal_ctimer_int_set(AM_HAL_CTIMER_INT_TIMERA0);
 	} else {
 		ambiq_ctimer_delta_set(delta);
 	}
+
+	am_hal_ctimer_start(0, AM_HAL_CTIMER_TIMERA);
 }
 
 uint32_t sys_clock_elapsed(void)
@@ -185,19 +186,10 @@ uint32_t sys_clock_cycle_get_32(void)
 
 int ctimer_init(void)
 {
-	/* Timer configuration */
-	am_hal_ctimer_config_t s_continuous_timer;
-	/* Create 32-bit timer */
-	s_continuous_timer.ui32Link = 1;
-	/* Set up TimerA. */
-	s_continuous_timer.ui32TimerAConfig = (AM_HAL_CTIMER_FN_REPEAT | AM_HAL_CTIMER_INT_ENABLE |
-				       AM_HAL_CTIMER_XT_32_768KHZ);
-	/* Set up TimerB. */
-	s_continuous_timer.ui32TimerBConfig = 0;
-
 	am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_SYSCLK_MAX, 0);
 	am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_XTAL_START, 0);
 
+    am_hal_ctimer_stop(0, AM_HAL_CTIMER_BOTH);
 	am_hal_ctimer_clear(0, AM_HAL_CTIMER_BOTH);
 	am_hal_ctimer_config(0, &s_continuous_timer);
     am_hal_ctimer_start(0, AM_HAL_CTIMER_TIMERA);
