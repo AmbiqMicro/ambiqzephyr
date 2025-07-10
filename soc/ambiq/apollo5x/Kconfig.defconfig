@@ -23,4 +23,9 @@ config ICACHE
 config IDLE_STACK_SIZE
 	default 2048 if PM
 
+if !CORTEX_M_DWT
+config SOC_HAS_TIMING_FUNCTIONS
+	default y
+endif
+
 endif # SOC_SERIES_APOLLO5X
