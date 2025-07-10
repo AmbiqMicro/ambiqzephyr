@@ -1,4 +1,8 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright (c) 2024 Ambiq
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include <arm/armv7-m.dtsi>
 #include <mem.h>
@@ -593,7 +597,6 @@
 			internal-vref-mv = <1190>;
 			status = "disabled";
 			#io-channel-cells = <1>;
-			ambiq,pwrcfg = <&pwrcfg 0x4 0x2000>;
 		};
 
 		mspi0: spi@40060000 {
@@ -637,14 +640,6 @@
 			interrupts = <27 0>;
 			num-bidir-endpoints = <6>;
 			maximum-speed = "full-speed";
-			status = "disabled";
-		};
-
-		rtc0: rtc@40004800 {
-			compatible = "ambiq,rtc";
-			reg = <0x40004800 0x210>;
-			interrupts = <2 0>;
-			alarms-count = <1>;
 			status = "disabled";
 		};
 
