@@ -190,10 +190,18 @@ static int uart_ambiq_configure(const struct device *dev, const struct uart_conf
 
 	switch (config->clk_src) {
 	case 0:
+#if defined(CONFIG_SOC_APOLLO510)
 		data->hal_cfg.eClockSrc = AM_HAL_UART_CLOCK_SRC_HFRC;
+#else
+		data->hal_cfg.eClockSrc = AM_HAL_UART_HFCLK_SRC_HFRC_96M;
+#endif
 		break;
 	case 1:
+#if defined(CONFIG_SOC_APOLLO510)
 		data->hal_cfg.eClockSrc = AM_HAL_UART_CLOCK_SRC_SYSPLL;
+#else
+		data->hal_cfg.eClockSrc = AM_HAL_UART_HFCLK_SRC_PLLPOSTDIV;
+#endif
 		break;
 	default:
 		return -EINVAL;
@@ -411,16 +419,17 @@ static int uart_ambiq_irq_tx_ready(const struct device *dev)
 {
 	const struct uart_ambiq_config *cfg = dev->config;
 	struct uart_ambiq_data *data = dev->data;
-	uint32_t status, flag = 0;
+	uint32_t status, flag, ier = 0;
 
 	if (!(UARTn(cfg->inst_idx)->CR & UART0_CR_TXE_Msk)) {
 		return false;
 	}
 
 	/* Check for TX interrupt status is set or TX FIFO is empty. */
-	am_hal_uart_interrupt_status_get(data->uart_handler, &status, true);
+	am_hal_uart_interrupt_status_get(data->uart_handler, &status, false);
 	am_hal_uart_flags_get(data->uart_handler, &flag);
-	return ((status & UART0_IES_TXRIS_Msk) || (flag & AM_HAL_UART_FR_TX_EMPTY));
+    am_hal_uart_interrupt_enable_get(data->uart_handler, &ier);
+    return ((ier & AM_HAL_UART_INT_TX) && ((status & UART0_IES_TXRIS_Msk) || (flag & AM_HAL_UART_FR_TX_EMPTY)));
 }
 
 static void uart_ambiq_irq_rx_enable(const struct device *dev)
