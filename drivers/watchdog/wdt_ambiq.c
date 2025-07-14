@@ -33,8 +33,10 @@ struct wdt_ambiq_data {
 uint32_t wdt_ambiq_clk_select[] =
 #if defined(CONFIG_SOC_SERIES_APOLLO3X) || defined(CONFIG_SOC_SERIES_APOLLO4X)
 	{128, 16, 1};
-#else
+#elif defined(CONFIG_SOC_SERIES_APOLLO510)
 	{128, 16, 1, 32768, 16384};
+#else
+	{112, 14};
 #endif
 
 static void wdt_ambiq_isr(void *arg)
@@ -80,19 +82,27 @@ static int wdt_ambiq_setup(const struct device *dev, uint8_t options)
 	am_hal_wdt_int_enable();
 	am_hal_wdt_start();
 #else
+#if !defined (CONFIG_SOC_APOLLO510L)
 	if (dev_cfg->clk_freq == 128) {
 		cfg.eClockSource = AM_HAL_WDT_128HZ;
 	} else if (dev_cfg->clk_freq == 16) {
 		cfg.eClockSource = AM_HAL_WDT_16HZ;
 	} else if (dev_cfg->clk_freq == 1) {
 		cfg.eClockSource = AM_HAL_WDT_1HZ;
-#if defined(CONFIG_SOC_SERIES_APOLLO5X)
+#if defined(CONFIG_SOC_APOLLO510)
 	} else if (dev_cfg->clk_freq == 32768) {
 		cfg.eClockSource = AM_HAL_WDT_XTAL_HS;
 	} else if (dev_cfg->clk_freq == 16384) {
 		cfg.eClockSource = AM_HAL_WDT_XTAL_HS_DIV2;
 	}
 #else
+	}
+#endif
+#else
+	if (dev_cfg->clk_freq == 112) {
+		cfg.eClockSource = AM_HAL_WDT_LFRC_DIV8;
+	} else if (dev_cfg->clk_freq == 14) {
+		cfg.eClockSource = AM_HAL_WDT_LFRC_DIV64;
 	}
 #endif
 
