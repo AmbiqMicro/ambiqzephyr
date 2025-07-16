@@ -1,0 +1,16 @@
+&flash0 {
+    erase-block-size = <2048>;
+	write-block-size = <16>;
+
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		/* Set 4KB of storage at the end of bank0 */
+		storage_partition: partition@4ff000 {
+			label = "storage";
+			reg = <0x4ff000 DT_SIZE_K(4)>;
+		};
+	};
+};

@@ -23,6 +23,8 @@ supported:
   - i2s
   - mspi
   - sdhc
+  - flash
+  - nvs
 testing:
   ignore_tags:
     - net
