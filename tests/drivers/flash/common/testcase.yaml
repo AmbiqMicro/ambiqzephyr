@@ -49,6 +49,8 @@ tests:
       - nrf54l20pdk/nrf54l20/cpuapp
       - nrf54h20dk/nrf54h20/cpuapp
       - ophelia4ev/nrf54l15/cpuapp
+      - apollo510_evb
+      - apollo510_eb
   drivers.flash.common.tfm_ns:
     build_only: true
     filter: (CONFIG_FLASH_HAS_DRIVER_ENABLED and CONFIG_TRUSTED_EXECUTION_NONSECURE
