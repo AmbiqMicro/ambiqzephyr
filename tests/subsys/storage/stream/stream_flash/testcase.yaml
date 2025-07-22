@@ -25,6 +25,8 @@ tests:
       - nrf54l09pdk/nrf54l09/cpuapp
       - nrf54l15dk/nrf54l15/cpuapp
       - ophelia4ev/nrf54l15/cpuapp
+      - apollo510_evb
+      - apollo510_eb
     extra_configs:
       # Tests, currently, can only support single device testing
       # and platform enabling SPI NOR automatically brings in a device with
