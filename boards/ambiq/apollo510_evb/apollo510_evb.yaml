@@ -23,6 +23,7 @@ supported:
   - i2s
   - mspi
   - sdhc
+  - usb
   - flash
   - nvs
   - zms
