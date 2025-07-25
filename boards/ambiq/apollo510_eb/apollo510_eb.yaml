@@ -18,6 +18,7 @@ supported:
   - i2s
   - mspi
   - flash
+  - usb
   - nvs
   - zms
 testing:
