@@ -13,7 +13,7 @@ permissions:
 jobs:
   all_jobs_passed:
     name: all jobs passed
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, zephyr-ci]
     steps:
       - name: "Check status of all required jobs"
         run: |-

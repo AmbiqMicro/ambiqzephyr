@@ -107,7 +107,7 @@ class Filters:
         self.testsuite_root = testsuite_root
         self.resolved_files = []
         self.twister_options = []
-        self.full_twister = False
+        self.full_twister = (not modified_files) and (not pull_request)
         self.all_tests = []
         self.tag_options = []
         self.pull_request = pull_request
