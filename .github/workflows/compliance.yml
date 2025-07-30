@@ -7,29 +7,52 @@ on:
     - opened
     - reopened
     - synchronize
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch name'
+        required: true
+        default: 'apollo510L-dev'
+      base:
+        description: 'Base branch name'
+        required: true
+        default: 'main'
 
 permissions:
   contents: read
 
 jobs:
   check_compliance:
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, zephyr-ci]
     name: Run compliance checks on patch series (PR)
     steps:
-    - name: Update PATH for west
-      run: |
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
-
     - name: Checkout the code
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      with:
-        ref: ${{ github.event.pull_request.head.sha }}
-        fetch-depth: 0
-
-    - name: Rebase onto the target branch
-      env:
-        BASE_REF: ${{ github.base_ref }}
       run: |
+        if [ "${{ github.event_name }}" == "pull_request" ]; then
+          GIT_REF="${{ github.event.pull_request.head.sha }}"
+          BASE_REF="${{ github.event.pull_request.base.ref }}"
+        elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          GIT_REF="${{ github.event.inputs.branch }}"
+          BASE_REF="${{ github.event.inputs.base }}"
+        fi
+        sudo rm -rf "$GITHUB_WORKSPACE"/.??* "$GITHUB_WORKSPACE"/*
+        CACHE_DIR="/data/ambiqzephyrcache/zephyrproject/zephyr"
+        if [ -d "${CACHE_DIR}" ]; then
+          echo "Cloning from local cache (${CACHE_DIR}) at ${GIT_REF}…"
+          git clone --reference "${CACHE_DIR}" \
+                    --depth 50 \
+                    https://github.com/${{ github.repository }}.git "zephyr"
+        else
+          echo "Cache not found; doing fresh shallow clone at ${GIT_REF}…"
+          git clone --depth 50 \
+                    https://github.com/${{ github.repository }}.git "zephyr"
+        fi
+        cd "zephyr"
+        git fetch origin "${BASE_REF}"
+        git fetch origin "${GIT_REF}"
+        git reset --hard "${GIT_REF}"
+        git clean -fdx
+
         git config --global user.email "you@example.com"
         git config --global user.name "Your Name"
         git remote -v
@@ -51,31 +74,35 @@ jobs:
         cache-dependency-path: scripts/requirements-actions.txt
 
     - name: Install Python packages
+      working-directory: zephyr
       run: |
         pip install -r scripts/requirements-actions.txt --require-hashes
 
     - name: west setup
+      working-directory: zephyr
       run: |
+        CACHE_DEP="/data/ambiqzephyrcache/zephyrproject/"
         west init -l . || true
         west config manifest.group-filter -- +ci,-optional
-        west update -o=--depth=1 -n 2>&1 1> west.update.log || west update -o=--depth=1 -n 2>&1 1> west.update2.log
+        west update --path-cache "${CACHE_DEP}" -o=--depth=1 -n 2>&1 1> west.update.log || west update --path-cache "${CACHE_DEP}" -o=--depth=1 -n 2>&1 1> west.update2.log
 
     - name: Run Compliance Tests
+      working-directory: zephyr
       continue-on-error: true
       id: compliance
-      env:
-        BASE_REF: ${{ github.base_ref }}
       run: |
         export ZEPHYR_BASE=$PWD
-        # debug
-        ls -la
-        git log  --pretty=oneline | head -n 10
         # Increase rename limit to allow for large PRs
         git config diff.renameLimit 10000
         excludes="-e KconfigBasic -e SysbuildKconfigBasic -e ClangFormat"
         # The signed-off-by check for dependabot should be skipped
         if [ "${{ github.actor }}" == "dependabot[bot]" ]; then
           excludes="$excludes -e Identity"
+        fi
+        if [ "${{ github.event_name }}" == "pull_request" ]; then
+          BASE_REF="${{ github.event.pull_request.base.ref }}"
+        elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          BASE_REF="${{ github.event.inputs.base }}"
         fi
         ./scripts/ci/check_compliance.py --annotate $excludes -c origin/${BASE_REF}..
 
@@ -84,9 +111,10 @@ jobs:
       continue-on-error: true
       with:
         name: compliance.xml
-        path: compliance.xml
+        path: zephyr/compliance.xml
 
     - name: check-warns
+      working-directory: zephyr
       run: |
         if [[ ! -s "compliance.xml" ]]; then
           exit 1;

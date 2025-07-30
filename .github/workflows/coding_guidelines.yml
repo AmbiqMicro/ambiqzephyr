@@ -1,20 +1,65 @@
 name: Coding Guidelines
 
-on: pull_request
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch name'
+        required: true
+        default: 'apollo510L-dev'
+      base:
+        description: 'Base branch name'
+        required: true
+        default: 'main'
 
 permissions:
   contents: read
 
 jobs:
   compliance_job:
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, zephyr-ci]
     name: Run coding guidelines checks on patch series (PR)
     steps:
     - name: Checkout the code
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      with:
-        ref: ${{ github.event.pull_request.head.sha }}
-        fetch-depth: 0
+      run: |
+        if [ "${{ github.event_name }}" == "pull_request" ]; then
+          GIT_REF="${{ github.event.pull_request.head.sha }}"
+          BASE_REF="${{ github.event.pull_request.base.ref }}"
+        elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          GIT_REF="${{ github.event.inputs.branch }}"
+          BASE_REF="${{ github.event.inputs.base }}"
+        fi
+        sudo rm -rf "$GITHUB_WORKSPACE"/.??* "$GITHUB_WORKSPACE"/*
+        CACHE_DIR="/data/ambiqzephyrcache/zephyrproject/zephyr"
+        if [ -d "${CACHE_DIR}" ]; then
+          echo "Cloning from local cache (${CACHE_DIR}) at ${GIT_REF}…"
+          git clone --reference "${CACHE_DIR}" \
+                    --depth 50 \
+                    https://github.com/${{ github.repository }}.git "zephyr"
+        else
+          echo "Cache not found; doing fresh shallow clone at ${GIT_REF}…"
+          git clone --depth 50 \
+                    https://github.com/${{ github.repository }}.git "zephyr"
+        fi
+        cd "zephyr"
+        git fetch origin "${BASE_REF}"
+        git fetch origin "${GIT_REF}"
+        git reset --hard "${GIT_REF}"
+        git clean -fdx
+
+        git config --global user.email "you@example.com"
+        git config --global user.name "Your Name"
+        git remote -v
+        # Ensure there's no merge commits in the PR
+        [[ "$(git rev-list --merges --count origin/${BASE_REF}..)" == "0" ]] || \
+        (echo "::error ::Merge commits not allowed, rebase instead";false)
+        rm -fr ".git/rebase-apply"
+        rm -fr ".git/rebase-merge"
+        git rebase origin/${BASE_REF}
+        git clean -f -d
+        # debug
+        git log  --pretty=oneline | head -n 10
 
     - name: Set up Python
       uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
@@ -24,32 +69,22 @@ jobs:
         cache-dependency-path: scripts/requirements-actions.txt
 
     - name: Install Python packages
+      working-directory: zephyr
       run: |
         pip install -r scripts/requirements-actions.txt --require-hashes
 
-    - name: Install Packages
-      run: |
-        sudo apt-get update
-        sudo apt-get install coccinelle
-
     - name: Run Coding Guidelines Checks
+      working-directory: zephyr
       continue-on-error: true
       id: coding_guidelines
-      env:
-        BASE_REF: ${{ github.base_ref }}
       run: |
         export ZEPHYR_BASE=$PWD
-        git config --global user.email "actions@zephyrproject.org"
-        git config --global user.name "Github Actions"
-        git remote -v
-        rm -fr ".git/rebase-apply"
-        rm -fr ".git/rebase-merge"
-        git rebase origin/${BASE_REF}
-        git clean -f -d
         source zephyr-env.sh
-        # debug
-        ls -la
-        git log  --pretty=oneline | head -n 10
+        if [ "${{ github.event_name }}" == "pull_request" ]; then
+          BASE_REF="${{ github.event.pull_request.base.ref }}"
+        elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          BASE_REF="${{ github.event.inputs.base }}"
+        fi
         ./scripts/ci/guideline_check.py --output output.txt -c origin/${BASE_REF}..
 
     - name: check-warns

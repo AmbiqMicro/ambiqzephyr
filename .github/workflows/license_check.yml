@@ -7,31 +7,50 @@ permissions:
 
 jobs:
   scancode_job:
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, Linux, zephyr-ci]
     name: Scan code for licenses
+    env:
+      BASE_REF: ${{ github.event.pull_request.base.ref }}
     steps:
-    - name: Checkout the code
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      with:
-        fetch-depth: 0
-    - name: Scan the code
-      id: scancode
-      uses: zephyrproject-rtos/action_scancode@23ef91ce31cd4b954366a7b71eea47520da9b380 # v4
-      with:
-        directory-to-scan: 'scan/'
-    - name: Artifact Upload
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-      with:
-        name: scancode
-        path: ./artifacts
+      - name: Checkout
+        if: github.event_name == 'pull_request'
+        run: |
+          sudo rm -rf "$GITHUB_WORKSPACE"/.??* "$GITHUB_WORKSPACE"/*
+          GIT_REF="${{ github.event.pull_request.head.sha }}"
+          CACHE_DIR="/data/ambiqzephyrcache/zephyrproject/zephyr"
+          if [ -d "${CACHE_DIR}" ]; then
+            echo "Cloning from local cache (${CACHE_DIR}) at ${GIT_REF}…"
+            git clone --reference "${CACHE_DIR}" \
+                      --depth 1 \
+                      https://github.com/${{ github.repository }}.git .
+          else
+            echo "Cache not found; doing fresh shallow clone at ${GIT_REF}…"
+            git clone --depth 1 \
+                      https://github.com/${{ github.repository }}.git .
+          fi
+          git fetch origin "${BASE_REF}"
+          git fetch origin "${GIT_REF}"
+          git reset --hard "${GIT_REF}"
+          git clean -fdx
 
-    - name: Verify
-      run: |
-        if [ -s ./artifacts/report.txt ]; then
-          report=$(cat ./artifacts/report.txt)
-          report="${report//'%'/'%25'}"
-          report="${report//$'\n'/'%0A'}"
-          report="${report//$'\r'/'%0D'}"
-          echo "::error file=./artifacts/report.txt::$report"
-          exit 1
-        fi
+      - name: Scan the code
+        id: scancode
+        uses: zephyrproject-rtos/action_scancode@23ef91ce31cd4b954366a7b71eea47520da9b380 # v4
+        with:
+          directory-to-scan: 'scan/'
+      - name: Artifact Upload
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: scancode
+          path: artifacts
+
+      - name: Verify
+        run: |
+          if [ -s ./artifacts/report.txt ]; then
+            report=$(cat ./artifacts/report.txt)
+            report="${report//'%'/'%25'}"
+            report="${report//$'\n'/'%0A'}"
+            report="${report//$'\r'/'%0D'}"
+            echo "::error file=./artifacts/report.txt::$report"
+            exit 1
+          fi

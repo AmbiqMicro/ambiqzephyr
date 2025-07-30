@@ -4976,7 +4976,7 @@ West:
   labels:
     - "area: ACPI"
 
-"West project: ambiqhal_ambiq":
+"West project: ambiqhal_ambiq_alpha":
   status: odd fixes
   collaborators:
     - aaronyegx
