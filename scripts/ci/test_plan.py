@@ -102,7 +102,7 @@ class Tag:
 
 class Filters:
     def __init__(self, modified_files, ignore_path, alt_tags, testsuite_root,
-                 pull_request=False, vendors=[], platforms=[], detailed_test_id=False, quarantine_list=None, tc_roots_th=20):
+                 pull_request=False, vendors=[], platforms=[], detailed_test_id=True, quarantine_list=None, tc_roots_th=20):
         self.modified_files = modified_files
         self.testsuite_root = testsuite_root
         self.resolved_files = []
