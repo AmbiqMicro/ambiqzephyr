@@ -44,9 +44,12 @@ LOG_MODULE_REGISTER(dmic_i2s_sample, LOG_LEVEL_INF);
 #define BLOCK_SIZE  (BYTES_PER_SAMPLE * SAMPLES_PER_BLOCK)
 #define BLOCK_COUNT 4
 
-K_MEM_SLAB_DEFINE_STATIC(mem_slab, BLOCK_SIZE, BLOCK_COUNT, 4);
+#define TEST_TXRX_COUNT 100
+
+K_MEM_SLAB_DEFINE_STATIC(tx_mem_slab, BLOCK_SIZE, BLOCK_COUNT, 4);
 
 #if CONFIG_I2S_LOOPBACK
+K_MEM_SLAB_DEFINE_STATIC(rx_mem_slab, BLOCK_SIZE, BLOCK_COUNT, 4);
 uint8_t rx_temp_buf[BLOCK_SIZE * 100];
 
 static bool check_i2s_data(uint32_t rxtx_sample_num, void *rx_databuf)
@@ -69,7 +72,7 @@ static bool check_i2s_data(uint32_t rxtx_sample_num, void *rx_databuf)
 
 	for (i = 0; i < (rxtx_sample_num - index_0); i++) {
 		if (rx_databuf_16[i + index_0] != (0xCD00 | ((i % SAMPLES_PER_BLOCK) & 0xFF))) {
-			printk("idx %d 0x%x buf[%d] = 0x%x 0x%x", index_0,
+			printk("idx %d 0x%x buf[%d] = 0x%x 0x%x\n", index_0,
 			       rx_databuf_16[i + index_0 - 1], i, rx_databuf_16[i + index_0],
 			       rx_databuf_16[i + index_0 + 1]);
 			return false;
@@ -87,7 +90,7 @@ static bool check_i2s_data(uint32_t rxtx_sample_num, void *rx_databuf)
 
 	for (i = 0; i < (rxtx_sample_num - index_0); i++) {
 		if (rx_databuf_32[i + index_0] != (0xCD0000 | ((i % SAMPLES_PER_BLOCK) & 0xFF))) {
-			printk("idx %d 0x%x buf[%d] = 0x%x 0x%x", index_0,
+			printk("idx %d 0x%x buf[%d] = 0x%x 0x%x\n", index_0,
 			       rx_databuf_32[i + index_0 - 1], i, rx_databuf_32[i + index_0],
 			       rx_databuf_32[i + index_0 + 1]);
 			return false;
@@ -145,7 +148,7 @@ int main(void)
 #if CONFIG_I2S_DMIC_INPUT
 	struct pcm_stream_cfg stream = {
 		.pcm_width = SAMPLE_BIT_WIDTH,
-		.mem_slab = &mem_slab,
+		.mem_slab = &tx_mem_slab,
 	};
 	struct dmic_cfg dmic_config_param = {
 		.io = {
@@ -191,7 +194,7 @@ int main(void)
 	i2s_config_param.format = I2S_FMT_DATA_FORMAT_I2S;
 	i2s_config_param.options = I2S_OPT_BIT_CLK_MASTER | I2S_OPT_FRAME_CLK_MASTER;
 	i2s_config_param.frame_clk_freq = CONFIG_SAMPLE_FREQ;
-	i2s_config_param.mem_slab = &mem_slab;
+	i2s_config_param.mem_slab = &tx_mem_slab;
 	i2s_config_param.block_size = BLOCK_SIZE;
 	i2s_config_param.timeout = TIMEOUT;
 
@@ -209,7 +212,7 @@ int main(void)
 
 #if CONFIG_I2S_LOOPBACK
 	i2s_config_param.options = I2S_OPT_BIT_CLK_SLAVE | I2S_OPT_FRAME_CLK_SLAVE;
-	i2s_config_param.mem_slab = &mem_slab;
+	i2s_config_param.mem_slab = &rx_mem_slab;
 
 	ret = i2s_configure(i2s_rx_dev, I2S_DIR_RX, &i2s_config_param);
 	if (ret < 0) {
@@ -252,7 +255,7 @@ int main(void)
 #else
 		void *mem_block;
 
-		ret = k_mem_slab_alloc(&mem_slab, &mem_block, Z_TIMEOUT_TICKS(TIMEOUT));
+		ret = k_mem_slab_alloc(&tx_mem_slab, &mem_block, Z_TIMEOUT_TICKS(TIMEOUT));
 		if (ret < 0) {
 			LOG_ERR("Failed to allocate TX block");
 			return 0;
@@ -317,28 +320,34 @@ int main(void)
 		void *rx_buffer;
 		uint32_t rx_size = 0;
 
+		if (tx_count == TEST_TXRX_COUNT - 1) {
+			if (i2s_trigger(i2s_dev, I2S_DIR_TX, I2S_TRIGGER_DRAIN) < 0) {
+				LOG_ERR("Send I2S trigger DRAIN failed: %d", ret);
+			}
+		}
+
 		ret = i2s_read(i2s_rx_dev, &rx_buffer, &rx_size);
 
 		if (ret < 0) {
-			LOG_ERR("Failed to read data: %d", ret);
+			LOG_ERR("Failed to read data %d: %d", tx_count, ret);
 			break;
 		}
 
 #if SEQ_NUM_DATA_IN
 		memcpy(&rx_temp_buf[rx_buf_index], rx_buffer, rx_size);
 		rx_buf_index += rx_size;
-		if (rx_buf_index >= (BLOCK_SIZE * 100)) {
-			if (check_i2s_data(SAMPLES_PER_BLOCK * 100, (void *)rx_temp_buf)) {
-				LOG_INF("%d bytes passed", BLOCK_SIZE * 100);
+		if (rx_buf_index >= (BLOCK_SIZE * TEST_TXRX_COUNT)) {
+			if (check_i2s_data(SAMPLES_PER_BLOCK * TEST_TXRX_COUNT, (void *)rx_temp_buf)) {
+				LOG_INF("%d bytes passed", BLOCK_SIZE * TEST_TXRX_COUNT);
 			} else {
-				LOG_INF("Failed");
+				LOG_INF("Test %d Failed", tx_count);
 			}
 			rx_buf_index = 0;
 		}
 #endif
-		k_mem_slab_free(&mem_slab, rx_buffer);
+		k_mem_slab_free(&rx_mem_slab, rx_buffer);
 #endif
-		if (tx_count++ > 100) {
+		if (++tx_count >= TEST_TXRX_COUNT) {
 			break;
 		}
 	}
@@ -351,7 +360,9 @@ int main(void)
 	}
 #endif
 
-	if (i2s_trigger(i2s_dev, I2S_DIR_TX, I2S_TRIGGER_STOP) < 0) {
+	//k_sleep(K_MSEC(100));
+
+	if (i2s_trigger(i2s_rx_dev, I2S_DIR_RX, I2S_TRIGGER_STOP) < 0) {
 		LOG_ERR("Send I2S trigger STOP failed: %d", ret);
 		return 0;
 	}
