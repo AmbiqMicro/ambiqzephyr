@@ -19,18 +19,28 @@
 
 #include <am_mcu_apollo.h>
 
+#define DBG_PRINT_ENABLED  	0
+
+#define TX_LOWER_LIMIT		0x20
+#define RX_UPPER_LIMIT		0x20
+
+#define I2S_PAUSE_TX_DMA	0
+
+#define I2S_TWO_STAGES_DMA	1
+
 #define DT_DRV_COMPAT ambiq_i2s
 
-LOG_MODULE_REGISTER(ambiq_i2s, LOG_LEVEL_ERR);
+LOG_MODULE_REGISTER(ambiq_i2s, LOG_LEVEL_INF);
 
 struct i2s_ambiq_data {
 	void *i2s_handler;
-	void *pdm_handler;
 	void *mem_slab_buffer;
-	struct k_mem_slab *mem_slab;
-	void *i2s_dma_buf;
+	struct k_mem_slab *tx_mem_slab;
+	struct k_mem_slab *rx_mem_slab;
 	struct k_sem tx_ready_sem;
 	struct k_sem rx_done_sem;
+	struct k_msgq tx_queue;
+	struct k_msgq rx_queue;
 	int inst_idx;
 	uint32_t block_size;
 	uint32_t sample_num;
@@ -39,14 +49,21 @@ struct i2s_ambiq_data {
 	struct i2s_config i2s_user_config;
 	uint32_t *dma_tcb_tx_buf;
 	uint32_t *dma_tcb_rx_buf;
+	int8_t tx_dma_cnt;
 	bool pm_policy_state_on;
 
+	bool i2s_dma_enabled;
 	enum i2s_state i2s_state;
 };
 
 struct i2s_ambiq_cfg {
 	void (*irq_config_func)(void);
 	const struct pinctrl_dev_config *pcfg;
+};
+
+struct i2s_queue {
+	void *mem_block;
+	size_t size;
 };
 
 static void i2s_ambiq_pm_policy_state_lock_get(const struct device *dev)
@@ -98,44 +115,162 @@ static am_hal_i2s_io_signal_t i2s_io_config = {
 	.eRxCpol = AM_HAL_I2S_IO_RX_CPOL_RISING,
 };
 
+static int i2s_ambiq_tx_transfer(const struct device *dev)
+{
+	struct i2s_ambiq_data *data = dev->data;
+	int ret;
+	struct i2s_queue queue_data;
+
+	while(k_msgq_num_used_get(&(data->tx_queue)) > 0) {
+		ret = k_sem_take(&(data->tx_ready_sem), K_NO_WAIT);
+		if(ret != 0) {
+			LOG_ERR("Failed to take TX ready semaphore: %d %d", ret, k_sem_count_get(&(data->tx_ready_sem)));
+			return ret;
+		}
+		ret = k_msgq_get(&(data->tx_queue), &queue_data, K_NO_WAIT);
+		if(ret != 0) {
+			LOG_ERR("Failed to get message from tx queue: %d", ret);
+			break;
+		}
+
+		uint32_t i2s_data_buf_ptr =
+			am_hal_i2s_dma_get_buffer(data->i2s_handler, AM_HAL_I2S_XFER_TX);
+#if DBG_PRINT_ENABLED
+		printk("[T] 0x%x wd %d sp %d sz %d %d\n", i2s_data_buf_ptr, data->i2s_user_config.word_size, data->sample_num, queue_data.size, I2Sn(data->inst_idx)->TXFIFOSTATUS_b.TXFIFOCNT);
+#endif
+		memcpy((void *)i2s_data_buf_ptr, queue_data.mem_block, data->block_size);
+
+		data->tx_dma_cnt++;
+
+		#if CONFIG_I2S_AMBIQ_HANDLE_CACHE
+		if (!buf_in_nocache((uintptr_t)i2s_data_buf_ptr, data->block_size)) {
+			/* Clean I2S DMA buffer of block_size after filling data. */
+			sys_cache_data_flush_range((uint32_t *)i2s_data_buf_ptr, data->block_size);
+		}
+		#endif /* CONFIG_I2S_AMBIQ_HANDLE_CACHE */
+#if I2S_PAUSE_TX_DMA
+		if((data->i2s_dma_enabled == false) && (data->i2s_state == I2S_STATE_RUNNING)) {
+#if DBG_PRINT_ENABLED
+			printk("[/]\n");
+#endif
+			data->i2s_dma_enabled = true;
+			#if I2S_TWO_STAGES_DMA
+			//am_hal_i2s_enable(data->i2s_handler);
+			//I2Sn(data->inst_idx)->I2SCTL_b.TXRST  = 0x1;
+			//I2Sn(data->inst_idx)->I2SCTL = _VAL2FLD(I2S0_I2SCTL_TXRST, 1);
+			#endif
+			am_hal_i2s_dma_transfer_start(data->i2s_handler, &(data->i2s_hal_cfg));
+		}
+#endif
+		k_mem_slab_free(data->tx_mem_slab, queue_data.mem_block);
+	}
+}
+
 static void i2s_ambiq_isr(const struct device *dev)
 {
 	uint32_t ui32Status;
 	struct i2s_ambiq_data *data = dev->data;
+	int ret;
+	struct i2s_queue queue_data;
+	void *slab_buffer;
 
 	am_hal_i2s_interrupt_status_get(data->i2s_handler, &ui32Status, true);
 	am_hal_i2s_interrupt_clear(data->i2s_handler, ui32Status);
-	am_hal_i2s_interrupt_service(data->i2s_handler, ui32Status, &(data->i2s_hal_cfg));
 
 	if (ui32Status & AM_HAL_I2S_INT_TXDMACPL) {
 		k_sem_give(&data->tx_ready_sem);
+#if DBG_PRINT_ENABLED
+		printk("[TD] %d %d %d\n", k_sem_count_get(&(data->tx_ready_sem)), data->tx_dma_cnt, k_msgq_num_used_get(&(data->tx_queue)));
+#endif
+		data->tx_dma_cnt--;
+		i2s_ambiq_tx_transfer(dev);
+
+		#if I2S_PAUSE_TX_DMA
+		if(data->tx_dma_cnt <= 0) {
+			data->i2s_dma_enabled = false;
+			am_hal_i2s_dma_transfer_complete(data->i2s_handler);
+#if DBG_PRINT_ENABLED
+			printk("[T %d]\n", I2Sn(data->inst_idx)->TXFIFOSTATUS_b.TXFIFOCNT);
+#endif
+			while(I2Sn(data->inst_idx)->TXFIFOSTATUS_b.TXFIFOCNT);
+			#if I2S_TWO_STAGES_DMA
+			//I2Sn(data->inst_idx)->I2SCTL_b.TXEN  = 0x0;
+			//I2Sn(data->inst_idx)->I2SCTL = _VAL2FLD(I2S0_I2SCTL_TXEN, 0);
+			//am_hal_i2s_disable(data->i2s_handler);
+			#endif
+			I2Sn(data->inst_idx)->TXDMAADDR = (uint32_t)data->dma_tcb_tx_buf;
+			I2Sn(data->inst_idx)->TXDMATOTCNT = data->i2s_transfer.ui32TxTotalCount;
+			return;
+		}
+		#endif
 	}
 
+	am_hal_i2s_interrupt_service(data->i2s_handler, ui32Status, &(data->i2s_hal_cfg));
+
 	if (ui32Status & AM_HAL_I2S_INT_RXDMACPL) {
+		ret = k_mem_slab_alloc(data->rx_mem_slab, &slab_buffer, K_NO_WAIT);
+		if (ret != 0) {
+			return;
+		}
+
+		uint32_t *i2s_data_buf = (uint32_t *)am_hal_i2s_dma_get_buffer(data->i2s_handler,
+									       AM_HAL_I2S_XFER_RX);
+#if DBG_PRINT_ENABLED
+		int16_t *i2s_data_buf_16bit = (int16_t *)i2s_data_buf;
+		printk("[R] 0x%x %d\n", (uint32_t)i2s_data_buf, i2s_data_buf_16bit[0]);
+#endif
+#if CONFIG_I2S_AMBIQ_HANDLE_CACHE
+		if (!buf_in_nocache((uintptr_t)i2s_data_buf, data->block_size)) {
+			/* I2S DMA is 32-bit datawidth for each sample, so we need to invalidate 2x
+			 * block_size when we are getting 16 bits sample.
+			 */
+			sys_cache_data_invd_range(i2s_data_buf, data->block_size);
+		}
+#endif /* CONFIG_I2S_AMBIQ_HANDLE_CACHE */
+
+		memcpy(slab_buffer, (void *)i2s_data_buf, data->block_size);
+
+		queue_data.mem_block = slab_buffer;
+		queue_data.size = data->block_size;
+
+		ret = k_msgq_put(&data->rx_queue, &queue_data, K_NO_WAIT);
+		if(ret != 0) {
+			LOG_ERR("Fail to put message to RX queue: %d", data->rx_mem_slab->info.num_used);
+			k_mem_slab_free(data->rx_mem_slab, data->mem_slab_buffer);
+			return;
+		}
 		k_sem_give(&data->rx_done_sem);
+		#if !I2S_TWO_STAGES_DMA
+		I2Sn(data->inst_idx)->DMACFG_b.RXDMAEN     = 0;
+		I2Sn(data->inst_idx)->RXDMASTAT_b.RXDMACPL = 0;
+		I2Sn(data->inst_idx)->RXDMAADDR            = (uint32_t)data->dma_tcb_rx_buf;
+		I2Sn(data->inst_idx)->RXDMATOTCNT          = data->i2s_transfer.ui32RxTotalCount;
+		I2Sn(data->inst_idx)->DMACFG_b.RXDMAEN     = 1;
+		#endif
 	}
 }
 
-static int i2s_ambiq_init(const struct device *dev)
+static int i2s_ambiq_clear_buf(const struct device *dev, enum i2s_dir dir)
 {
 	struct i2s_ambiq_data *data = dev->data;
-	const struct i2s_ambiq_cfg *config = dev->config;
+	struct i2s_queue queue_data;
 
-	int ret = 0;
-
-	if (ret < 0) {
-		LOG_ERR("Fail to power on I2S\n");
+	if (dir == I2S_DIR_TX) {
+		while (k_msgq_get(&data->tx_queue,
+				  &queue_data,
+				  K_NO_WAIT) == 0) {
+			k_mem_slab_free(data->tx_mem_slab, queue_data.mem_block);
+		}
+	} else if (dir == I2S_DIR_RX) {
+		while (k_msgq_get(&data->rx_queue,
+				  &queue_data,
+				  K_NO_WAIT) == 0) {
+			k_mem_slab_free(data->rx_mem_slab, queue_data.mem_block);
+		}
+	} else {
+		LOG_ERR("Unsupported direction %d", dir);
+		return -EINVAL;
 	}
-
-	ret = pinctrl_apply_state(config->pcfg, PINCTRL_STATE_DEFAULT);
-	if (ret < 0) {
-		LOG_ERR("Fail to config I2S pins\n");
-	}
-
-	am_hal_i2s_initialize(data->inst_idx, &data->i2s_handler);
-	am_hal_i2s_power_control(data->i2s_handler, AM_HAL_I2S_POWER_ON, false);
-
-	data->i2s_state = I2S_STATE_NOT_READY;
 
 	return 0;
 }
@@ -155,10 +290,18 @@ static int i2s_ambiq_configure(const struct device *dev, enum i2s_dir dir,
 
 	if (i2s_config_in->frame_clk_freq == 0U) {
 		LOG_ERR("Invalid frame_clk_freq %u", i2s_config_in->frame_clk_freq);
+		am_hal_i2s_dma_transfer_complete(data->i2s_handler);
+		am_hal_i2s_disable(data->i2s_handler);
+		i2s_ambiq_clear_buf(dev, dir);
 		data->i2s_state = I2S_STATE_NOT_READY;
 		return 0;
 	}
 
+#if DBG_PRINT_ENABLED
+	LOG_ERR("dev 0x%x, inst_idx %d", dev, data->inst_idx);
+#endif
+
+	i2s_ambiq_clear_buf(dev, dir);
 	data->i2s_hal_cfg.eData = &i2s_data_format;
 
 	if (i2s_config_in->word_size == 16) {
@@ -265,8 +408,9 @@ static int i2s_ambiq_configure(const struct device *dev, enum i2s_dir dir,
 		return -EINVAL;
 	}
 
+#if DBG_PRINT_ENABLED
 	LOG_INF("I2S clock frequency %d KHz", i2s_clock_freq / 1000);
-
+#endif
 	switch (i2s_clock_freq) {
 	case 128000:
 		data->i2s_hal_cfg.eClock = eAM_HAL_I2S_CLKSEL_HFRC_375kHz;
@@ -292,6 +436,10 @@ static int i2s_ambiq_configure(const struct device *dev, enum i2s_dir dir,
 		data->i2s_hal_cfg.eClock = eAM_HAL_I2S_CLKSEL_HFRC_1_5MHz;
 		data->i2s_hal_cfg.eDiv3 = 0;
 		break;
+	case 2048000:
+		data->i2s_hal_cfg.eClock = eAM_HAL_I2S_CLKSEL_HFRC_6MHz;
+		data->i2s_hal_cfg.eDiv3 = 1;
+		break;
 	case 3072000:
 		data->i2s_hal_cfg.eClock = eAM_HAL_I2S_CLKSEL_HFRC_3MHz;
 		data->i2s_hal_cfg.eDiv3 = 0;
@@ -303,21 +451,20 @@ static int i2s_ambiq_configure(const struct device *dev, enum i2s_dir dir,
 
 	data->i2s_hal_cfg.eASRC = 0;
 	data->i2s_hal_cfg.eIO = &i2s_io_config;
-
-	LOG_INF("I2S eClock %d, eDiv3 %d\n", data->i2s_hal_cfg.eClock & 0xFF,
+#if DBG_PRINT_ENABLED
+	LOG_INF("I2S eClock %d, eDiv3 %d", data->i2s_hal_cfg.eClock & 0xFF,
 		data->i2s_hal_cfg.eDiv3);
-
+#endif
 	if (i2s_config_in->channels > 2) {
 		LOG_ERR("Unsupported channel number %d", i2s_config_in->channels);
 		return -EINVAL;
 	}
 
 	am_hal_i2s_configure(data->i2s_handler, &(data->i2s_hal_cfg));
-	am_hal_i2s_enable(data->i2s_handler);
+	//am_hal_i2s_enable(data->i2s_handler);
 	config->irq_config_func();
 
 	data->block_size = i2s_config_in->block_size;
-	data->mem_slab = i2s_config_in->mem_slab;
 
 	/*
 	 * Configure DMA and target address.
@@ -325,26 +472,48 @@ static int i2s_ambiq_configure(const struct device *dev, enum i2s_dir dir,
 	if (dir == I2S_DIR_TX) {
 		uint8_t *tx_buf_8 = (uint8_t *)data->dma_tcb_tx_buf;
 
+		data->tx_mem_slab = i2s_config_in->mem_slab;
 		data->i2s_transfer.ui32TxTotalCount =
-			data->sample_num; /* I2S DMA buffer count is the number of 32-bit datawidth.
+			i2s_config_in->block_size / 4; /* I2S DMA buffer count is the number of 32-bit datawidth.
 					   */
 		data->i2s_transfer.ui32TxTargetAddr = (uint32_t)tx_buf_8;
+		#if I2S_TWO_STAGES_DMA
 		data->i2s_transfer.ui32TxTargetAddrReverse = (uint32_t)&tx_buf_8[data->block_size];
-		LOG_INF("TX addr : 0x%x Cnt : %d Rev : 0x%x", data->i2s_transfer.ui32TxTargetAddr,
+		#else
+		data->i2s_transfer.ui32TxTargetAddrReverse = 0xFFFFFFFF;
+		#endif
+		LOG_INF("TX: 0x%x Cnt: %d Resv: 0x%x", data->i2s_transfer.ui32TxTargetAddr,
 			data->i2s_transfer.ui32TxTotalCount,
 			data->i2s_transfer.ui32TxTargetAddrReverse);
+		k_sem_init(&(data->tx_ready_sem), 1, 1);
 	} else {
 		uint8_t *rx_buf_8 = (uint8_t *)data->dma_tcb_rx_buf;
 
+		data->rx_mem_slab = i2s_config_in->mem_slab;
 		data->i2s_transfer.ui32RxTotalCount =
-			data->sample_num; /* I2S DMA buffer count is the number of 32-bit datawidth.
+			i2s_config_in->block_size / 4; /* I2S DMA buffer count is the number of 32-bit datawidth.
 					   */
 		data->i2s_transfer.ui32RxTargetAddr = (uint32_t)rx_buf_8;
+		#if I2S_TWO_STAGES_DMA
 		data->i2s_transfer.ui32RxTargetAddrReverse = (uint32_t)&rx_buf_8[data->block_size];
-		LOG_INF("RX addr : 0x%x Cnt : %d Rev : 0x%x", data->i2s_transfer.ui32RxTargetAddr,
+		#else
+		data->i2s_transfer.ui32RxTargetAddrReverse = 0xFFFFFFFF;
+		#endif
+		LOG_INF("RX: 0x%x Cnt: %d Resv: 0x%x", data->i2s_transfer.ui32RxTargetAddr,
 			data->i2s_transfer.ui32RxTotalCount,
 			data->i2s_transfer.ui32RxTargetAddrReverse);
+		k_sem_init(&(data->rx_done_sem), 0, 4);
 	}
+
+	am_hal_i2s_dma_configure(data->i2s_handler, &(data->i2s_hal_cfg),
+					&(data->i2s_transfer));
+
+	uint32_t buf_limit = TX_LOWER_LIMIT;
+	am_hal_i2s_control(data->i2s_handler, AM_HAL_I2S_REQ_WRITE_TXLOWERLIMIT,
+				 (void *)&buf_limit);
+	buf_limit = RX_UPPER_LIMIT;
+	am_hal_i2s_control(data->i2s_handler, AM_HAL_I2S_REQ_WRITE_RXUPPERLIMIT,
+				 (void *)&buf_limit);
 
 	memcpy(&(data->i2s_user_config), i2s_config_in, sizeof(struct i2s_config));
 
@@ -371,21 +540,72 @@ static int i2s_ambiq_trigger(const struct device *dev, enum i2s_dir dir, enum i2
 
 	ARG_UNUSED(dir);
 
-	LOG_INF("Direction: %d Command: %d", dir, cmd);
+#if DBG_PRINT_ENABLED
+	LOG_INF("Inst: %d Dir: %d Command: %d", data->inst_idx, dir, cmd);
+#endif
+	if (dir == I2S_DIR_BOTH) {
+		LOG_ERR("Unsupported direction %d", dir);
+		return -EINVAL;
+	}
 	switch (cmd) {
+	case I2S_TRIGGER_START:
+		if (data->i2s_state != I2S_STATE_READY) {
+			LOG_ERR("START trigger: invalid state %d", data->i2s_state);
+			ret = -EIO;
+			break;
+		}
+		am_hal_i2s_enable(data->i2s_handler);
+		am_hal_i2s_dma_transfer_start(data->i2s_handler, &(data->i2s_hal_cfg));
+		data->i2s_state = I2S_STATE_RUNNING;
+		data->i2s_dma_enabled = true;
+
+		if(dir == I2S_DIR_TX) {
+			i2s_ambiq_tx_transfer(dev);
+		}
+		break;
+
 	case I2S_TRIGGER_STOP:
-	case I2S_TRIGGER_DROP:
-		if (dir == I2S_DIR_BOTH) {
-			LOG_ERR("Unsupported direction %d for STOP/DRAIN/DROP", dir);
-			return -EINVAL;
+		if (data->i2s_state != I2S_STATE_RUNNING) {
+			LOG_ERR("STOP trigger: invalid state %d", data->i2s_state);
+			ret = -EIO;
+			break;
+		}
+#if DBG_PRINT_ENABLED
+		if(dir == I2S_DIR_TX) {
+			printk("TX cnt = %d %d\n", I2Sn(data->inst_idx)->TXDMATOTCNT, data->i2s_transfer.ui32TxTotalCount);
+		} else if(dir == I2S_DIR_RX) {
+			printk("RX cnt = %d %d\n", I2Sn(data->inst_idx)->RXDMATOTCNT, data->i2s_transfer.ui32RxTotalCount);
+		}
+#endif		
+		data->i2s_state = I2S_STATE_STOPPING;
+
+		if(data->i2s_dma_enabled == true) {
+			am_hal_i2s_dma_transfer_complete(data->i2s_handler);
+			data->i2s_dma_enabled = false;
 		}
 
-		if (data->i2s_state == I2S_STATE_RUNNING) {
-			am_hal_i2s_dma_transfer_complete(data->i2s_handler);
-			am_hal_i2s_disable(data->i2s_handler);
-			data->i2s_state = I2S_STATE_READY;
-			k_sleep(K_MSEC(100));
+		if(dir == I2S_DIR_TX) {
+			while(I2Sn(data->inst_idx)->TXFIFOSTATUS_b.TXFIFOCNT);
+		} else if(dir == I2S_DIR_RX) {
+			//while(I2Sn(data->inst_idx)->RXDMATOTCNT < data->i2s_transfer.ui32RxTotalCount);
 		}
+
+		am_hal_i2s_disable(data->i2s_handler);
+		i2s_ambiq_clear_buf(dev, dir);
+		data->i2s_state = I2S_STATE_READY;
+
+		break;
+
+	case I2S_TRIGGER_DROP:
+		if (data->i2s_state != I2S_STATE_ERROR) {
+			LOG_ERR("DROP trigger: invalid state");
+			ret = -EIO;
+			break;
+		}
+
+		am_hal_i2s_disable(data->i2s_handler);
+		//i2s_ambiq_clear_buf(dev, dir);
+		data->i2s_state = I2S_STATE_READY;
 		break;
 
 	case I2S_TRIGGER_DRAIN:
@@ -394,20 +614,20 @@ static int i2s_ambiq_trigger(const struct device *dev, enum i2s_dir dir, enum i2
 			ret = -EIO;
 			break;
 		}
-		data->i2s_state = I2S_STATE_STOPPING;
-		break;
 
-	case I2S_TRIGGER_START:
-		if (data->i2s_state != I2S_STATE_READY) {
-			LOG_ERR("START trigger: invalid state %d", data->i2s_state);
-			ret = -EIO;
-			break;
+		data->i2s_state = I2S_STATE_STOPPING;
+
+		k_sleep(K_MSEC(data->block_size * 1000 / 4 / data->i2s_user_config.frame_clk_freq));
+
+		if(data->i2s_dma_enabled == true) {
+			am_hal_i2s_dma_transfer_complete(data->i2s_handler);
+			data->i2s_dma_enabled = false;
+			while(I2Sn(data->inst_idx)->TXFIFOSTATUS_b.TXFIFOCNT);
 		}
-		am_hal_i2s_enable(data->i2s_handler);
-		am_hal_i2s_dma_configure(data->i2s_handler, &(data->i2s_hal_cfg),
-					 &(data->i2s_transfer));
-		am_hal_i2s_dma_transfer_start(data->i2s_handler, &(data->i2s_hal_cfg));
-		data->i2s_state = I2S_STATE_RUNNING;
+
+		am_hal_i2s_disable(data->i2s_handler);
+		i2s_ambiq_clear_buf(dev, dir);
+		data->i2s_state = I2S_STATE_READY;
 		break;
 
 	case I2S_TRIGGER_PREPARE:
@@ -418,11 +638,13 @@ static int i2s_ambiq_trigger(const struct device *dev, enum i2s_dir dir, enum i2
 		}
 
 		am_hal_i2s_disable(data->i2s_handler);
+		i2s_ambiq_clear_buf(dev, dir);
 		data->i2s_state = I2S_STATE_READY;
 		break;
 
 	default:
 		LOG_ERR("Invalid command: %d", cmd);
+		i2s_ambiq_clear_buf(dev, dir);
 		ret = -EINVAL;
 		break;
 	}
@@ -434,6 +656,7 @@ static int i2s_ambiq_write(const struct device *dev, void *buffer, size_t size)
 {
 	struct i2s_ambiq_data *data = dev->data;
 	int ret;
+	struct i2s_queue queue_data;
 
 	if ((data->i2s_state != I2S_STATE_RUNNING) && (data->i2s_state != I2S_STATE_READY)) {
 		LOG_ERR("Device is not ready or running");
@@ -445,38 +668,22 @@ static int i2s_ambiq_write(const struct device *dev, void *buffer, size_t size)
 		return -EINVAL;
 	}
 
-	ret = k_sem_take(&(data->tx_ready_sem), K_MSEC(100));
-
 	i2s_ambiq_pm_policy_state_lock_get(dev);
 
-	uint32_t i2s_data_buf_ptr =
-		am_hal_i2s_dma_get_buffer(data->i2s_handler, AM_HAL_I2S_XFER_TX);
+	queue_data.mem_block = buffer;
+	queue_data.size = size;
 
-	if (data->i2s_user_config.word_size == 16) {
-		int16_t *i2s_data_buf_16bit = (int16_t *)i2s_data_buf_ptr;
-		int16_t *data_buf = (int16_t *)buffer;
-
-		for (int i = 0; i < data->sample_num; i++) {
-			i2s_data_buf_16bit[i] = data_buf[i];
-		}
-	} else if ((data->i2s_user_config.word_size == 24) ||
-		   (data->i2s_user_config.word_size == 32)) {
-		int32_t *i2s_data_buf_32bit = (int32_t *)i2s_data_buf_ptr;
-		int32_t *data_buf = (int32_t *)buffer;
-
-		for (int i = 0; i < data->sample_num; i++) {
-			i2s_data_buf_32bit[i] = data_buf[i];
-		}
+	//printk("[WR1] inst %d msgq %d slab %d\n", data->inst_idx, k_msgq_num_used_get(&(data->tx_queue)), data->tx_mem_slab->info.num_used);
+	ret = k_msgq_put(&(data->tx_queue), &queue_data, K_NO_WAIT);
+	if(ret != 0) {
+		return ret;
 	}
 
-#if CONFIG_I2S_AMBIQ_HANDLE_CACHE
-	if (!buf_in_nocache((uintptr_t)i2s_data_buf_ptr, data->block_size)) {
-		/* Clean I2S DMA buffer of block_size after filling data. */
-		sys_cache_data_flush_range((uint32_t *)i2s_data_buf_ptr, data->block_size);
+	if((data->i2s_state == I2S_STATE_RUNNING) || (data->i2s_state == I2S_STATE_READY)) {
+		i2s_ambiq_tx_transfer(dev);
 	}
-#endif /* CONFIG_I2S_AMBIQ_HANDLE_CACHE */
 
-	k_mem_slab_free(data->mem_slab, buffer);
+	//printk("[WR2] inst %d msgq %d slab %d\n", data->inst_idx, k_msgq_num_used_get(&(data->tx_queue)), data->tx_mem_slab->info.num_used);
 	i2s_ambiq_pm_policy_state_lock_put(dev);
 
 	return ret;
@@ -486,40 +693,31 @@ static int i2s_ambiq_read(const struct device *dev, void **buffer, size_t *size)
 {
 	struct i2s_ambiq_data *data = dev->data;
 	int ret;
+	struct i2s_queue queue_data;
 
 	if ((data->i2s_state != I2S_STATE_RUNNING) && (data->i2s_state != I2S_STATE_READY)) {
 		LOG_ERR("Device is not running or ready");
 		return -EIO;
 	}
 
-	ret = k_sem_take(&(data->rx_done_sem), K_MSEC(100));
+	ret = k_sem_take(&(data->rx_done_sem), K_MSEC(1000));
 
+#if DBG_PRINT_ENABLED
+	printk("[%d]\n", I2Sn(data->inst_idx)->RXDMATOTCNT);
+#endif
 	if (ret != 0) {
-		LOG_DBG("No audio data to be read %d", ret);
+		LOG_ERR("No audio data to be read %d %d", ret, I2Sn(data->inst_idx)->RXDMATOTCNT);
 	} else {
 		i2s_ambiq_pm_policy_state_lock_get(dev);
-
-		ret = k_mem_slab_alloc(data->mem_slab, &data->mem_slab_buffer, K_NO_WAIT);
+		ret = k_msgq_get(&(data->rx_queue), &queue_data, K_NO_WAIT);
 		if (ret != 0) {
-			LOG_ERR("Fail to allocate memory slab");
-			return -ENOMEM;
+			LOG_ERR("Failed to get message from RX queue: %d", ret);
+			i2s_ambiq_pm_policy_state_lock_put(dev);
+			return ret;
 		}
 
-		uint32_t *i2s_data_buf = (uint32_t *)am_hal_i2s_dma_get_buffer(data->i2s_handler,
-									       AM_HAL_I2S_XFER_RX);
-
-#if CONFIG_I2S_AMBIQ_HANDLE_CACHE
-		if (!buf_in_nocache((uintptr_t)i2s_data_buf, data->block_size)) {
-			/* I2S DMA is 32-bit datawidth for each sample, so we need to invalidate 2x
-			 * block_size when we are getting 16 bits sample.
-			 */
-			sys_cache_data_invd_range(i2s_data_buf, data->block_size);
-		}
-#endif /* CONFIG_I2S_AMBIQ_HANDLE_CACHE */
-
-		memcpy(data->mem_slab_buffer, (void *)i2s_data_buf, data->block_size);
-		*size = data->block_size;
-		*buffer = data->mem_slab_buffer;
+		*size = queue_data.size;
+		*buffer = queue_data.mem_block;
 	}
 
 	i2s_ambiq_pm_policy_state_lock_put(dev);
@@ -566,6 +764,8 @@ static DEVICE_API(i2s, i2s_ambiq_driver_api) = {
 
 #define AMBIQ_I2S_DEFINE(n)                                                                        \
 	PINCTRL_DT_INST_DEFINE(n);                                                                 \
+	static struct i2s_queue tx_msgs##idx[CONFIG_I2S_AMBIQ_TX_BLOCK_COUNT];                            \
+	static struct i2s_queue rx_msgs##idx[CONFIG_I2S_AMBIQ_RX_BLOCK_COUNT];                            \
 	static void i2s_irq_config_func_##n(void)                                                  \
 	{                                                                                          \
 		IRQ_CONNECT(DT_INST_IRQN(n), DT_INST_IRQ(n, priority), i2s_ambiq_isr,              \
@@ -577,20 +777,35 @@ static DEVICE_API(i2s, i2s_ambiq_driver_api) = {
 		__aligned(CONFIG_I2S_AMBIQ_BUFFER_ALIGNMENT);                                      \
 	static struct i2s_ambiq_data i2s_ambiq_data##n = {                                         \
 		.tx_ready_sem = Z_SEM_INITIALIZER(i2s_ambiq_data##n.tx_ready_sem, 1, 1),           \
-		.rx_done_sem = Z_SEM_INITIALIZER(i2s_ambiq_data##n.rx_done_sem, 0, 1),             \
+		.rx_done_sem = Z_SEM_INITIALIZER(i2s_ambiq_data##n.rx_done_sem, 0, 4),             \
 		.inst_idx = n,                                                                     \
 		.block_size = 0,                                                                   \
 		.sample_num = 0,                                                                   \
 		.i2s_state = I2S_STATE_NOT_READY,                                                  \
 		.dma_tcb_tx_buf = i2s_dma_tcb_buf##n,                                              \
 		.dma_tcb_rx_buf = i2s_dma_tcb_buf##n + DT_INST_PROP_OR(n, i2s_buffer_size, 1536),  \
+		.i2s_dma_enabled = false,						           \
+		.tx_dma_cnt = 0,                                                                   \
 	};                                                                                         \
 	static const struct i2s_ambiq_cfg i2s_ambiq_cfg##n = {                                     \
 		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                         \
 		.irq_config_func = i2s_irq_config_func_##n,                                        \
 	};                                                                                         \
+	static int i2s_ambiq_init_##n(const struct device *dev)                                    \
+	{                                                                                          \
+		int ret = pinctrl_apply_state(i2s_ambiq_cfg##n.pcfg, PINCTRL_STATE_DEFAULT);     \
+		if (ret < 0) {                                                                     \
+			return ret;                                                                \
+		}                                                                                  \
+		am_hal_i2s_initialize(i2s_ambiq_data##n.inst_idx, &i2s_ambiq_data##n.i2s_handler);	\
+		am_hal_i2s_power_control(i2s_ambiq_data##n.i2s_handler, AM_HAL_I2S_POWER_ON, false);	\
+		k_msgq_init(&i2s_ambiq_data##n.tx_queue, (char *)tx_msgs##idx, sizeof(struct i2s_queue), ARRAY_SIZE(tx_msgs##idx)); \
+		k_msgq_init(&i2s_ambiq_data##n.rx_queue, (char *)rx_msgs##idx, sizeof(struct i2s_queue), ARRAY_SIZE(rx_msgs##idx)); \
+		i2s_ambiq_data##n.i2s_state = I2S_STATE_NOT_READY;                                \
+		return 0;                                                                          \
+	}                                                                                          \
 	PM_DEVICE_DT_INST_DEFINE(n, i2s_ambiq_pm_action);                                          \
-	DEVICE_DT_INST_DEFINE(n, i2s_ambiq_init, NULL, &i2s_ambiq_data##n, &i2s_ambiq_cfg##n,      \
+	DEVICE_DT_INST_DEFINE(n, i2s_ambiq_init_##n, NULL, &i2s_ambiq_data##n, &i2s_ambiq_cfg##n,      \
 			      POST_KERNEL, CONFIG_I2S_INIT_PRIORITY, &i2s_ambiq_driver_api);
 
 DT_INST_FOREACH_STATUS_OKAY(AMBIQ_I2S_DEFINE)
