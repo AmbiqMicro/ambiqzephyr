@@ -36,4 +36,94 @@
 			drive-strength = "0.1";
 		};
 	};
+
+	i2c0_default: i2c0_default {
+		group1 {
+			pinmux = <M0SCL_P5>, <M0SDAWIR3_P6>;
+			drive-open-drain;
+			drive-strength = "0.5";
+			bias-pull-up;
+		};
+	};
+
+	i2c0_sleep: i2c0_sleep {
+		group1 {
+			pinmux = <GPIO_P5>, <GPIO_P6>;
+		};
+	};
+
+	i2c1_default: i2c1_default {
+		group1 {
+			pinmux = <M1SCL_P8>, <M1SDAWIR3_P9>;
+			drive-open-drain;
+			drive-strength = "0.5";
+			bias-pull-up;
+		};
+	};
+
+	i2c1_sleep: i2c1_sleep {
+		group1 {
+			pinmux = <GPIO_P8>, <GPIO_P9>;
+		};
+	};
+
+	i2c2_default: i2c2_default {
+		group1 {
+			pinmux = <M2SCL_P25>, <M2SDAWIR3_P26>;
+			drive-open-drain;
+			drive-strength = "0.5";
+			bias-pull-up;
+		};
+	};
+
+	i2c2_sleep: i2c2_sleep {
+		group1 {
+			pinmux = <GPIO_P25>, <GPIO_P26>;
+		};
+	};
+
+	i2c3_default: i2c3_default {
+		group1 {
+			pinmux = <M3SCL_P29>, <M3SDAWIR3_P30>;
+			drive-open-drain;
+			drive-strength = "0.5";
+			bias-pull-up;
+		};
+	};
+
+	i2c3_sleep: i2c3_sleep {
+		group1 {
+			pinmux = <GPIO_P29>, <GPIO_P30>;
+		};
+	};
+
+	i2c4_default: i2c4_default {
+		group1 {
+			pinmux = <M4SCL_P32>, <M4SDAWIR3_P33>;
+			drive-open-drain;
+			drive-strength = "0.5";
+			bias-pull-up;
+		};
+	};
+
+	i2c4_sleep: i2c4_sleep {
+		group1 {
+			pinmux = <GPIO_P32>, <GPIO_P33>;
+		};
+	};
+
+	i2c5_default: i2c5_default {
+		group1 {
+			pinmux = <M5SCL_P22>, <M5SDAWIR3_P23>;
+			drive-open-drain;
+			drive-strength = "0.5";
+			bias-pull-up;
+		};
+	};
+
+	i2c5_sleep: i2c5_sleep {
+		group1 {
+			pinmux = <GPIO_P22>, <GPIO_P23>;
+		};
+	};
 };
