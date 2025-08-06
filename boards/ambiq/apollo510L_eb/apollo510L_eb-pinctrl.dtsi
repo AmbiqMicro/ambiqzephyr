@@ -126,4 +126,76 @@
 			pinmux = <GPIO_P22>, <GPIO_P23>;
 		};
 	};
+
+	spi0_default: spi0_default {
+		group1 {
+			pinmux = <M0SCK_P5>, <M0MISO_P7>, <M0MOSI_P6>;
+		};
+	};
+
+	spi0_sleep: spi0_sleep {
+		group1 {
+			pinmux = <GPIO_P5>, <GPIO_P7>, <GPIO_P6>;
+		};
+	};
+
+	spi1_default: spi1_default {
+		group1 {
+			pinmux = <M1SCK_P8>, <M1MISO_P10>, <M1MOSI_P9>;
+		};
+	};
+
+	spi1_sleep: spi1_sleep {
+		group1 {
+			pinmux = <GPIO_P8>, <GPIO_P10>, <GPIO_P9>;
+		};
+	};
+
+	spi2_default: spi2_default {
+		group1 {
+			pinmux = <M2SCK_P25>, <M2MISO_P27>, <M2MOSI_P26>;
+		};
+	};
+
+	spi2_sleep: spi2_sleep {
+		group1 {
+			pinmux = <GPIO_P25>, <GPIO_P27>, <GPIO_P26>;
+		};
+	};
+
+	spi3_default: spi3_default {
+		group1 {
+			pinmux = <M3SCK_P29>, <M3MISO_P31>, <M3MOSI_P30>;
+		};
+	};
+
+	spi3_sleep: spi3_sleep {
+		group1 {
+			pinmux = <GPIO_P29>, <GPIO_P31>, <GPIO_P30>;
+		};
+	};
+
+	spi4_default: spi4_default {
+		group1 {
+			pinmux = <M4SCK_P32>, <M4MISO_P34>, <M4MOSI_P33>;
+		};
+	};
+
+	spi4_sleep: spi4_sleep {
+		group1 {
+			pinmux = <GPIO_P32>, <GPIO_P34>, <GPIO_P33>;
+		};
+	};
+
+	spi5_default: spi5_default {
+		group1 {
+			pinmux = <M5SCK_P22>, <M5MISO_P24>, <M5MOSI_P23>;
+		};
+	};
+
+	spi5_sleep: spi5_sleep {
+		group1 {
+			pinmux = <GPIO_P22>, <GPIO_P24>, <GPIO_P23>;
+		};
+	};
 };
