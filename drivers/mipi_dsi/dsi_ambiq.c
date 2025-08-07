@@ -234,7 +234,11 @@ static int mipi_dsi_ambiq_init(const struct device *dev)
 	am_hal_dsi_register_external_vdd18_callback(mipi_dsi_external_vdd18_switch);
 #endif
 
-	am_hal_dsi_init();
+	ret = am_hal_dsi_init();
+	if (ret != 0) {
+		LOG_ERR("DSI init failed!\n");
+		return ret;
+	}
 
 	am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_DISP);
 
