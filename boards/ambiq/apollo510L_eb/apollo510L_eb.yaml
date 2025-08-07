@@ -25,6 +25,7 @@ supported:
   - mbox
   - bluetooth
   - sdhc
+  - mipi_dsi
 testing:
   ignore_tags:
     - net
