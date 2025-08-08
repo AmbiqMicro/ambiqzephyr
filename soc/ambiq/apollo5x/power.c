@@ -37,6 +37,14 @@ void pm_state_set(enum pm_state state, uint8_t substate_id)
 		am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_DEEP);
 		break;
 	}
+#if defined(CONFIG_SOC_APOLLO510L)
+	case PM_STATE_SUSPEND_TO_DISK: {
+		/* Ambiq deeper sleep. */
+		/* Only NVM memory is retained */
+		am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_DEEPER);
+		break;
+	}
+#endif
 	default: {
 		LOG_DBG("Unsupported power state %u", state);
 		break;

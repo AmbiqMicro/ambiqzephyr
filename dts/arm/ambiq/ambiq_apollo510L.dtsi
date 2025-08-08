@@ -54,7 +54,7 @@
 			reg = <0>;
 			#address-cells = <1>;
 			#size-cells = <1>;
-			cpu-power-states = <&idle &suspend_to_ram>;
+			cpu-power-states = <&idle &suspend_to_ram &suspend_to_disk>;
 
 			itm: itm@e0000000 {
 				compatible = "arm,armv8m-itm";
@@ -80,6 +80,13 @@
 				compatible = "zephyr,power-state";
 				power-state-name = "suspend-to-ram";
 				min-residency-us = <5000>;
+				exit-latency-us = <125>;
+			};
+
+			suspend_to_disk: suspend_to_disk {
+				compatible = "zephyr,power-state";
+				power-state-name = "suspend-to-disk";
+				min-residency-us = <8000>;
 				exit-latency-us = <125>;
 			};
 		};
