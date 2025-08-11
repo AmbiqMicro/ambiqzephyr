@@ -41,7 +41,7 @@ void soc_early_init_hook(void)
 	}
 
 	/* Internal timer15 for SPOT manager */
-	IRQ_CONNECT(82, 0, hal_internal_timer_isr, 0, 0);
+	IRQ_CONNECT(TIMER0_IRQn + AM_HAL_INTERNAL_TIMER_NUM_A, 0, hal_internal_timer_isr, 0, 0);
 
 	/* Initialize for low power in the power control block */
 	am_hal_pwrctrl_low_power_init();
@@ -90,6 +90,15 @@ void soc_early_init_hook(void)
 	am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_CRYPTO);
 	am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_OTP);
 
+#if defined(CONFIG_SOC_APOLLO510L)
+	/* Using LFRC instead of XT for RTC Clock Source */
+	CLKGEN->OCTRL_b.SECURERTCOSEL = 1;
+	CLKGEN->OCTRL_b.RTCOSEL = 1;
+
+	/* Clk Gating for CM4 Processor */
+	CLKGEN->MISC_b.CM4DAXICLKGATEEN = 1;
+#endif
+
 	am_hal_pwrctrl_sram_memcfg_t SRAMMemCfg = {
 		.eSRAMCfg = AM_HAL_PWRCTRL_SRAM_NONE,
 		.eActiveWithMCU = AM_HAL_PWRCTRL_SRAM_NONE,
@@ -99,9 +108,17 @@ void soc_early_init_hook(void)
 
 	am_hal_pwrctrl_mcu_memory_config_t McuMemCfg = {
 		.eROMMode = AM_HAL_PWRCTRL_ROM_AUTO,
-		.eDTCMCfg = AM_HAL_PWRCTRL_ITCM32K_DTCM128K,
+#if defined(CONFIG_SOC_APOLLO510L)
+		.eDTCMCfg       = AM_HAL_PWRCTRL_DTCM128K,
+#else
+		.eDTCMCfg       = AM_HAL_PWRCTRL_ITCM32K_DTCM128K,
+#endif
 		.eRetainDTCM = AM_HAL_PWRCTRL_MEMRETCFG_TCMPWDSLP_RETAIN,
-		.eNVMCfg = AM_HAL_PWRCTRL_NVM0_ONLY,
+#if defined(CONFIG_SOC_APOLLO510L)
+		.eNVMCfg        = AM_HAL_PWRCTRL_NVM,
+#else
+		.eNVMCfg        = AM_HAL_PWRCTRL_NVM0_ONLY,
+#endif
 		.bKeepNVMOnInDeepSleep = false};
 
 	am_hal_pwrctrl_mcu_memory_config(&McuMemCfg);
