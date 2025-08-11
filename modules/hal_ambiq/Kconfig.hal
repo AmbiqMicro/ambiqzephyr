@@ -41,6 +41,11 @@ config AMBIQ_HAL_USE_STIMER
 	help
 	  Use the STIMER driver from Ambiq HAL
 
+config AMBIQ_HAL_USE_CTIMER
+	bool
+	help
+	  Use the CTIMER driver from Ambiq HAL
+
 config AMBIQ_HAL_USE_TIMER
 	bool
 	help

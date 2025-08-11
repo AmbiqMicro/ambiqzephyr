@@ -120,8 +120,12 @@
 	};
 };
 
-&stimer0 {
-	clk-source = <3>;
+// &stimer0 {
+// 	clk-source = <3>;
+// };
+
+&ctimer0 {
+	clk-source = <6>;
 };
 
 &bleif {
