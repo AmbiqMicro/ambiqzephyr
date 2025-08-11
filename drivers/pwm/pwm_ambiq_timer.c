@@ -10,9 +10,9 @@
 #include <zephyr/drivers/pwm.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/clock_control.h>
-#include <am_mcu_apollo.h>
-
 #include <zephyr/logging/log.h>
+/* ambiq-sdk includes */
+#include <soc.h>
 
 LOG_MODULE_REGISTER(ambiq_timer_pwm, CONFIG_PWM_LOG_LEVEL);
 
@@ -36,52 +36,33 @@ static uint32_t get_clock_cycles(uint32_t clock_sel)
 
 	switch (clock_sel) {
 	case 0:
-		ret = 24000000;
-		break;
 	case 1:
-		ret = 6000000;
-		break;
 	case 2:
-		ret = 1500000;
-		break;
 	case 3:
-		ret = 375000;
-		break;
 	case 4:
-		ret = 93750;
-		break;
 	case 5:
-		ret = 1000;
+		ret = 96000000 / (4 << (clock_sel * 2));
 		break;
 	case 6:
+		ret = 1000;
+		break;
+#if defined(CONFIG_SOC_SERIES_APOLLO4X) || defined(CONFIG_SOC_APOLLO510)
+	case 7:
 		ret = 500;
 		break;
-	case 7:
+	case 8:
 		ret = 31;
 		break;
-	case 8:
+	case 9:
 		ret = 1;
 		break;
-	case 9:
-		ret = 256;
-		break;
 	case 10:
-		ret = 32768;
-		break;
 	case 11:
-		ret = 16384;
-		break;
 	case 12:
-		ret = 8192;
-		break;
 	case 13:
-		ret = 4096;
-		break;
 	case 14:
-		ret = 2048;
-		break;
 	case 15:
-		ret = 1024;
+		ret = 32768 / (1 << (clock_sel - 10));
 		break;
 	case 16:
 		ret = 256;
@@ -89,6 +70,72 @@ static uint32_t get_clock_cycles(uint32_t clock_sel)
 	case 17:
 		ret = 100;
 		break;
+#if defined(CONFIG_SOC_APOLLO510)
+	case 18:
+		ret = 512;
+		break;
+	case 19:
+	case 20:
+	case 21:
+	case 22:
+	case 23:
+	case 24:
+		ret = 125000000 / (8 << (clock_sel - 19));
+		break;
+	case 25:
+	case 26:
+	case 27:
+		ret = 48000000 / (1 << (clock_sel - 25));
+		break;
+#endif
+#else
+	case 7:
+		ret = 31;
+		break;
+	case 8:
+		ret = 1;
+		break;
+	case 9:
+		ret = 32768;
+		break;
+	case 10:
+		ret = 8192;
+		break;
+	case 11:
+		ret = 2048;
+		break;
+	case 12:
+		ret = 1024;
+		break;
+	case 13:
+		ret = 32;
+		break;
+	case 14:
+		ret = 100;
+		break;
+	case 15:
+		ret = 512;
+		break;
+	case 16:
+		ret = 256;
+		break;
+	case 17:
+		am_hal_clkmgr_clock_config_get(AM_HAL_CLKMGR_CLK_ID_PLLPOSTDIV, &ret, NULL);
+		break;
+	case 18:
+	case 19:
+	case 20:
+		ret = 48000000 / (1 << (clock_sel - 18));
+		break;
+	case 21:
+	case 22:
+	case 23:
+	case 24: {
+		am_hal_clkmgr_board_info_t board;
+		am_hal_clkmgr_board_info_get(&board);
+		ret = board.ui32ExtRefClkFreq / (1 << (clock_sel - 21));
+	} break;
+#endif
 	default:
 		ret = 24000000;
 		break;
