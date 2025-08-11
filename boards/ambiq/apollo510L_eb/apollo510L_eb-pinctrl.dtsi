@@ -198,4 +198,12 @@
 			pinmux = <GPIO_P22>, <GPIO_P24>, <GPIO_P23>;
 		};
 	};
+
+	pwm2_default: pwm2_default{
+		group1 {
+			pinmux = <CT109_P109>;
+			drive-open-drain;
+			drive-strength = "0.5";
+		};
+	};
 };

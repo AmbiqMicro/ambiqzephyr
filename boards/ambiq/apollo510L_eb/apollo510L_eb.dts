@@ -64,6 +64,14 @@
 	};
 };
 
+&timer2 {
+	pwm2: pwm {
+		pinctrl-0 = <&pwm2_default>;
+		pinctrl-names = "default";
+		status = "disabled";
+	};
+};
+
 &rtc0 {
 	status = "disabled";
 	clock = "XTAL";
