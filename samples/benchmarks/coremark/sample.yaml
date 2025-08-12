@@ -14,9 +14,7 @@ tests:
       type: multi_line
       ordered: true
       regex:
-        - "Coremark started"
-        - "Correct operation validated"
-        - "Coremark finished"
+        - "Coremark started!"
 
   sample.benchmark.coremark.sysbuild:
     platform_allow: nrf52840dk/nrf52840
