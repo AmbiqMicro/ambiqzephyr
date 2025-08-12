@@ -30,6 +30,7 @@
 	aliases {
 		watchdog0 = &wdt0;
 		sdhc0 = &sdio0;
+		accel0 = &adxl362;
 	};
 
 	sram0: memory@SSRAM_BASE_NAME {
@@ -114,6 +115,24 @@
 	pinctrl-1 = <&uart0_sleep>;
 	pinctrl-names = "default", "sleep";
 	status = "okay";
+};
+
+&iom5 {
+	spi5: spi {
+		pinctrl-0 = <&spi5_default>;
+		pinctrl-1 = <&spi5_sleep>;
+		pinctrl-names = "default", "sleep";
+		cs-gpios = <&gpio96_119 2 GPIO_ACTIVE_LOW>;
+		clock-frequency = <DT_FREQ_M(1)>;
+		status = "okay";
+
+		adxl362: adxl362@0 {
+			compatible = "adi,adxl362";
+			reg = <0>;
+			spi-max-frequency = <DT_FREQ_M(1)>;
+			int1-gpios = <&gpio96_119 3 GPIO_ACTIVE_LOW>;
+		};
+	};
 };
 
 &stimer0 {
