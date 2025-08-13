@@ -44,7 +44,3 @@ zephyr_udc0: &usb {
 &audadc0 {
 	status = "disabled";
 };
-
-&uart0 {
-	status = "disabled";
-};
