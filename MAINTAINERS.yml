@@ -513,6 +513,8 @@ Bluetooth HCI:
     - sjanc
     - HoZHel
     - cvinayak
+    - PavelVPV
+    - HaavardRei
   files:
     - include/zephyr/drivers/bluetooth/
     - include/zephyr/drivers/bluetooth.h
@@ -537,6 +539,8 @@ Bluetooth Host:
     - sjanc
     - Thalley
     - cvinayak
+    - PavelVPV
+    - HaavardRei
   files:
     - doc/connectivity/bluetooth/
     - include/zephyr/bluetooth/
@@ -700,7 +704,7 @@ Bouffalolab Platforms:
     - dts/bindings/*/bflb,*
     - soc/bflb/
   labels:
-    - "platform: bouffalolab"
+    - "platform: Bouffalo Lab"
 
 Broadcom Platforms:
   status: odd fixes
@@ -1251,6 +1255,7 @@ Documentation Infrastructure:
     - samples/net/sockets/can/
     - samples/subsys/canbus/
     - scripts/west_commands/runners/canopen_program.py
+    - snippets/socketcan-native-sim/
     - subsys/canbus/
     - subsys/net/l2/canbus/
     - tests/drivers/build_all/can/
@@ -2783,9 +2788,8 @@ ITE Platforms:
 Infineon Platforms:
   status: maintained
   maintainers:
-    - ifyall
-  collaborators:
     - sreeramIfx
+  collaborators:
     - mcatee-infineon
     - talih0
   files:
@@ -3519,6 +3523,7 @@ Networking:
   files-exclude:
     - doc/connectivity/networking/api/gptp.rst
     - doc/connectivity/networking/api/ieee802154.rst
+    - doc/connectivity/networking/api/ocpp.rst
     - doc/connectivity/networking/api/ptp.rst
     - doc/connectivity/networking/api/wifi.rst
     - doc/connectivity/networking/api/http*.rst
@@ -3532,6 +3537,7 @@ Networking:
     - samples/net/sockets/coap_*/
     - samples/net/sockets/*http*/
     - samples/net/lwm2m_client/
+    - samples/net/ocpp/
     - samples/net/wifi/
     - samples/net/dhcpv4_client/
     - subsys/net/l2/ethernet/gptp/
@@ -3541,11 +3547,13 @@ Networking:
     - subsys/net/lib/config/ieee802154*
     - subsys/net/lib/http/
     - subsys/net/lib/lwm2m/
+    - subsys/net/lib/ocpp/
     - subsys/net/lib/ptp/
     - subsys/net/lib/tls_credentials/
     - subsys/net/lib/dhcpv4/
     - tests/net/dhcpv4/
     - tests/net/ieee802154/
+    - tests/net/lib/ocpp/
     - tests/net/lib/http*/
     - tests/net/wifi/
   labels:
@@ -3716,6 +3724,17 @@ Networking:
     - "area: IEEE 802.15.4"
   tests:
     - net.ieee802154
+
+"Networking: OCPP":
+  status: maintained
+  maintainers:
+    - ssekar15
+  files:
+    - samples/net/ocpp/
+    - subsys/net/lib/ocpp/
+    - tests/net/lib/ocpp/
+  labels:
+    - "area: OCPP"
 
 "Networking: OpenThread":
   status: maintained
@@ -5225,10 +5244,9 @@ West:
 "West project: hal_cypress":
   status: maintained
   maintainers:
-    - ifyall
+    - sreeramIfx
   collaborators:
     - nashif
-    - sreeramIfx
     - mcatee-infineon
   files:
     - modules/Kconfig.cypress
@@ -5242,6 +5260,8 @@ West:
   collaborators:
     - LucasTambor
     - marekmatej
+    - raffarost
+    - wmrsouza
   files:
     - modules/Kconfig.esp32
   labels:
@@ -5275,11 +5295,10 @@ West:
 "West project: hal_infineon":
   status: maintained
   maintainers:
-    - ifyall
+    - sreeramIfx
   collaborators:
     - parthitce
     - talih0
-    - sreeramIfx
     - mcatee-infineon
   files:
     - modules/Kconfig.infineon
@@ -5559,6 +5578,15 @@ West:
   labels:
     - "area: AMP"
 
+"West project: libsbc":
+  status: maintained
+  maintainers:
+    - MarkWangChinese
+  files:
+    - modules/libsbc/
+  labels:
+    - "area: Audio"
+
 "West project: littlefs":
   status: odd fixes
   files:
@@ -5670,8 +5698,7 @@ West:
   maintainers:
     - aescolar
   collaborators:
-    - wopu-ot
-    - thoh-ot
+    - rugeGerritsen
   files: []
   labels:
     - "area: native port"
@@ -5907,6 +5934,7 @@ Xen Platform:
     - soc/xen/
     - boards/xen/
     - dts/bindings/xen/
+    - snippets/xen_dom0/
   labels:
     - "area: Xen Platform"
 
