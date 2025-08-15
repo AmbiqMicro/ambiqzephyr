@@ -1,0 +1,39 @@
+/*
+ * Copyright (c) 2025, Ambiq Micro Inc. <www.ambiq.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+		sram@2027F000 {
+		compatible = "zephyr,memory-region", "mmio-sram";
+		reg = <0x2027F000 0x1000>;
+		zephyr,memory-region = "RetainedMem";
+		status = "okay";
+
+		retainedmem {
+			compatible = "zephyr,retained-ram";
+			status = "okay";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			boot_info0: boot_mode@0 {
+				compatible = "zephyr,retention";
+				status = "okay";
+				reg = <0x0 0x1000>;
+				prefix = [08 04];
+				checksum = <1>;
+			};
+		};
+	};
+
+	chosen {
+		zephyr,boot-mode = &boot_mode0;
+	};
+};
+
+
+&sram0 {
+	reg = <SSRAM_BASE_ADDR 0x1FF000>;
+};
+
