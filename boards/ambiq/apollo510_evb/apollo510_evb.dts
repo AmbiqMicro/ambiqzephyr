@@ -135,6 +135,7 @@
 	pinctrl-1 = <&uart0_sleep>;
 	pinctrl-names = "default", "sleep";
 	status = "okay";
+	zephyr,pm-device-runtime-auto;
 };
 
 &stimer0 {
