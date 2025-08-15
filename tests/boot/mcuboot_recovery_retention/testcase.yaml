@@ -20,13 +20,19 @@ common:
       - "Boot source: none"
 tests:
   bootloader.mcuboot.recovery.retention:
-    platform_allow: nrf52840dk/nrf52840
+    platform_allow:
+      - nrf52840dk/nrf52840
+      - apollo510_evb
+      - apollo510_eb
     tags:
       - mcuboot
       - sysbuild
       - recovery
   bootloader.mcuboot.recovery.retention.mem:
-    platform_allow: nrf52840dk/nrf52840
+    platform_allow:
+      - nrf52840dk/nrf52840
+      - apollo510_evb
+      - apollo510_eb
     extra_args:
       - EXTRA_CONF_FILE="boards/nrf52840dk_nrf52840_mem.conf"
       - DTC_OVERLAY_FILE="boards/nrf52840dk_nrf52840_mem.overlay"
