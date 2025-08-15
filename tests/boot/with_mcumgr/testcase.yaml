@@ -5,6 +5,7 @@ common:
     - nrf54l15dk/nrf54l15/cpuapp
     - nrf9160dk/nrf9160
     - nucleo_wba55cg
+    - apollo510_eb
   timeout: 600
   slow: true
   tags:
@@ -15,6 +16,7 @@ tests:
   boot.with_mcumgr.test_upgrade:
     platform_allow:
       - nrf52840dk/nrf52840
+      - apollo510_eb
     integration_platforms:
       - nrf52840dk/nrf52840
     harness: pytest
@@ -25,6 +27,7 @@ tests:
   boot.with_mcumgr.test_downgrade_prevention:
     platform_allow:
       - nrf52840dk/nrf52840
+      - apollo510_eb
     integration_platforms:
       - nrf52840dk/nrf52840
     harness: pytest
