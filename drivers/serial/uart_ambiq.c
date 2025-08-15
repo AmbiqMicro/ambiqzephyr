@@ -25,6 +25,8 @@ LOG_MODULE_REGISTER(uart_ambiq, CONFIG_UART_LOG_LEVEL);
 #define UART_AMBIQ_RSR_ERROR_MASK                                                                  \
 	(UART0_RSR_FESTAT_Msk | UART0_RSR_PESTAT_Msk | UART0_RSR_BESTAT_Msk | UART0_RSR_OESTAT_Msk)
 
+#define UART_IO_RESUME_DELAY_US 100
+
 #ifdef CONFIG_UART_ASYNC_API
 struct uart_ambiq_async_tx {
 	const uint8_t *buf;
@@ -65,6 +67,7 @@ struct uart_ambiq_config {
 #if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
 	void (*irq_config_func)(const struct device *dev);
 #endif
+	bool pm_dev_runtime_auto;
 };
 
 /* Device data structure */
@@ -238,15 +241,25 @@ static int uart_ambiq_poll_in(const struct device *dev, unsigned char *c)
 {
 	struct uart_ambiq_data *data = dev->data;
 	uint32_t flag = 0;
+	int ret = 0;
 
-	if (!uart_ambiq_is_readable(dev)) {
-		return -1;
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_get(dev);
 	}
 
 	/* got a character */
-	am_hal_uart_fifo_read(data->uart_handler, c, 1, NULL);
-	am_hal_uart_flags_get(data->uart_handler, &flag);
-	return flag & UART_AMBIQ_RSR_ERROR_MASK;
+	if (uart_ambiq_is_readable(dev)) {
+		am_hal_uart_fifo_read(data->uart_handler, c, 1, NULL);
+		am_hal_uart_flags_get(data->uart_handler, &flag);
+		ret = flag & UART_AMBIQ_RSR_ERROR_MASK;
+	} else {
+		ret = -1;
+	}
+
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_put_async(dev, K_NO_WAIT);
+	}
+	return ret;
 }
 
 static void uart_ambiq_poll_out(const struct device *dev, unsigned char c)
@@ -254,6 +267,10 @@ static void uart_ambiq_poll_out(const struct device *dev, unsigned char c)
 	struct uart_ambiq_data *data = dev->data;
 	uint32_t flag = 0;
 	unsigned int key;
+
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_get(dev);
+	}
 
 	/* Wait for space in FIFO */
 	do {
@@ -279,12 +296,20 @@ static void uart_ambiq_poll_out(const struct device *dev, unsigned char c)
 	am_hal_uart_fifo_write(data->uart_handler, &c, 1, NULL);
 
 	irq_unlock(key);
+
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_put_async(dev, K_NO_WAIT);
+	}
 }
 
 static int uart_ambiq_err_check(const struct device *dev)
 {
 	const struct uart_ambiq_config *cfg = dev->config;
 	int errors = 0;
+
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_get(dev);
+	}
 
 	if (UARTn(cfg->inst_idx)->RSR & AM_HAL_UART_RSR_OESTAT) {
 		errors |= UART_ERROR_OVERRUN;
@@ -302,6 +327,10 @@ static int uart_ambiq_err_check(const struct device *dev)
 		errors |= UART_ERROR_FRAMING;
 	}
 
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_put_async(dev, K_NO_WAIT);
+	}
+
 	return errors;
 }
 
@@ -312,12 +341,20 @@ static int uart_ambiq_fifo_fill(const struct device *dev, const uint8_t *tx_data
 	int num_tx = 0U;
 	unsigned int key;
 
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_get(dev);
+	}
+
 	/* Lock interrupts to prevent nested interrupts or thread switch */
 	key = irq_lock();
 
 	am_hal_uart_fifo_write(data->uart_handler, (uint8_t *)tx_data, len, &num_tx);
 
 	irq_unlock(key);
+
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_put_async(dev, K_NO_WAIT);
+	}
 
 	return num_tx;
 }
@@ -327,7 +364,15 @@ static int uart_ambiq_fifo_read(const struct device *dev, uint8_t *rx_data, cons
 	struct uart_ambiq_data *data = dev->data;
 	int num_rx = 0U;
 
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_get(dev);
+	}
+
 	am_hal_uart_fifo_read(data->uart_handler, rx_data, len, &num_rx);
+
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_put_async(dev, K_NO_WAIT);
+	}
 
 	return num_rx;
 }
@@ -338,6 +383,15 @@ static void uart_ambiq_irq_tx_enable(const struct device *dev)
 	struct uart_ambiq_data *data = dev->data;
 	unsigned int key;
 
+	if (!data->sw_call_txdrdy) {
+		return;
+	}
+	data->sw_call_txdrdy = false;
+
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_get(dev);
+	}
+
 	key = irq_lock();
 	data->tx_poll_trans_on = false;
 	data->tx_int_trans_on = true;
@@ -347,11 +401,6 @@ static void uart_ambiq_irq_tx_enable(const struct device *dev)
 				     (AM_HAL_UART_INT_TX | AM_HAL_UART_INT_TXCMP));
 
 	irq_unlock(key);
-
-	if (!data->sw_call_txdrdy) {
-		return;
-	}
-	data->sw_call_txdrdy = false;
 
 	/*
 	 * Verify if the callback has been registered. Due to HW limitation, the
@@ -365,20 +414,21 @@ static void uart_ambiq_irq_tx_enable(const struct device *dev)
 	 * [1]: PrimeCell UART (PL011) Technical Reference Manual
 	 *      functional-overview/interrupts
 	 */
-	if (!data->irq_cb) {
-		return;
-	}
-
-	/*
-	 * Execute callback while TX interrupt remains enabled. If
-	 * uart_fifo_fill() is called with small amounts of data, the 1/8 TX
-	 * FIFO threshold may never be reached, and the hardware TX interrupt
-	 * will never trigger.
-	 */
-	while (UARTn(cfg->inst_idx)->IER & AM_HAL_UART_INT_TX) {
-		K_SPINLOCK(&data->irq_cb_lock) {
-			data->irq_cb(dev, data->irq_cb_data);
+	if (data->irq_cb) {
+		/*
+		 * Execute callback while TX interrupt remains enabled. If
+		 * uart_fifo_fill() is called with small amounts of data, the 1/8 TX
+		 * FIFO threshold may never be reached, and the hardware TX interrupt
+		 * will never trigger.
+		 */
+		while (UARTn(cfg->inst_idx)->IER & AM_HAL_UART_INT_TX) {
+			K_SPINLOCK(&data->irq_cb_lock) {
+				data->irq_cb(dev, data->irq_cb_data);
+			}
 		}
+	}
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_put_async(dev, K_NO_WAIT);
 	}
 }
 
@@ -387,6 +437,9 @@ static void uart_ambiq_irq_tx_disable(const struct device *dev)
 	struct uart_ambiq_data *data = dev->data;
 	unsigned int key;
 
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_get(dev);
+	}
 	key = irq_lock();
 
 	data->sw_call_txdrdy = true;
@@ -396,14 +449,24 @@ static void uart_ambiq_irq_tx_disable(const struct device *dev)
 	uart_ambiq_pm_policy_state_lock_put(dev);
 
 	irq_unlock(key);
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_put_async(dev, K_NO_WAIT);
+	}
 }
 
 static int uart_ambiq_irq_tx_complete(const struct device *dev)
 {
 	struct uart_ambiq_data *data = dev->data;
 	uint32_t flag = 0;
+
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_get(dev);
+	}
 	/* Check for UART is busy transmitting data. */
 	am_hal_uart_flags_get(data->uart_handler, &flag);
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_put_async(dev, K_NO_WAIT);
+	}
 	return ((flag & AM_HAL_UART_FR_BUSY) == 0);
 }
 
@@ -429,16 +492,28 @@ static void uart_ambiq_irq_rx_enable(const struct device *dev)
 {
 	struct uart_ambiq_data *data = dev->data;
 
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_get(dev);
+	}
 	am_hal_uart_interrupt_enable(data->uart_handler,
 				     (AM_HAL_UART_INT_RX | AM_HAL_UART_INT_RX_TMOUT));
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_put_async(dev, K_NO_WAIT);
+	}
 }
 
 static void uart_ambiq_irq_rx_disable(const struct device *dev)
 {
 	struct uart_ambiq_data *data = dev->data;
 
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_get(dev);
+	}
 	am_hal_uart_interrupt_disable(data->uart_handler,
 				      (AM_HAL_UART_INT_RX | AM_HAL_UART_INT_RX_TMOUT));
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_put_async(dev, K_NO_WAIT);
+	}
 }
 
 static int uart_ambiq_irq_rx_ready(const struct device *dev)
@@ -460,19 +535,32 @@ static int uart_ambiq_irq_rx_ready(const struct device *dev)
 static void uart_ambiq_irq_err_enable(const struct device *dev)
 {
 	struct uart_ambiq_data *data = dev->data;
+
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_get(dev);
+	}
 	/* enable framing, parity, break, and overrun */
 	am_hal_uart_interrupt_enable(data->uart_handler,
 				     (AM_HAL_UART_INT_FRAME_ERR | AM_HAL_UART_INT_PARITY_ERR |
 				      AM_HAL_UART_INT_BREAK_ERR | AM_HAL_UART_INT_OVER_RUN));
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_put_async(dev, K_NO_WAIT);
+	}
 }
 
 static void uart_ambiq_irq_err_disable(const struct device *dev)
 {
 	struct uart_ambiq_data *data = dev->data;
 
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_get(dev);
+	}
 	am_hal_uart_interrupt_disable(data->uart_handler,
 				      (AM_HAL_UART_INT_FRAME_ERR | AM_HAL_UART_INT_PARITY_ERR |
 				       AM_HAL_UART_INT_BREAK_ERR | AM_HAL_UART_INT_OVER_RUN));
+	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)) {
+		pm_device_runtime_put_async(dev, K_NO_WAIT);
+	}
 }
 
 static int uart_ambiq_irq_is_pending(const struct device *dev)
@@ -545,6 +633,13 @@ end:
 	if (ret < 0) {
 		am_hal_uart_deinitialize(data->uart_handler);
 	}
+
+	if (config->pm_dev_runtime_auto) {
+		ret = pm_device_runtime_enable(dev);
+		if (ret) {
+			LOG_ERR("Failed pm_device_runtime_enable\n");
+		}
+	}
 	return ret;
 }
 
@@ -563,7 +658,7 @@ static int uart_ambiq_pm_action(const struct device *dev, enum pm_device_action 
 		if (err < 0) {
 			return err;
 		}
-		k_busy_wait(100);
+		k_busy_wait(UART_IO_RESUME_DELAY_US);
 		status = AM_HAL_SYSCTRL_WAKE;
 		break;
 	case PM_DEVICE_ACTION_SUSPEND:
@@ -1091,6 +1186,7 @@ static DEVICE_API(uart, uart_ambiq_driver_api) = {
 		.inst_idx = (DT_INST_REG_ADDR(n) - UART0_BASE) / (UART1_BASE - UART0_BASE),        \
 		.clk_src = DT_INST_PROP(n, clk_src),                                               \
 		.pincfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                       \
+		.pm_dev_runtime_auto = DT_INST_PROP(n, zephyr_pm_device_runtime_auto),             \
 		IRQ_FUNC_INIT}
 
 #if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API)
