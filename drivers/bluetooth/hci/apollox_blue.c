@@ -345,7 +345,16 @@ int bt_apollo_controller_deinit(void)
 {
 	int ret = -ENOTSUP;
 
-#if (CONFIG_SOC_SERIES_APOLLO3X)
+#if (CONFIG_SOC_SERIES_APOLLO4X)
+	/* De-initialize the BLE controller */
+	ret = am_devices_cooper_term();
+	if (ret == AM_DEVICES_COOPER_STATUS_SUCCESS) {
+		LOG_INF("BT controller deinitialized");
+	} else {
+		ret = -EPERM;
+		LOG_ERR("BT controller deinitialization fail");
+	}
+#elif (CONFIG_SOC_SERIES_APOLLO3X)
 	irq_disable(DT_IRQN(SPI_DEV_NODE));
 
 	ret = am_apollo3_bt_controller_deinit();

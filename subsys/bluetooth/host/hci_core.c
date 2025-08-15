@@ -3410,6 +3410,7 @@ static int common_init(void)
 	int err;
 
 	if (!drv_quirk_no_reset()) {
+		LOG_INF("common_init - Send HCI_RESET ");
 		/* Send HCI_RESET */
 		err = bt_hci_cmd_send_sync(BT_HCI_OP_RESET, NULL, NULL);
 		if (err) {
@@ -3420,6 +3421,7 @@ static int common_init(void)
 	}
 
 	/* Read Local Supported Features */
+	LOG_INF("common_init - Send BT_HCI_OP_READ_LOCAL_FEATURES ");
 	err = bt_hci_cmd_send_sync(BT_HCI_OP_READ_LOCAL_FEATURES, NULL, &rsp);
 	if (err) {
 		return err;
@@ -4145,23 +4147,34 @@ static int hci_init(void)
 
 	err = bt_hci_setup(bt_dev.hci, &setup_params);
 	if (err && err != -ENOSYS) {
+		LOG_INF("hci_init - bt_hci_setup err (%d)", err);
 		return err;
 	}
 #endif /* defined(CONFIG_BT_HCI_SETUP) */
 
+	LOG_INF("hci_init - prepare for common_init");
 	err = common_init();
 	if (err) {
+		LOG_INF("hci_init - common_init err (%d)", err);
 		return err;
+	}
+	else {
+		LOG_INF("hci_init - common_init OK");
 	}
 
 	err = le_init();
 	if (err) {
+		LOG_INF("hci_init - le_init err (%d)", err);
 		return err;
+	}
+	else {
+		LOG_INF("hci_init - le_init OK");
 	}
 
 	if (BT_FEAT_BREDR(bt_dev.features)) {
 		err = bt_br_init();
 		if (err) {
+			LOG_INF("hci_init - bt_br_init err (%d)", err);
 			return err;
 		}
 	} else if (IS_ENABLED(CONFIG_BT_CLASSIC)) {
@@ -4177,6 +4190,7 @@ static int hci_init(void)
 
 	err = set_event_mask();
 	if (err) {
+		LOG_INF("hci_init - set_event_mask err (%d)", err);
 		return err;
 	}
 
@@ -4185,6 +4199,7 @@ static int hci_init(void)
 #endif
 	err = bt_id_init();
 	if (err) {
+		LOG_INF("hci_init - bt_id_init err (%d)", err);
 		return err;
 	}
 
@@ -4327,7 +4342,7 @@ void bt_finalize_init(void)
 	if (IS_ENABLED(CONFIG_BT_OBSERVER)) {
 		bt_scan_reset();
 	}
-
+	LOG_INF("bt_finalize_init - prepare to bt_dev_show_info");
 	bt_dev_show_info();
 }
 
@@ -4337,20 +4352,32 @@ static int bt_init(void)
 
 	err = hci_init();
 	if (err) {
+		LOG_INF("bt_init - hci_init err(%d)", err);
 		return err;
+	}
+	else {
+		LOG_INF("bt_init - hci_init OK");
 	}
 
 	if (IS_ENABLED(CONFIG_BT_CONN)) {
 		err = bt_conn_init();
 		if (err) {
+			LOG_INF("bt_init - bt_conn_init err(%d)", err);
 			return err;
+		}
+		else {
+			LOG_INF("bt_init - bt_conn_init OK");
 		}
 	}
 
 	if (IS_ENABLED(CONFIG_BT_ISO)) {
 		err = bt_conn_iso_init();
 		if (err) {
+			LOG_INF("bt_init - bt_conn_iso_init err(%d)", err);
 			return err;
+		}
+		else {
+			LOG_INF("bt_init - bt_conn_iso_init OK");
 		}
 	}
 
@@ -4460,6 +4487,9 @@ int bt_enable(bt_ready_cb_t cb)
 		LOG_ERR("HCI driver is not ready");
 		return -ENODEV;
 	}
+	else {
+		LOG_INF("bt_enable - device_is_ready");
+	}
 
 	bt_monitor_new_index(BT_MONITOR_TYPE_PRIMARY, BT_HCI_BUS, BT_ADDR_ANY, BT_HCI_NAME);
 
@@ -4493,6 +4523,7 @@ int bt_enable(bt_ready_cb_t cb)
 		k_sem_init(&bt_dev.ncmd_sem, 0, 1);
 	}
 	k_fifo_init(&bt_dev.cmd_tx_queue);
+	
 
 #if defined(CONFIG_BT_RECV_WORKQ_BT)
 	/* RX thread */
@@ -4502,12 +4533,16 @@ int bt_enable(bt_ready_cb_t cb)
 			   K_PRIO_COOP(CONFIG_BT_RX_PRIO), NULL);
 	k_thread_name_set(&bt_workq.thread, "BT RX WQ");
 #endif
-
+	
 	err = bt_hci_open(bt_dev.hci, bt_hci_recv);
 	if (err) {
 		LOG_ERR("HCI driver open failed (%d)", err);
 		return err;
 	}
+	else {
+		LOG_INF("HCI driver open OK");
+	}
+
 
 	bt_monitor_send(BT_MONITOR_OPEN_INDEX, NULL, 0);
 
@@ -4552,7 +4587,6 @@ int bt_disable(void)
 
 	/* Reset the Controller */
 	if (!drv_quirk_no_reset()) {
-
 		err = bt_hci_cmd_send_sync(BT_HCI_OP_RESET, NULL, NULL);
 		if (err) {
 			LOG_ERR("Failed to reset BLE controller");

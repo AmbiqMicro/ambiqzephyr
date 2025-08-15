@@ -366,7 +366,12 @@ static int bt_apollo_open(const struct device *dev, bt_hci_recv_t recv)
 
 	ret = bt_hci_transport_setup(spi_bus.bus);
 	if (ret) {
+		LOG_INF("bt_apollo_open - bt_hci_transport_setup error (%d)", ret);
 		return ret;
+	}
+	else
+	{
+		LOG_INF("bt_apollo_open - bt_hci_transport_setup OK");
 	}
 
 	/* Start RX thread */
@@ -376,7 +381,11 @@ static int bt_apollo_open(const struct device *dev, bt_hci_recv_t recv)
 
 	ret = bt_apollo_controller_init(spi_send_packet);
 	if (ret == 0) {
+		LOG_INF("bt_apollo_open - bt_apollo_controller_init OK");
 		hci->recv = recv;
+	}
+	else {
+		LOG_INF("bt_apollo_open - bt_apollo_controller_init error (%d)", ret);
 	}
 
 	return ret;

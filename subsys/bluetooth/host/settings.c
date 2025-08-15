@@ -305,6 +305,9 @@ int bt_settings_init(void)
 		LOG_ERR("settings_subsys_init failed (err %d)", err);
 		return err;
 	}
+	else {
+		LOG_INF("settings_subsys_init OK");
+	}
 
 	return 0;
 }

@@ -192,6 +192,8 @@ static void blink_stop(void)
 int main(void)
 {
 	int err;
+	uint8_t dmytest = 0;
+	bool btdisable = false;
 
 	err = bt_enable(NULL);
 	if (err) {
@@ -303,6 +305,64 @@ int main(void)
 #if defined(HAS_LED)
 			blink_start();
 #endif /* HAS_LED */
+		}
+		// Simple conditional test loop to disable and re-enable BT
+		if((dmytest >= 30) && !(atomic_test_and_clear_bit(state, STATE_CONNECTED)))
+		{
+			if(btdisable == false)
+			{
+				err = bt_le_adv_stop();
+				if (err) {
+					printk("bt_le_adv_stop failed (err %d)\n", err);
+					return 0;
+				}
+				else
+				{
+					err = bt_disable();
+					if (err) {
+						printk("Bluetooth disable failed (err %d)\n", err);
+						return 0;
+					}
+					else {
+						printk("Bluetooth is Disabled (err %d)\n", err);
+						btdisable = true;
+						dmytest = 0;
+						// return 0;
+					}
+				}
+			}
+			else
+			{
+				btdisable = false;
+				dmytest = 0;
+				// restart advertising
+				err = bt_enable(NULL);
+				if (err) {
+					printk("Bluetooth init failed (err %d)\n", err);
+					return 0;
+				}
+// #if !defined(CONFIG_BT_EXT_ADV)
+// 				printk("Starting Legacy Advertising (connectable and scannable)\n");
+// 				err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad), sd,
+// 							ARRAY_SIZE(sd));
+// 				if (err) {
+// 					printk("Advertising failed to start (err %d)\n", err);
+// 					return 0;
+// 				}
+
+// #else /* CONFIG_BT_EXT_ADV */
+// 				printk("Starting Extended Advertising (connectable and non-scannable)\n");
+// 				err = bt_le_ext_adv_start(adv, BT_LE_EXT_ADV_START_DEFAULT);
+// 				if (err) {
+// 					printk("Failed to start extended advertising set (err %d)\n", err);
+// 					return 0;
+// 				}
+// #endif /* CONFIG_BT_EXT_ADV */
+			}
+		}
+		else {
+			dmytest++;
+			printk("dmyTest = %d\n", dmytest);
 		}
 	}
 
