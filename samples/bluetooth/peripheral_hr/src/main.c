@@ -199,6 +199,18 @@ int main(void)
 		return 0;
 	}
 
+	err = bt_disable();
+	if (err) {
+		printk("Bluetooth deinit failed (err %d)\n", err);
+		return 0;
+	}
+
+	err = bt_enable(NULL);
+	if (err) {
+		printk("Bluetooth init failed (err %d)\n", err);
+		return 0;
+	}
+
 	printk("Bluetooth initialized\n");
 
 	bt_conn_auth_cb_register(&auth_cb_display);
