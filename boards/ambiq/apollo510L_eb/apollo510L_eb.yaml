@@ -29,6 +29,7 @@ supported:
   - pdm
   - i2s
   - pm
+  - mspi
 testing:
   ignore_tags:
     - net

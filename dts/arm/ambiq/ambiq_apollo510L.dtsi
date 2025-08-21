@@ -139,6 +139,24 @@
 		reg = <SSRAM_BASE_ADDR SSRAM_MAX_SIZE>;
 	};
 
+	xip0: memory@MSPI0_APERTURE_BASE_NAME {
+		compatible = "zephyr,memory-region";
+		reg = <MSPI0_APERTURE_BASE_ADDR MSPI0_APERTURE_MAX_SIZE>;
+		zephyr,memory-region = "XIP0";
+	};
+
+	xip1: memory@MSPI1_APERTURE_BASE_NAME {
+		compatible = "zephyr,memory-region";
+		reg = <MSPI1_APERTURE_BASE_ADDR MSPI1_APERTURE_MAX_SIZE>;
+		zephyr,memory-region = "XIP1";
+	};
+
+	xip2: memory@MSPI2_APERTURE_BASE_NAME {
+		compatible = "zephyr,memory-region";
+		reg = <MSPI2_APERTURE_BASE_ADDR MSPI2_APERTURE_MAX_SIZE>;
+		zephyr,memory-region = "XIP2";
+	};
+
 	soc {
 		compatible = "ambiq,apollo510L", "ambiq,apollo5x", "simple-bus";
 
