@@ -649,6 +649,17 @@
 		};
 	};
 
+	ipc {
+		ipc0: ipc0 {
+			compatible = "zephyr,ipc-openamp-static-vrings";
+			mboxes = <&mbox 0>, <&mbox 1>;
+			mbox-names = "tx", "rx";
+			role = "host";
+			zephyr,buffer-size = <704>;
+			status = "disabled";
+		};
+	};
+
 	mbox-consumer {
 		compatible = "vnd,mbox-consumer";
 		mboxes = <&mbox 2>, <&mbox 3>;

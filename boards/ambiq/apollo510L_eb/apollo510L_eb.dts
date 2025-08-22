@@ -17,6 +17,8 @@
 		zephyr,shell-uart = &uart0;
 		zephyr,uart-pipe = &uart0;
 		zephyr,entropy = &trng;
+		zephyr,bt-hci-ipc = &ipc0;
+		zephyr,bt-hci = &bt_hci_ipc0;
 		ambiq,xo32m = &xo32m_xtal;
 		ambiq,xo32k = &xo32k_xtal;
 		ambiq,extrefclk = &extrefclk;
@@ -36,6 +38,15 @@
 		reg = <0x20200000 0x40000>;
 		zephyr,memory-region = "SRAM_NO_CACHE";
 		zephyr,memory-attr = <( DT_MEM_ARM(ATTR_MPU_RAM_NOCACHE) )>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		/* SRAM allocated for IPC shared memory region. */
+		sram_ipc: memory@2023d000 {
+			reg = <0x2023d000 0x3000>;
+		};
 	};
 };
 
@@ -107,6 +118,17 @@
 
 &gpio96_119 {
 	status = "okay";
+};
+
+&ipc0 {
+	memory-region = <&sram_ipc>;
+	status = "okay";
+
+	bt_hci_ipc0: bt_hci_ipc0 {
+		compatible = "zephyr,bt-hci-ipc";
+		bt-hci-ipc-name = "am_ipc";
+		status = "okay";
+	};
 };
 
 &mbox {
