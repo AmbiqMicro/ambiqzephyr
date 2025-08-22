@@ -637,6 +637,22 @@
 				};
 			};
 		};
+
+		mbox: ipc: mbox@40034000 {
+			compatible = "ambiq,mbox-ipc";
+			reg = <0x40034000 0x400>;
+			tx-mask = <0x0000ffff>;
+			rx-mask = <0x0000ffff>;
+			interrupts = <17 0>, <18 0>;
+			#mbox-cells = <1>;
+			status = "disabled";
+		};
+	};
+
+	mbox-consumer {
+		compatible = "vnd,mbox-consumer";
+		mboxes = <&mbox 2>, <&mbox 3>;
+		mbox-names = "tx", "rx";
 	};
 };
 

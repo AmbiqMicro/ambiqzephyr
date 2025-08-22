@@ -108,3 +108,7 @@
 &gpio96_119 {
 	status = "okay";
 };
+
+&mbox {
+	status = "okay";
+};
