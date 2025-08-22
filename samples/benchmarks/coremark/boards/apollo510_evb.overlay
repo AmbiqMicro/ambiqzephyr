@@ -18,5 +18,33 @@
 };
 
 &stimer0 {
+	clk-source = <6>;
+};
+
+&trng {
 	status = "disabled";
+};
+
+&mspi1 {
+	status = "disabled";
+};
+
+&sdio0 {
+	status = "disabled";
+};
+
+&sdio1 {
+	status = "disabled";
+};
+
+zephyr_udc0: &usb {
+	status = "disabled";
+};
+
+&audadc0 {
+	status = "disabled";
+};
+
+&uart0 {
+	zephyr,pm-device-runtime-auto;
 };

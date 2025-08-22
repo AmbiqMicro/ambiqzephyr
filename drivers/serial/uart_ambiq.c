@@ -25,6 +25,8 @@ LOG_MODULE_REGISTER(uart_ambiq, CONFIG_UART_LOG_LEVEL);
 #define UART_AMBIQ_RSR_ERROR_MASK                                                                  \
 	(UART0_RSR_FESTAT_Msk | UART0_RSR_PESTAT_Msk | UART0_RSR_BESTAT_Msk | UART0_RSR_OESTAT_Msk)
 
+#define UART_IO_RESUME_DELAY_US 100
+
 #ifdef CONFIG_UART_ASYNC_API
 struct uart_ambiq_async_tx {
 	const uint8_t *buf;
@@ -428,8 +430,9 @@ static int uart_ambiq_irq_tx_ready(const struct device *dev)
 	/* Check for TX interrupt status is set or TX FIFO is empty. */
 	am_hal_uart_interrupt_status_get(data->uart_handler, &status, false);
 	am_hal_uart_flags_get(data->uart_handler, &flag);
-    am_hal_uart_interrupt_enable_get(data->uart_handler, &ier);
-    return ((ier & AM_HAL_UART_INT_TX) && ((status & UART0_IES_TXRIS_Msk) || (flag & AM_HAL_UART_FR_TX_EMPTY)));
+	am_hal_uart_interrupt_enable_get(data->uart_handler, &ier);
+	return ((ier & AM_HAL_UART_INT_TX) &&
+		((status & UART0_IES_TXRIS_Msk) || (flag & AM_HAL_UART_FR_TX_EMPTY)));
 }
 
 static void uart_ambiq_irq_rx_enable(const struct device *dev)
@@ -570,9 +573,11 @@ static int uart_ambiq_pm_action(const struct device *dev, enum pm_device_action 
 		if (err < 0) {
 			return err;
 		}
+		k_busy_wait(UART_IO_RESUME_DELAY_US);
 		status = AM_HAL_SYSCTRL_WAKE;
 		break;
 	case PM_DEVICE_ACTION_SUSPEND:
+		am_hal_uart_tx_flush(data->uart_handler);
 		/* Move pins to sleep state */
 		err = pinctrl_apply_state(config->pincfg, PINCTRL_STATE_SLEEP);
 		if ((err < 0) && (err != -ENOENT)) {
