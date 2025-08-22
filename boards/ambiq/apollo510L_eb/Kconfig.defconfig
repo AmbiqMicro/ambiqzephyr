@@ -12,4 +12,50 @@ config LOG_BACKEND_SWO_FREQ_HZ
 	default 1000000
 	depends on LOG_BACKEND_SWO
 
+if BT
+
+config SOC_AMBIQ_RSS_ENABLE
+	default y
+
+config IPC_SERVICE_BACKEND_RPMSG_SHMEM_RESET
+	default y
+
+config IPC_SERVICE_STATIC_VRINGS_MEM_ALIGNMENT
+	default 32
+
+config OPENAMP_SLAVE
+	default n
+
+config MAIN_STACK_SIZE
+    default 2048
+
+config HEAP_MEM_POOL_SIZE
+	default 2048
+
+config BT_HCI_ACL_FLOW_CONTROL
+	default y
+
+config BT_HCI_VS
+	default n
+
+config BT_BUF_ACL_TX_COUNT
+	default 8
+
+config BT_BUF_CMD_TX_SIZE
+	default 251
+
+config BT_BUF_EVT_RX_SIZE
+	default 251
+
+config BT_BUF_ACL_TX_SIZE
+	default 251
+
+config BT_BUF_ACL_RX_SIZE
+	default 251
+
+config BT_L2CAP_TX_MTU
+	default 247
+
+endif # BT
+
 endif # BOARD_APOLLO510L_EB
