@@ -14,4 +14,8 @@ if(CONFIG_SOC_APOLLO510)
   zephyr_linker_sources(ITCM_SECTION hal_internal.ld)
 endif()
 
+if(CONFIG_SOC_APOLLO510L)
+  zephyr_linker_sources(DTCM_SECTION hal_internel.ld)
+endif()
+
 set(SOC_LINKER_SCRIPT ${ZEPHYR_BASE}/include/zephyr/arch/arm/cortex_m/scripts/linker.ld CACHE INTERNAL "")
