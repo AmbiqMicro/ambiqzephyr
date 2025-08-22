@@ -36,6 +36,7 @@ config BT_HCI_IPC
 	select BT_HAS_HCI_VS
 	select IPC_SERVICE
 	select MBOX
+	select BT_HCI_SETUP if SOC_APOLLO510L
 	help
 	  Bluetooth HCI driver for communication with another CPU
 	  using the IPC subsystem.
