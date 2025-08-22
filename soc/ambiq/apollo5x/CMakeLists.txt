@@ -15,3 +15,5 @@ if(CONFIG_SOC_APOLLO510L)
 endif()
 
 set(SOC_LINKER_SCRIPT ${ZEPHYR_BASE}/include/zephyr/arch/arm/cortex_m/scripts/linker.ld CACHE INTERNAL "")
+
+add_subdirectory_ifdef(CONFIG_SOC_AMBIQ_RSS_MGR rss_mgr)

@@ -43,3 +43,20 @@ config SOC_AMBIQ_DMA_BUFF_ALIGNMENT
 	default 1
 	help
 	  This option specifies the DMA buffers' alignment
+
+config SOC_AMBIQ_RSS_MGR
+	bool
+	default n
+	depends on SOC_APOLLO510L
+    depends on DT_HAS_VND_MBOX_CONSUMER_ENABLED
+    select NET_BUF
+	help
+	  This option includes the radio subsystem manager functions.
+
+config SOC_AMBIQ_RSS_ENABLE
+	bool "Enable the radio subsystem at boot time"
+	default n
+	select SOC_AMBIQ_RSS_MGR
+	select SOC_LATE_INIT_HOOK
+	help
+	  This option enables the radio subsystem on Apollo510L.
