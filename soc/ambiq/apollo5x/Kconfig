@@ -46,17 +46,9 @@ config SOC_AMBIQ_DMA_BUFF_ALIGNMENT
 
 config SOC_AMBIQ_RSS_MGR
 	bool
-	default n
+	default y
 	depends on SOC_APOLLO510L
-    depends on DT_HAS_VND_MBOX_CONSUMER_ENABLED
+    depends on DT_HAS_VND_MBOX_CONSUMER_ENABLED || DT_HAS_AMBIQ_MBOX_IPC_ENABLED
     select NET_BUF
 	help
-	  This option includes the radio subsystem manager functions.
-
-config SOC_AMBIQ_RSS_ENABLE
-	bool "Enable the radio subsystem at boot time"
-	default n
-	select SOC_AMBIQ_RSS_MGR
-	select SOC_LATE_INIT_HOOK
-	help
-	  This option enables the radio subsystem on Apollo510L.
+	  This option includes the radio subsystem manager functions for Apollo510L.

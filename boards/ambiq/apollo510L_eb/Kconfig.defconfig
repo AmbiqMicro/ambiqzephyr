@@ -24,9 +24,6 @@ config ROM_START_OFFSET
 
 if BT
 
-config SOC_AMBIQ_RSS_ENABLE
-	default y
-
 config IPC_SERVICE_BACKEND_RPMSG_SHMEM_RESET
 	default y
 
