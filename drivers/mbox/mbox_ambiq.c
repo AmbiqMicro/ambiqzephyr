@@ -239,5 +239,5 @@ static struct mbox_driver_api mbox_ambiq_driver_api = {
 };
 
 DEVICE_DT_INST_DEFINE(0, mbox_ambiq_init, NULL, &ambiq_mbox_data, NULL,
-                      POST_KERNEL, CONFIG_MBOX_INIT_PRIORITY,
+                      PRE_KERNEL_1, CONFIG_MBOX_INIT_PRIORITY,
                       &mbox_ambiq_driver_api);

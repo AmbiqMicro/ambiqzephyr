@@ -662,6 +662,10 @@
 	ipc {
 		ipc0: ipc0 {
 			compatible = "zephyr,ipc-openamp-static-vrings";
+			/* The channel 0 and 1 of mbox are used for the IPC message
+			 * transmit notification and receive interrupt between
+			 * application core and radio core.
+			 */
 			mboxes = <&mbox 0>, <&mbox 1>;
 			mbox-names = "tx", "rx";
 			role = "host";
@@ -672,6 +676,9 @@
 
 	mbox-consumer {
 		compatible = "vnd,mbox-consumer";
+		/* The channel 2 and 3 of mbox are used for vendor specific request
+		 * and response usage between application core and radio core.
+		 */
 		mboxes = <&mbox 2>, <&mbox 3>;
 		mbox-names = "tx", "rx";
 	};
