@@ -36,11 +36,12 @@ config OPENAMP_SLAVE
 config MAIN_STACK_SIZE
     default 2048
 
+# HEAP is definitely necessary for BT HCI IPC.
 config HEAP_MEM_POOL_SIZE
 	default 2048
 
 config BT_HCI_ACL_FLOW_CONTROL
-	default y
+	default y if BT_CONN
 
 config BT_HCI_VS
 	default n
