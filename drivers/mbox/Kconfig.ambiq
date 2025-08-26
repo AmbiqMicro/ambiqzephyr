@@ -8,6 +8,5 @@ config MBOX_AMBIQ
   default y
   depends on DT_HAS_AMBIQ_MBOX_IPC_ENABLED
   select AMBIQ_HAL
-  select AMBIQ_HAL_USE_MBOX
   help
     Enable the driver for Ambiq mailbox.
