@@ -142,18 +142,33 @@ int am_rss_mgr_rss_enable(bool on)
 
     if (on) {
         /* Power up the radio subsystem */
-        am_hal_pwrctrl_rss_bootup();
+        ret = am_hal_pwrctrl_rss_bootup();
+        if ((ret != AM_HAL_STATUS_SUCCESS) && (ret != AM_HAL_STATUS_IN_USE)) {
+            LOG_ERR("RSS bootup failed %d", ret);
+            return -EIO;
+        }
 
         ret = vnd_mbox_init();
     } else {
-        /* TODO: need to identify if RFXTAL is used by other peripherals before
-         * power off the radio subsystem.
-         */
-        am_hal_pwrctrl_rss_pwroff();
+        uint32_t user_count = 0;
 
-        ret = mbox_set_enabled_dt(&vnd_mbox_rx, false);
+        /* Check if crystal in radio subsystem is used by other peripherals */
+        ret = am_hal_clkmgr_clock_status_get(AM_HAL_CLKMGR_CLK_ID_XTAL_HS, &user_count);
+        if (ret != AM_HAL_STATUS_SUCCESS) {
+            LOG_ERR("Clock status getting failed %d", ret);
+            return -EIO;
+        }
 
-        ipc_shm_configured = false;
+        if (user_count == 0) {
+            ret = am_hal_pwrctrl_rss_pwroff();
+            if (ret != AM_HAL_STATUS_SUCCESS) {
+                LOG_ERR("RSS pwroff failed %d", ret);
+                return -EIO;
+            }
+            ret = mbox_set_enabled_dt(&vnd_mbox_rx, false);
+
+            ipc_shm_configured = false;
+        }
     }
 
     return ret;

@@ -7,6 +7,9 @@
 #include <zephyr/init.h>
 #include <zephyr/kernel.h>
 #include <am_mcu_apollo.h>
+#if defined(CONFIG_SOC_AMBIQ_RSS_MGR)
+#include <am_rss_mgr.h>
+#endif /* CONFIG_SOC_AMBIQ_RSS_MGR */
 
 #if DT_HAS_CHOSEN(ambiq_xo32m)
 #define XTAL_HS_FREQ DT_PROP(DT_CHOSEN(ambiq_xo32m), clock_frequency)
@@ -54,4 +57,7 @@ void board_early_init_hook(void)
 	am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_PLLVCO,
 				   250000000, NULL);
 
+#if defined(CONFIG_SOC_AMBIQ_RSS_MGR)
+	am_rss_mgr_rss_enable(true);
+#endif /* CONFIG_SOC_AMBIQ_RSS_MGR */
 }

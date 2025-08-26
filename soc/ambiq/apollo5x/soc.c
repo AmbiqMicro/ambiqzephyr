@@ -20,10 +20,6 @@
 #include "icache_prefill.h"
 #endif
 
-#ifdef CONFIG_SOC_AMBIQ_RSS_MGR
-#include <am_rss_mgr.h>
-#endif /* CONFIG_SOC_AMBIQ_RSS_MGR */
-
 #include <soc.h>
 
 LOG_MODULE_REGISTER(soc, CONFIG_SOC_LOG_LEVEL);
@@ -122,15 +118,6 @@ void soc_early_init_hook(void)
 #endif
 #endif
 }
-
-#ifdef CONFIG_SOC_EARLY_INIT_HOOK
-void soc_late_init_hook(void)
-{
-#ifdef CONFIG_SOC_AMBIQ_RSS_ENABLE
-	am_rss_mgr_rss_enable(true);
-#endif /* CONFIG_SOC_AMBIQ_RSS_ENABLE */
-}
-#endif /* CONFIG_SOC_EARLY_INIT_HOOK */
 
 #if CONFIG_CACHE_MANAGEMENT
 bool buf_in_nocache(uintptr_t buf, size_t len_bytes)
