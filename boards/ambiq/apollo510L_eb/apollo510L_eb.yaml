@@ -18,6 +18,9 @@ supported:
   - rtc
   - hwinfo
   - clock_control
+  - flash
+  - nvs
+  - zms
 testing:
   ignore_tags:
     - net
