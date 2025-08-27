@@ -33,7 +33,7 @@ struct wdt_ambiq_data {
 uint32_t wdt_ambiq_clk_select[] =
 #if defined(CONFIG_SOC_SERIES_APOLLO3X) || defined(CONFIG_SOC_SERIES_APOLLO4X)
 	{128, 16, 1};
-#elif defined(CONFIG_SOC_SERIES_APOLLO510)
+#elif defined(CONFIG_SOC_APOLLO510)
 	{128, 16, 1, 32768, 16384};
 #else
 	{112, 14};

@@ -35,6 +35,7 @@ tests:
       - frdm_mcxw71
       - apollo510_evb
       - apollo510_eb
+      - apollo510L_eb
   drivers.watchdog.stm32wwdg:
     filter: dt_compat_enabled("st,stm32-window-watchdog") or dt_compat_enabled("st,stm32-watchdog")
     extra_args: DTC_OVERLAY_FILE="boards/stm32_wwdg.overlay"
