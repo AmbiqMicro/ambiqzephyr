@@ -12,6 +12,13 @@ config LOG_BACKEND_SWO_FREQ_HZ
 	default 1000000
 	depends on LOG_BACKEND_SWO
 
+if FLASH
+
+config FLASH_INIT_PRIORITY
+	default 50
+
+endif # FLASH
+
 if BT
 
 config SOC_AMBIQ_RSS_ENABLE
