@@ -4,9 +4,9 @@
 #
 
 config MBOX_AMBIQ
-  bool "Ambiq mailbox driver"
-  default y
-  depends on DT_HAS_AMBIQ_MBOX_IPC_ENABLED
-  select AMBIQ_HAL
-  help
-    Enable the driver for Ambiq mailbox.
+	bool "Ambiq mailbox driver"
+	default y
+	depends on DT_HAS_AMBIQ_MBOX_IPC_ENABLED
+	select AMBIQ_HAL
+	help
+	  Enable the driver for Ambiq mailbox.
