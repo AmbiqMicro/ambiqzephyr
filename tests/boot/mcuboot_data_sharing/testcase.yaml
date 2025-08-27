@@ -7,7 +7,9 @@ common:
   sysbuild: true
 tests:
   bootloader.mcuboot.data.sharing:
-    platform_allow: nrf52840dk/nrf52840
+    platform_allow:
+    - nrf52840dk/nrf52840
+    - apollo510_evb
     tags:
       - mcuboot
       - sysbuild
