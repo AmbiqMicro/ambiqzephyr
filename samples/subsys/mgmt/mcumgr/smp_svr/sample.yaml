@@ -93,6 +93,7 @@ tests:
       - mg100
       - apollo510_evb
       - apollo510_eb
+      - apollo510L_eb
     integration_platforms:
       - nrf52840dk/nrf52840
   # In mcuboot_flags test overlay-serial.conf is used for convenience as it is the simplest
@@ -108,6 +109,7 @@ tests:
       - mg100
       - apollo510_evb
       - apollo510_eb
+      - apollo510L_eb
     integration_platforms:
       - nrf52840dk/nrf52840
   sample.mcumgr.smp_svr.serial-console:
@@ -156,6 +158,7 @@ tests:
       - mg100
       - apollo510_evb
       - apollo510_eb
+      - apollo510L_eb
     integration_platforms:
       - nrf52840dk/nrf52840
       - mimxrt1060_evk/mimxrt1062/qspi
@@ -176,6 +179,7 @@ tests:
       - mg100
       - apollo510_evb
       - apollo510_eb
+      - apollo510L_eb
     integration_platforms:
       - nrf52840dk/nrf52840
   sample.mcumgr.smp_svr.ram_load:

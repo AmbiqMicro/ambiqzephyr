@@ -57,6 +57,7 @@ tests:
       - esp8684_devkitm
       - apollo510_evb
       - apollo510_eb
+      - apollo510L_eb
     integration_platforms:
       - frdm_k64f
       - nrf52840dk/nrf52840
@@ -65,6 +66,7 @@ tests:
       - b_u585i_iot02a
       - apollo510_evb
       - apollo510_eb
+      - apollo510L_eb
     extra_configs:
       - CONFIG_ASSERT=y
   bootloader.mcuboot.swap_using_offset:
@@ -73,6 +75,7 @@ tests:
       - nrf5340dk/nrf5340/cpuapp
       - apollo510_evb
       - apollo510_eb
+      - apollo510L_eb
     integration_platforms:
       - frdm_k64f
       - nrf5340dk/nrf5340/cpuapp
