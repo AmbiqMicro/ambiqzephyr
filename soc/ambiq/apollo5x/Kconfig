@@ -45,7 +45,7 @@ config SOC_AMBIQ_DMA_BUFF_ALIGNMENT
 	  This option specifies the DMA buffers' alignment
 
 config SOC_AMBIQ_RSS_MGR
-	bool
+	bool "Radio subsystem manager functions"
 	default y
 	depends on SOC_APOLLO510L
     depends on DT_HAS_VND_MBOX_CONSUMER_ENABLED || DT_HAS_AMBIQ_MBOX_IPC_ENABLED
