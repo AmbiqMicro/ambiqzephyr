@@ -13,33 +13,28 @@
 
 / {
 	clocks {
-		xo32m_xtal: xo32m_xtal {
+		xo48m_xtal: xo48m_xtal {
 			compatible = "fixed-clock";
-			clock-frequency = <DT_FREQ_M(32)>;
 			#clock-cells = <0>;
 		};
 
-		xo32m_ext: xo32m_ext {
+		xo48m_ext: xo48m_ext {
 			compatible = "fixed-clock";
-			clock-frequency = <DT_FREQ_M(32)>;
 			#clock-cells = <0>;
 		};
 
 		xo32k_xtal: xo32k_xtal {
 			compatible = "fixed-clock";
-			clock-frequency = <32768>;
 			#clock-cells = <0>;
 		};
 
 		xo32k_ext: xo32k_ext {
 			compatible = "fixed-clock";
-			clock-frequency = <32768>;
 			#clock-cells = <0>;
 		};
 
 		extrefclk: extrefclk {
 			compatible = "fixed-clock";
-			clock-frequency = <0>;
 			#clock-cells = <0>;
 		};
 	};

@@ -11,11 +11,11 @@
 #include <am_rss_mgr.h>
 #endif /* CONFIG_SOC_AMBIQ_RSS_MGR */
 
-#if DT_HAS_CHOSEN(ambiq_xo32m)
-#define XTAL_HS_FREQ DT_PROP(DT_CHOSEN(ambiq_xo32m), clock_frequency)
-#if DT_SAME_NODE(DT_CHOSEN(ambiq_xo32m), DT_NODELABEL(xo32m_xtal))
+#if DT_HAS_CHOSEN(ambiq_xo48m)
+#define XTAL_HS_FREQ DT_PROP(DT_CHOSEN(ambiq_xo48m), clock_frequency)
+#if DT_SAME_NODE(DT_CHOSEN(ambiq_xo48m), DT_NODELABEL(xo48m_xtal))
 #define XTAL_HS_MODE AM_HAL_CLKMGR_XTAL_HS_MODE_XTAL
-#elif DT_SAME_NODE(DT_CHOSEN(ambiq_xo32m), DT_NODELABEL(xo32m_ext))
+#elif DT_SAME_NODE(DT_CHOSEN(ambiq_xo48m), DT_NODELABEL(xo48m_ext))
 #define XTAL_HS_MODE AM_HAL_CLKMGR_XTAL_HS_MODE_EXT
 #endif
 #else
