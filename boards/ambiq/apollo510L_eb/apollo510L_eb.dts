@@ -22,7 +22,7 @@
 		zephyr,entropy = &trng;
 		zephyr,bt-hci-ipc = &ipc0;
 		zephyr,bt-hci = &bt_hci_ipc0;
-		ambiq,xo32m = &xo32m_xtal;
+		ambiq,xo48m = &xo48m_xtal;
 		ambiq,xo32k = &xo32k_xtal;
 		ambiq,extrefclk = &extrefclk;
 	};
@@ -57,8 +57,24 @@
 	status = "okay";
 };
 
-&xo32m_xtal {
+&xo48m_xtal {
 	clock-frequency = <DT_FREQ_M(48)>;
+};
+
+&xo48m_ext {
+	clock-frequency = <0>;
+};
+
+&xo32k_xtal {
+	clock-frequency = <32768>;
+};
+
+&xo32k_ext {
+	clock-frequency = <0>;
+};
+
+&extrefclk {
+	clock-frequency = <0>;
 };
 
 &itm {
