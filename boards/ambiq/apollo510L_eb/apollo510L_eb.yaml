@@ -23,6 +23,7 @@ supported:
   - zms
   - mbox
   - bluetooth
+  - sdhc
 testing:
   ignore_tags:
     - net
