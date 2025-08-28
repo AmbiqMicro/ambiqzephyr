@@ -22,6 +22,7 @@ supported:
   - nvs
   - zms
   - mbox
+  - bluetooth
 testing:
   ignore_tags:
     - net
