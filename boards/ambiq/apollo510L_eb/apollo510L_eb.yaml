@@ -21,6 +21,7 @@ supported:
   - flash
   - nvs
   - zms
+  - mbox
 testing:
   ignore_tags:
     - net
