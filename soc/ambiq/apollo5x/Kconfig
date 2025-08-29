@@ -48,8 +48,14 @@ config SOC_AMBIQ_RSS_MGR
 	bool "Radio subsystem manager functions"
 	default y
 	depends on SOC_APOLLO510L
-	depends on DT_HAS_VND_MBOX_CONSUMER_ENABLED || DT_HAS_AMBIQ_MBOX_IPC_ENABLED
+	depends on DT_HAS_VND_MBOX_CONSUMER_ENABLED || DT_HAS_AMBIQ_MBOX_IPC_ENABLED || DT_HAS_AMBIQ_USB_ENABLED
 	select NET_BUF
 	select MBOX
 	help
 	  This option includes the radio subsystem manager functions for Apollo510L.
+
+config SOC_AMBIQ_HAS_CLKMGR
+	bool "Ambiq clock manager support"
+	default y
+	help
+	  This option enables the Ambiq clock manager support.

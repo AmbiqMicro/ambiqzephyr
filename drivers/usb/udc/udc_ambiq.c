@@ -495,39 +495,47 @@ static int usb_power_rails_set(const struct device *dev, bool on)
 	int ret = 0;
 	const struct udc_ambiq_config *cfg = dev->config;
 
-	/* Check that both power control GPIO is defined */
-	if ((cfg->vddusb33_gpio.port == NULL) || (cfg->vddusb0p9_gpio.port == NULL)) {
-		LOG_WRN("vddusb control gpio not defined");
-		return -EINVAL;
+	/* Check that USB PHY 3.3V rail GPIO is defined */
+	if (cfg->vddusb33_gpio.port != NULL) {
+		/* Enable USB IO */
+		ret = gpio_pin_configure_dt(&cfg->vddusb33_gpio,
+					    (on ? GPIO_OUTPUT : GPIO_DISCONNECTED));
+		if (ret) {
+			return ret;
+		}
+		/* Power rails set */
+		ret = gpio_pin_set_dt(&cfg->vddusb33_gpio, on);
+		if (ret) {
+			return ret;
+		}
 	}
 
-	/* Enable USB IO */
-	ret = gpio_pin_configure_dt(&cfg->vddusb33_gpio, GPIO_OUTPUT);
-	if (ret) {
-		return ret;
+#ifdef MCUCTRL_USBLDOCTRL_USBLDOPDNB_Msk
+	/* Enable Internal USB power regulator */
+	am_hal_mcuctrl_usb_phy_ldo0p9_enable(on);
+	am_hal_delay_us(1000);
+#else
+	/* Enable External USB power rails */
+	if (cfg->vddusb0p9_gpio.port != NULL) {
+		ret = gpio_pin_configure_dt(&cfg->vddusb0p9_gpio,
+					    (on ? GPIO_OUTPUT : GPIO_DISCONNECTED));
+		if (ret) {
+			return ret;
+		}
+		ret = gpio_pin_set_dt(&cfg->vddusb0p9_gpio, on);
+		if (ret) {
+			return ret;
+		}
 	}
+#endif
 
-	ret = gpio_pin_configure_dt(&cfg->vddusb0p9_gpio, GPIO_OUTPUT);
-	if (ret) {
-		return ret;
-	}
-
-	/* power rails set */
-	ret = gpio_pin_set_dt(&cfg->vddusb33_gpio, on);
-	if (ret) {
-		return ret;
-	}
-	ret = gpio_pin_set_dt(&cfg->vddusb0p9_gpio, on);
-	if (ret) {
-		return ret;
-	}
 	am_hal_delay_us(50000);
 
 	return 0;
 }
 
-#if CONFIG_SOC_SERIES_APOLLO5X
-static int init_apollo5x(const struct udc_ambiq_data *priv)
+#if CONFIG_SOC_AMBIQ_HAS_CLKMGR
+static int usb_init_clksrc(const struct udc_ambiq_data *priv)
 {
 	uint32_t am_ret = AM_HAL_STATUS_SUCCESS;
 	am_hal_clkmgr_board_info_t board;
@@ -535,6 +543,8 @@ static int init_apollo5x(const struct udc_ambiq_data *priv)
 
 	/* Decide PHY clock source according to USB speed and board configuration*/
 	am_hal_clkmgr_board_info_get(&board);
+
+#if CONFIG_SOC_APOLLO510
 	if (priv->usb_speed == AM_HAL_USB_SPEED_FULL) {
 		phyclksrc = AM_HAL_USB_PHYCLKSRC_HFRC_24M;
 	} else if (board.sXtalHs.ui32XtalHsFreq == 48000000) {
@@ -557,8 +567,49 @@ static int init_apollo5x(const struct udc_ambiq_data *priv)
 			phyclksrc = AM_HAL_USB_PHYCLKSRC_HFRC_24M;
 		}
 	}
-
 	am_hal_usb_set_phy_clk_source(priv->usb_handle, phyclksrc);
+#else
+	am_hal_usb_phyclksrc_div_e phyclkdiv;
+
+	if (priv->usb_speed == AM_HAL_USB_SPEED_FULL) {
+		phyclksrc = AM_HAL_USB_PHYCLKSRC_HFRC_48M;
+		phyclkdiv = AM_HAL_USB_PHYCLKSRC_DIV_2;
+	} else if (board.sXtalHs.ui32XtalHsFreq == 48000000) {
+		phyclksrc = AM_HAL_USB_PHYCLKSRC_RF_XTAL_48M;
+		phyclkdiv = AM_HAL_USB_PHYCLKSRC_DIV_2;
+	} else if (board.sXtalHs.ui32XtalHsFreq == 24000000) {
+		phyclksrc = AM_HAL_USB_PHYCLKSRC_RF_XTAL_48M;
+		phyclkdiv = AM_HAL_USB_PHYCLKSRC_DIV_1;
+	} else if (board.ui32ExtRefClkFreq == 48000000) {
+		phyclksrc = AM_HAL_USB_PHYCLKSRC_EXTREF_CLK;
+		phyclkdiv = AM_HAL_USB_PHYCLKSRC_DIV_2;
+	} else if (board.ui32ExtRefClkFreq == 24000000) {
+		phyclksrc = AM_HAL_USB_PHYCLKSRC_EXTREF_CLK;
+		phyclkdiv = AM_HAL_USB_PHYCLKSRC_DIV_1;
+	} else {
+		phyclksrc = AM_HAL_USB_PHYCLKSRC_PLLPOSTDIV;
+		phyclkdiv = AM_HAL_USB_PHYCLKSRC_DIV_1;
+	}
+
+	if (phyclksrc == AM_HAL_USB_PHYCLKSRC_PLLPOSTDIV) {
+		am_ret = am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_PLLPOSTDIV,
+						    24000000 * ((uint8_t)phyclkdiv + 1), NULL);
+		if (am_ret != AM_HAL_STATUS_SUCCESS) {
+			LOG_WRN("Unable to configure SYSPLL for USB. Fallback to HFRC clock "
+				"source");
+			phyclksrc = AM_HAL_USB_PHYCLKSRC_HFRC_48M;
+		}
+	} else if (phyclksrc == AM_HAL_USB_PHYCLKSRC_PLLFOUT2) {
+		am_ret = am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_PLLPOSTDIV,
+						    24000000 * 4 * ((uint8_t)phyclkdiv + 1), NULL);
+		if (am_ret != AM_HAL_STATUS_SUCCESS) {
+			LOG_WRN("Unable to configure SYSPLL for USB. Fallback to HFRC clock "
+				"source");
+			phyclksrc = AM_HAL_USB_PHYCLKSRC_HFRC_48M;
+		}
+	}
+	am_hal_usb_set_phy_clk_source(priv->usb_handle, phyclksrc, phyclkdiv);
+#endif
 	am_hal_usb_phy_clock_enable(priv->usb_handle, true, priv->usb_speed);
 
 	return 0;
@@ -615,8 +666,8 @@ static int udc_ambiq_init(const struct device *dev)
 	/* Release USB PHY reset */
 	am_hal_usb_disable_phy_reset_override();
 
-#if CONFIG_SOC_SERIES_APOLLO5X
-	ret = init_apollo5x(priv);
+#if CONFIG_SOC_AMBIQ_HAS_CLKMGR
+	ret = usb_init_clksrc(priv);
 	if (ret) {
 		return ret;
 	}
@@ -675,7 +726,7 @@ static int udc_ambiq_shutdown(const struct device *dev)
 	cfg->irq_disable_func(dev);
 	/* Assert USB PHY reset */
 	am_hal_usb_enable_phy_reset_override();
-#if CONFIG_SOC_SERIES_APOLLO5X
+#if CONFIG_SOC_AMBIQ_HAS_CLKMGR
 	/* Release USB PHY Clock*/
 	am_hal_usb_phy_clock_enable(priv->usb_handle, false, priv->usb_speed);
 #endif
