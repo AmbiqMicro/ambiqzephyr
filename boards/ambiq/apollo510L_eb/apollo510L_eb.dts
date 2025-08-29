@@ -124,6 +124,11 @@
 	status = "okay";
 };
 
+zephyr_udc0: &usb {
+	vddusb33-gpios = <&gpio64_95 27 (GPIO_PULL_UP)>;
+	status = "okay";
+};
+
 &gpio0_31 {
 	status = "okay";
 };
