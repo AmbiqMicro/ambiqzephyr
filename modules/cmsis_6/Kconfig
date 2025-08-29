@@ -25,4 +25,7 @@ config CMSIS_CORE_HAS_SYSTEM_CORE_CLOCK
 	help
 	  Enable this option if CMSIS SystemCoreClock symbols is available.
 
+config CMSIS_CORE_HAS_ITM_LAR
+	bool "[Experimental]Indicates if ITM has LAR register"
+
 endif
