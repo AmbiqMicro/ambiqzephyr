@@ -1,0 +1,6 @@
+shield:
+  name: apollo5_eb_display_card
+  full_name: Apollo5 EB Display Card Revision 2.0
+  vendor: ambiq
+  supported_features:
+    - display
