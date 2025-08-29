@@ -1,0 +1,59 @@
+/*
+ * Copyright (c) 2025 Ambiq Micro, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#define DT_DRV_COMPAT ambiq_hw_crc32
+
+#include <string.h>
+#include "soc.h"
+#include <zephyr/logging/log.h>
+#include <zephyr/device.h>
+#include <zephyr/drivers/crc/crc.h>
+
+LOG_MODULE_REGISTER(ambiq_hw_crc32, CONFIG_KERNEL_LOG_LEVEL);
+
+static int crc_ambiq_get_crc32(const struct device *dev, uint32_t startAddr, uint32_t sizeBytes,
+			       uint32_t *pCrc)
+{
+	ARG_UNUSED(dev);
+
+	/*
+	 * Validate input parameters
+	 */
+	if (sizeBytes == 0 || startAddr == 0 || pCrc == NULL) {
+		return -EINVAL;
+	}
+
+	/*
+	 * If the CRC is already running then turn it off since we need a new CRC run
+	 */
+	if (SECURITY->CTRL_b.ENABLE) {
+		SECURITY->CTRL_b.ENABLE = 0x00;
+		SECURITY->CTRL = 0x00;
+	}
+
+	/*
+	 * Generate the CRC
+	 */
+	am_hal_crc32(startAddr, sizeBytes, pCrc);
+
+	return 0;
+}
+
+static int crc_ambiq_init(const struct device *dev)
+{
+	ARG_UNUSED(dev);
+
+	/* Any hardware init can be performed here if needed. */
+	return 0;
+}
+
+static const struct crc_driver_api crc_ambiq_api_funcs = {
+	.get_crc = crc_ambiq_get_crc32,
+};
+
+DEVICE_DT_INST_DEFINE(0, crc_ambiq_init, NULL, NULL, NULL, POST_KERNEL,
+					  CONFIG_KERNEL_INIT_PRIORITY_DEFAULT,
+					  &crc_ambiq_api_funcs);
