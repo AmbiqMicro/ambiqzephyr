@@ -54,10 +54,6 @@ cmsis_dsp:
     # change to west.yml is updating something we need to re-test for.
     - west.yml
 
-kernel:
-  files:
-    - kernel/
-    - arch/
 
 mcumgr:
   files:
