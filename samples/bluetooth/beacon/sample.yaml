@@ -1,7 +1,15 @@
 sample:
   name: Bluetooth Beacon
 tests:
-  sample.bluetooth.beacon:
+  sample.bluetooth.beacon.console:
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "Beacon started"
+    platform_allow:
+      - apollo510L_eb
+  sample.bluetooth.beacon.bluetooth_harness:
     harness: bluetooth
     platform_allow:
       - qemu_cortex_m3

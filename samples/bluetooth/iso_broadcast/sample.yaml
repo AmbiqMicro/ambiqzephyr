@@ -1,7 +1,15 @@
 sample:
   name: Bluetooth ISO Broadcaster
 tests:
-  sample.bluetooth.iso_broadcast:
+  sample.bluetooth.iso_broadcast.console:
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "Waiting for BIG complete"
+    platform_allow:
+      - apollo510L_eb
+  sample.bluetooth.iso_broadcast.bluetooth_harness:
     harness: bluetooth
     platform_allow:
       - qemu_cortex_m3

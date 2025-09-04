@@ -2,7 +2,15 @@ sample:
   description: Sample code for Zephyr iBeacon Demo
   name: iBeacon
 tests:
-  sample.bluetooth.ibeacon:
+  sample.bluetooth.ibeacon.console:
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "iBeacon started"
+    platform_allow:
+      - apollo510L_eb
+  sample.bluetooth.ibeacon.bluetooth_harness:
     harness: bluetooth
     platform_allow:
       - bbc_microbit
