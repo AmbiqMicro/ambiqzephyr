@@ -1,7 +1,16 @@
 sample:
   name: Bluetooth Multiple Extended Advertising Broadcaster
 tests:
-  sample.bluetooth.multiple_broadcast:
+  sample.bluetooth.multiple_broadcast.console:
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "Started Extended Advertising"
+        - "Exiting"
+    platform_allow:
+      - apollo510L_eb
+  sample.bluetooth.multiple_broadcast.bluetooth_harness:
     harness: bluetooth
     platform_allow:
       - qemu_cortex_m3

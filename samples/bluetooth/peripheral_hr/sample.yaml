@@ -2,7 +2,15 @@ sample:
   name: Bluetooth Peripheral HR
   description: Demonstrates the HR (Heart Rate) GATT Service
 tests:
-  sample.bluetooth.peripheral_hr:
+  sample.bluetooth.peripheral_hr.console:
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "Advertising successfully started"
+    platform_allow:
+      - apollo510L_eb
+  sample.bluetooth.peripheral_hr.bluetooth_harness:
     harness: bluetooth
     platform_allow:
       - qemu_cortex_m3
