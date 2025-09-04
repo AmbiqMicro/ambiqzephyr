@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: Apache-2.0 */
-#include "../../../boards/apollo510_eb.overlay"
+#include "../../../boards/apollo510_evb.overlay"
 
 / {
 	chosen {
