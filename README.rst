@@ -35,9 +35,9 @@ As of now, Ambiq provides zephyr support for a set of peripherals/drivers:
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 | CRYPTO |  coming soon   |                    |                                           |                  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-| DISPLAY|  coming soon   |                    |                                           |                  |
+| DISPLAY|       -        |    apollo510L-dev  |  samples\\drivers\\display                |  with disp card  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-| FLASH  |       -        |    apollo510L-dev  |  tests\\drivers\\flash\_api               |        All       |
+| FLASH  |       -        |    apollo510L-dev  |  samples\\subsys\\mgmt\\mcumgr\\smp_svr   |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 | HWINFO |       -        |    apollo510L-dev  |  tests\\drivers\\hwinfo\\api              |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
@@ -49,7 +49,7 @@ As of now, Ambiq provides zephyr support for a set of peripherals/drivers:
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |  INPUT |  coming soon   |                    |                                           |                  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|MIPI_DSI|  coming soon   |                    |                                           |                  |
+|MIPI_DSI|       -        |    apollo510L-dev  |  samples\\drivers\\display                |  with disp card  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |  MSPI  |  coming soon   |                    |                                           |                  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
@@ -61,7 +61,7 @@ As of now, Ambiq provides zephyr support for a set of peripherals/drivers:
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |   RTC  |       -        |    apollo510L-dev  |    samples\\drivers\\rtc                  |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|  SDHC  |  coming soon   |                    |                                           |                  |
+|  SDHC  |       -        |    apollo510L-dev  |  tests\\subsys\\sd\\sdio                  |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |   SPI  |       -        |    apollo510L-dev  |    samples\\sensor\\accel_polling         |apollo510L_eb only|
 +--------+----------------+--------------------+-------------------------------------------+------------------+
@@ -71,7 +71,7 @@ As of now, Ambiq provides zephyr support for a set of peripherals/drivers:
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |  UART  |       -        |    apollo510L-dev  |   samples\\drivers\\uart\\echo\_bot       |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|   USB  |  coming soon   |                    |                                           |                  |
+|   USB  |       -        |    apollo510L-dev  |  samples\\drivers\\subsys\\usb\\mass      |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |   WDT  |       -        |    apollo510L-dev  |    samples\\drivers\\watchdog             |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
@@ -83,7 +83,7 @@ And also there are supports for some third-party libs:
 +========+================+====================+===========================================+==================+
 |coremark|       -        |    apollo510L-dev  |   samples\\benchmarks\\coremark           |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|  fatfs |  coming soon   |                    |                                           |                  |
+|  fatfs |       -        |    apollo510L-dev  |  samples\\subsys\\fs\\fs_sample           |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 | mbedtls|  coming soon   |                    |                                           |                  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
@@ -93,6 +93,11 @@ And also there are supports for some third-party libs:
 
 Together with generic support for ARM Cortex-M peripherals like cache, interrupt controller, etc.
 
+
+Release Notes
+*************
+
+See the full release notes: `release_note.rst <RELEASE_NOTES.rst>`_
 
 .. below included in doc/introduction/introduction.rst
 
@@ -138,7 +143,7 @@ Get to Know Ambiq Components
   │   ├── ambiq/
   │   │   └── apollo510L_eb
   │   └── shields/
-  │       └── ap510_disp
+  │       └── apollo5_eb_display_card
   ├── drivers/
   │   ├── adc/
   │   │   └── adc_ambiq.c
@@ -303,4 +308,4 @@ Additional Resources
 .. _Zephyr Tech Talks: https://www.zephyrproject.org/tech-talks
 .. _Ambiq SoC: https://contentportal.ambiq.com/soc
 .. _Ambiq Products: https://ambiq.com/products/
-.. _Ambiq HAL Repository: https://github.com/AmbiqMicro/ambiqhal_ambiq
+.. _Ambiq HAL Repository: https://github.com/AmbiqMicro/ambiqhal_ambiq_alpha
