@@ -2,7 +2,15 @@ sample:
   name: Bluetooth Peripheral
   description: Demonstrates the Bluetooth LE Peripheral role
 tests:
-  sample.bluetooth.peripheral:
+  sample.bluetooth.peripheral.console:
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "Indicate VND attr"
+    platform_allow:
+      - apollo510L_eb
+  sample.bluetooth.peripheral.bluetooth_harness:
     harness: bluetooth
     platform_allow:
       - qemu_x86
