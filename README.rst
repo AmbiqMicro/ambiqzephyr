@@ -146,8 +146,8 @@ Get to Know Ambiq Components
   │   │   └── dmic_ambiq_pdm.c
   │   ├── bluetooth/
   │   │   └── hci/
-  │   │       ├── apollox_blue.c
-  │   │       └── hci_ambiq.c
+  │   │       ├── apollox_ipc_support.c
+  │   │       └── ipc.c
   │   ├── clock_control/
   │   │   └── clock_control_ambiq.c
   │   ├── counter/
@@ -166,6 +166,8 @@ Get to Know Ambiq Components
   │   │   └── i2c_ambiq.c
   │   ├── i2s/
   │   │   └── i2s_ambiq.c
+  │   ├── mbox/
+  │   │   └── mbox_ambiq.c
   │   ├── mipi_dsi/
   │   │   └── dsi_ambiq.c
   │   ├── mspi/
@@ -224,6 +226,9 @@ You should be able to see the logs in the serial terminal.
 For those samples that require additional hardware, such as the ap510_disp shield, you need to set the shield option when building. For example:
 
 ``west build -b apollo510L_eb --shield ap510_disp ./samples/drivers/display -p always``
+
+For Bluetooth samples, you need to program the BLE Controller firmware via JLINK once before running samples. The programming script and binary locate in the SDK
+ambiqsuite/tools/apollo510L_scripts/firmware_updates/cm4_ble_updates/ble_v1p2. Please contact with our Sales team to get the SDK.
 
 .. start_include_here
 
