@@ -177,6 +177,10 @@ class Binding:
       If nodes with this binding's 'compatible' appear on a bus, a string
       describing the bus type (like "i2c"). None otherwise.
 
+    additional_property:
+      A boolean to enable or disable merge binding from listed and less
+      specific bindings.
+
     child_binding:
       If this binding describes the properties of child nodes, then
       this is a Binding object for those children; it is None otherwise.
@@ -303,6 +307,11 @@ class Binding:
         "See the class docstring"
         return self.raw.get('on-bus')
 
+    @property
+    def additional_property(self) -> Optional[str]:
+        "See the class docstring"
+        return self.raw.get('additional-property', False)
+
     def _merge_includes(self, raw: dict, binding_path: Optional[str]) -> dict:
         # Constructor helper. Merges included files in
         # 'raw["include"]' into 'raw' using 'self._include_paths' as a
@@ -420,7 +429,7 @@ class Binding:
         # Allowed top-level keys. The 'include' key should have been
         # removed by _load_raw() already.
         ok_top = {"title", "description", "compatible", "bus",
-                  "on-bus", "properties", "child-binding"}
+                  "on-bus", "properties", "child-binding", "additional-property"}
 
         # Descriptive errors for legacy bindings.
         legacy_errors = {
@@ -459,12 +468,16 @@ class Binding:
             _err(f"malformed 'on-bus:' value in {self.path}, "
                  "expected string")
 
+        if ("additional-property" in raw
+            and not isinstance(raw["additional-property"], bool)):
+            _err(f"malformed 'additional-property:' value in {self.path}, "
+                 "expected string")
+
         self._check_properties()
 
         for key, val in raw.items():
-            if (key.endswith("-cells")
-                and not isinstance(val, list)
-                or not all(isinstance(elem, str) for elem in val)):
+            if (key.endswith("-cells") and not isinstance(val, list)
+                or isinstance(val, list) and not all(isinstance(elem, str) for elem in val)):
                 _err(f"malformed '{key}:' in {self.path}, "
                      "expected a list of strings")
 
@@ -1356,6 +1369,9 @@ class Node:
 
         if self.compats:
             on_buses = self.on_buses
+            merged_raw = {}
+            found_binding = False
+            merge = False
 
             for compat in self.compats:
                 # When matching, respect the order of the 'compatible' entries,
@@ -1370,13 +1386,20 @@ class Node:
                         binding = self.edt._compat2binding[compat, bus]
                         break
 
-                if not binding:
-                    if (compat, None) in self.edt._compat2binding:
-                        binding = self.edt._compat2binding[compat, None]
-                    else:
-                        continue
+                if not binding and (compat, None) in self.edt._compat2binding:
+                    binding = self.edt._compat2binding[compat, None]
 
-                self._binding = binding
+                if binding:
+                    found_binding = True
+                    if merged_raw and merge:
+                        _merge_props(merged_raw, binding.raw, None, binding.path, True)
+                    elif not merged_raw:
+                        _merge_props(merged_raw, binding.raw, None, binding.path, False)
+
+                    merge = binding.additional_property
+
+            if found_binding:
+                self._binding = Binding(None, self.edt._binding_fname2path, raw=merged_raw)
                 return
         else:
             # No 'compatible' property. See if the parent binding has
