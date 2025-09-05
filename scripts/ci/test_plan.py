@@ -143,7 +143,7 @@ class Filters:
         if self.testsuite_root and use_testsuite_root:
             for root in self.testsuite_root:
                 cmd+=["-T", root]
-        if integration:
+        if integration and not self.vendors:
             cmd.append("--integration")
         if self.quarantine_list:
             for q in self.quarantine_list:
@@ -407,12 +407,6 @@ class Filters:
         if self.full_twister:
             _options = []
             logging.info(f'Need to run full or partial twister...')
-
-            if self.vendors:
-                vendor_args = []
-                for vendor in self.vendors:
-                    vendor_args.extend(["--vendor", vendor])
-                _options.extend(vendor_args)
 
             if self.platforms:
                 for platform in self.platforms:
