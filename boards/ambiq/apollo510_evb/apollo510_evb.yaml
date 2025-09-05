@@ -28,6 +28,7 @@ supported:
   - flash
   - nvs
   - zms
+  - retained_mem
 testing:
   ignore_tags:
     - net

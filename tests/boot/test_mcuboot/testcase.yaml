@@ -60,6 +60,9 @@ tests:
     integration_platforms:
       - frdm_k64f
       - nrf52840dk/nrf52840
+    extra_args:
+      - SB_CONFIG_MCUBOOT_MODE_SWAP_USING_MOVE=y
+      - swapped_app_CONFIG_MCUBOOT_BOOTLOADER_MODE_SWAP_USING_MOVE=y
   bootloader.mcuboot.assert:
     platform_allow:
       - b_u585i_iot02a
