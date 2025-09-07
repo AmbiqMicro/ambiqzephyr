@@ -165,7 +165,7 @@ zephyr_udc0: &usb {
 	dqs-support;
 
 	psram0: aps25616n@0 {
-		compatible = "ambiq,mspi-device", "mspi-aps-z8";
+		compatible = "mspi-aps-z8", "ambiq,mspi-device";
 		size = <DT_SIZE_M(256)>;
 		reg = <0>;
 		status = "okay";
@@ -206,7 +206,7 @@ zephyr_udc0: &usb {
 	dqs-support;
 
 	aps6404l: aps6404l@0 {
-		compatible = "ambiq,mspi-device", "mspi-aps6404l";
+		compatible = "mspi-aps6404l", "ambiq,mspi-device";
 		size = <DT_SIZE_M(64)>;
 		reg = <0>;
 		status = "disabled";
@@ -227,7 +227,7 @@ zephyr_udc0: &usb {
 	};
 
 	is25wx064: is25wx064@1 {
-		compatible = "ambiq,mspi-device", "mspi-is25xX0xx";
+		compatible = "mspi-is25xX0xx", "ambiq,mspi-device";
 		size = <DT_SIZE_M(64)>;
 		reg = <1>;
 		status = "okay";
@@ -270,7 +270,7 @@ zephyr_udc0: &usb {
 	dqs-support;
 
 	psram1: aps25616n@0 {
-		compatible = "ambiq,mspi-device", "mspi-aps-z8";
+		compatible = "mspi-aps-z8", "ambiq,mspi-device";
 		size = <DT_SIZE_M(256)>;
 		reg = <0>;
 		status = "okay";
