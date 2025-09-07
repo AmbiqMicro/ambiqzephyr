@@ -23,3 +23,18 @@ properties:
     type: int
     description: |
       Minimum time, in nanoseconds, the flash chip needs to recover after reset.
+
+  reset-type:
+    required: true
+    oneOf:
+      - type: int
+        default: 0
+        description: |
+          Minimum duration, in nanoseconds, of an active pulse on the RESET line.
+      - type: string
+        enum:
+          - "RESET_DIV4"
+          - "RESET_DIV6"
+        default: "RESET_DIV4"
+        description: |
+          Minimum duration, in nanoseconds, of an active pulse on the RESET line.
