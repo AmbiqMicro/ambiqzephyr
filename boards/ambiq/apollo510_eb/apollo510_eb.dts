@@ -249,6 +249,7 @@ zephyr_udc0: &usb {
 		reset-gpios = <&gpio32_63 22 GPIO_ACTIVE_LOW>;
 		t-reset-pulse = <10000>; /* min tSHRH */
 		t-reset-recovery = <1000000>; /* max tSE */
+		reset-type = <0>;
 	};
 };
 

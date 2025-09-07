@@ -226,6 +226,7 @@
 		ce-break-config = <0 0>;
 		ambiq,timing-config-mask = <0x62>;
 		ambiq,timing-config = <0 16 1 0 0 5 20>;
+		reset-type = "RESET_DIV6";
 	};
 };
 
