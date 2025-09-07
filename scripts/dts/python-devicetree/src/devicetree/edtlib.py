@@ -76,7 +76,7 @@ from collections import defaultdict
 from collections.abc import Callable, Iterable
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, NoReturn, Optional, Union
+from typing import TYPE_CHECKING, Any, NoReturn, Optional, Union, Tuple
 
 import yaml
 
@@ -491,7 +491,7 @@ class Binding:
 
         ok_prop_keys = {"description", "type", "required",
                         "enum", "const", "default", "deprecated",
-                        "specifier-space"}
+                        "specifier-space", "oneOf", "anyOf", "allOf"}
 
         for prop_name, options in raw["properties"].items():
             for key in options:
@@ -500,7 +500,16 @@ class Binding:
                          f"'properties: {prop_name}: ...' in {self.path}, "
                          f"expected one of {', '.join(ok_prop_keys)}")
 
-            _check_prop_by_type(prop_name, options, self.path)
+            oneof_options = options.get("oneOf")
+
+            if oneof_options:
+                if len(oneof_options) < 2:
+                    _err(f"missing Property options for '{prop_name}'.oneOf in 'properties' in "
+                         f"{binding_path}")
+                for option in oneof_options:
+                    _check_prop_by_type(prop_name, option, self.path)
+            else:
+                _check_prop_by_type(prop_name, options, self.path)
 
             for true_false_opt in ["required", "deprecated"]:
                 if true_false_opt in options:
@@ -581,6 +590,9 @@ class PropertySpec:
 
     specifier_space:
       The specifier space for the property as given in the binding, or None.
+
+    oneof:
+      Only one of the property spec should be present at a time.
     """
 
     def __init__(self, name: str, binding: Binding):
@@ -589,7 +601,7 @@ class PropertySpec:
         self._raw: dict[str, Any] = self.binding.raw["properties"][name]
 
     def __repr__(self) -> str:
-        return f"<PropertySpec {self.name} type '{self.type}'>"
+        return f"<PropertySpec {self.name}>"
 
     @property
     def path(self) -> Optional[str]:
@@ -665,6 +677,11 @@ class PropertySpec:
     def specifier_space(self) -> Optional[str]:
         "See the class docstring"
         return self._raw.get("specifier-space")
+
+    @property
+    def oneOf(self) -> Optional[list[dict[str, Any]]]:
+        "See the class docstring"
+        return self._raw.get("oneOf")
 
 PropertyValType = Union[int, str,
                         list[int], list[str],
@@ -1519,7 +1536,10 @@ class Node:
         # Initialize self.props
         if prop2specs:
             for prop_spec in prop2specs.values():
-                self._init_prop(prop_spec, err_on_deprecated)
+                if prop_spec.oneOf:
+                    self._init_prop_oneOf(prop_spec, err_on_deprecated)
+                else:
+                    self._init_prop(prop_spec, err_on_deprecated)
             self._check_undeclared_props()
         elif default_prop_types:
             for name in self._node.props:
@@ -1528,6 +1548,60 @@ class Node:
                 prop_spec = _DEFAULT_PROP_SPECS[name]
                 val = self._prop_val(name, prop_spec, err_on_deprecated)
                 self.props[name] = Property(prop_spec, val, self)
+
+    def _init_prop_oneOf(self, prop_spec: PropertySpec,
+                         err_on_deprecated: bool) -> None:
+        # _init_props_oneOf() helper for initializing a single property marked with oneOf.
+        # 'prop_spec' is a PropertySpec object from the node's binding.
+
+        name = prop_spec.name
+
+        # Skip properties that start with '#', like '#size-cells', and mapping
+        # properties like 'gpio-map'/'interrupt-map'
+        if name[0] == "#" or name.endswith("-map"):
+            return
+
+        val, prop_type = self._prop_val_oneOf(name, prop_spec, err_on_deprecated)
+
+        if val is None:
+            # 'required: false' property that wasn't there, or a property type
+            # for which we store no data.
+            return
+
+        datalist = prop_spec._raw.pop("oneOf")
+        target = next((item for item in datalist if item.get("type") == prop_type), None)
+        prop_spec._raw.update(target)
+
+        if prop_spec.enum and prop_spec.type == 'string':
+            if not prop_spec.enum_tokenizable:
+                _LOG.warning(
+                    f"compatible '{prop_spec.binding.compatible}' "
+                    f"in binding '{prop_spec.binding.path}' has non-tokenizable enum "
+                    f"for property '{prop_spec.name}': " +
+                    ', '.join(repr(x) for x in prop_spec.enum))
+            elif not prop_spec.enum_upper_tokenizable:
+                _LOG.warning(
+                    f"compatible '{prop_spec.binding.compatible}' "
+                    f"in binding '{prop_spec.binding.path}' has enum for property "
+                    f"'{prop_spec.name}' that is only tokenizable "
+                    'in lowercase: ' +
+                    ', '.join(repr(x) for x in prop_spec.enum))
+
+        enum = prop_spec.enum
+        for subval in val if isinstance(val, list) else [val]:
+            if enum and subval not in enum:
+                _err(f"value of property '{name}' on {self.path} in "
+                     f"{self.edt.dts_path} ({subval!r}) is not in 'enum' list in "
+                     f"{self.binding_path} ({enum!r})")
+
+        const = prop_spec.const
+        if const is not None and val != const:
+            _err(f"value of property '{name}' on {self.path} in "
+                 f"{self.edt.dts_path} ({val!r}) "
+                 "is different from the 'const' value specified in "
+                 f"{self.binding_path} ({const!r})")
+
+        self.props[name] = Property(prop_spec, val, self)
 
     def _init_prop(self, prop_spec: PropertySpec,
                    err_on_deprecated: bool) -> None:
@@ -1550,8 +1624,8 @@ class Node:
         for subval in val if isinstance(val, list) else [val]:
             if enum and subval not in enum:
                 _err(f"value of property '{name}' on {self.path} in "
-                    f"{self.edt.dts_path} ({subval!r}) is not in 'enum' list in "
-                    f"{self.binding_path} ({enum!r})")
+                     f"{self.edt.dts_path} ({subval!r}) is not in 'enum' list in "
+                     f"{self.binding_path} ({enum!r})")
 
         const = prop_spec.const
         if const is not None and val != const:
@@ -1567,59 +1641,14 @@ class Node:
 
         self.props[name] = Property(prop_spec, val, self)
 
-    def _prop_val(
-        self,
-        name: str,
-        prop_spec: PropertySpec,
-        err_on_deprecated: bool,
-    ) -> PropertyValType:
-        # _init_prop() helper for getting the property's value
-        #
-        # name:
-        #   Property name from binding
-        #
-        # prop_spec:
-        #   PropertySpec from binding
-        #
-        # err_on_deprecated:
-        #   If True, a deprecated property is an error instead of warning.
+    def _prop(self, name: str,
+              prop_spec: PropertySpec,
+              prop_type: str) -> PropertyValType:
 
         node = self._node
         prop = node.props.get(name)
         binding_path = prop_spec.binding.path
-        prop_type = prop_spec.type
-        deprecated = prop_spec.deprecated
-        required = prop_spec.required
-        default = prop_spec.default
         specifier_space = prop_spec.specifier_space
-
-        if prop and deprecated:
-            msg = (
-                f"'{name}' is marked as deprecated in 'properties:' "
-                f"in {binding_path} for node {node.path}."
-            )
-            if err_on_deprecated:
-                _err(msg)
-            else:
-                _LOG.warning(msg)
-
-        if not prop:
-            if required and self.status == "okay":
-                _err(
-                    f"'{name}' is marked as required in 'properties:' in "
-                    f"{binding_path}, but does not appear in {node!r}"
-                )
-
-            if default is not None:
-                # YAML doesn't have a native format for byte arrays. We need to
-                # convert those from an array like [0x12, 0x34, ...]. The
-                # format has already been checked in
-                # _check_prop_by_type().
-                if prop_type == "uint8-array":
-                    return bytes(default) # type: ignore
-                return default
-
-            return False if prop_type == "boolean" else None
 
         if prop_type == "boolean":
             if prop.type != Type.EMPTY:
@@ -1671,6 +1700,126 @@ class Node:
         # patterns above, so that we can require all entries in 'properties:'
         # to have a 'type: ...'. No Property object is created for it.
         return None
+
+    def _prop_val_oneOf(
+        self,
+        name: str,
+        prop_spec: PropertySpec,
+        err_on_deprecated: bool,
+    ) -> Tuple[PropertyValType, str]:
+        # _init_prop() helper for getting the property's value
+        #
+        # name:
+        #   Property name from binding
+        #
+        # prop_spec:
+        #   PropertySpec from binding
+        #
+        # err_on_deprecated:
+        #   If True, a deprecated property is an error instead of warning.
+
+        node = self._node
+        prop = node.props.get(name)
+        binding_path = prop_spec.binding.path
+        deprecated = prop_spec.deprecated
+        required = prop_spec.required
+        default = prop_spec.default
+        oneOfs = prop_spec.oneOf
+
+        if not prop:
+            if required and self.status == "okay":
+                _err(
+                    f"'{name}' is marked as required in 'properties:' in "
+                    f"{binding_path}, but does not appear in {node!r}"
+                )
+
+            return None, None
+
+        if prop and deprecated:
+            msg = (
+                f"'{name}' is marked as deprecated in 'properties:' "
+                f"in {binding_path} for node {node.path}."
+            )
+            if err_on_deprecated:
+                _err(msg)
+            else:
+                _LOG.warning(msg)
+
+        prop_type = prop_spec._raw.get("type")
+        if prop_type or default:
+            _err(
+                    f"'{name}' is marked as oneOf in 'properties:' in "
+                    f"{binding_path}, 'type:' or 'default:' must not appear at the same level"
+                )
+
+        matches = []
+        for item in oneOfs:
+            try:
+                matches.append(self._prop(name, prop_spec, item.get("type")))
+                prop_type = item.get("type")
+            except:
+                continue
+        if len(matches) != 1:
+            _err(f"value of property '{name}' on {self.path} must match exactly one schema in oneOf")
+
+        return matches[0],prop_type
+
+    def _prop_val(
+        self,
+        name: str,
+        prop_spec: PropertySpec,
+        err_on_deprecated: bool,
+    ) -> PropertyValType:
+        # _init_prop() helper for getting the property's value
+        #
+        # name:
+        #   Property name from binding
+        #
+        # prop_spec:
+        #   PropertySpec from binding
+        #
+        # err_on_deprecated:
+        #   If True, a deprecated property is an error instead of warning.
+
+        node = self._node
+        prop = node.props.get(name)
+        binding_path = prop_spec.binding.path
+        prop_type = prop_spec.type
+        deprecated = prop_spec.deprecated
+        required = prop_spec.required
+        default = prop_spec.default
+
+        if prop and deprecated:
+            msg = (
+                f"'{name}' is marked as deprecated in 'properties:' "
+                f"in {binding_path} for node {node.path}."
+            )
+            if err_on_deprecated:
+                _err(msg)
+            else:
+                _LOG.warning(msg)
+
+        if not prop:
+            if required and self.status == "okay":
+                _err(
+                    f"'{name}' is marked as required in 'properties:' in "
+                    f"{binding_path}, but does not appear in {node!r}"
+                )
+
+            if default is not None:
+                # YAML doesn't have a native format for byte arrays. We need to
+                # convert those from an array like [0x12, 0x34, ...]. The
+                # format has already been checked in
+                # _check_prop_by_type().
+                if prop_type == "uint8-array":
+                    return bytes(default) # type: ignore
+                return default
+
+            return False if prop_type == "boolean" else None
+
+
+        return self._prop(name, prop_spec, prop_type)
+
 
     def _check_undeclared_props(self) -> None:
         # Checks that all properties are declared in the binding
