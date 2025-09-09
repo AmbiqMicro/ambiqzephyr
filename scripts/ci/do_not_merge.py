@@ -29,6 +29,8 @@ def parse_args(argv):
     )
 
     parser.add_argument("-p", "--pull-request", required=True, type=int, help="The PR number")
+    parser.add_argument("-o", "--org", default="zephyrproject-rtos", help="Github organization")
+    parser.add_argument("-r", "--repo", default="zephyr", help="Github repository")
 
     return parser.parse_args(argv)
 

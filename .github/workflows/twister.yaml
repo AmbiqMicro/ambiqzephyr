@@ -447,13 +447,13 @@ jobs:
           pip install -r scripts/requirements-actions.txt --require-hashes
 
       - name: Download Artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           path: artifacts
 
       - name: Merge Test Results
         run: |
-          junitparser merge artifacts/*/*/twister.xml junit.xml
+          junitparser merge --glob artifacts/**/twister.xml junit.xml
           junit2html junit.xml junit.html
 
       - name: Upload Unit Test Results
