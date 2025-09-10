@@ -85,7 +85,7 @@ And also there are supports for some third-party libs:
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |  fatfs |       -        |    apollo510L-dev  |  samples\\subsys\\fs\\fs_sample           |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-| mbedtls|  coming soon   |                    |                                           |                  |
+| mbedtls|       -        |    apollo510L-dev  |  tests\\benchmarks\\mbedtls               |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |  lvgl  |  coming soon   |                    |                                           |                  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
@@ -97,7 +97,7 @@ Together with generic support for ARM Cortex-M peripherals like cache, interrupt
 Release Notes
 *************
 
-See the full release notes: `release_note.rst <RELEASE_NOTES.rst>`_
+See the full release notes: `release_note.rst <doc/ambiq/RELEASE_NOTES.rst>`_
 
 .. below included in doc/introduction/introduction.rst
 
@@ -232,8 +232,14 @@ For those samples that require additional hardware, such as the ap510_disp shiel
 
 ``west build -b apollo510L_eb --shield ap510_disp ./samples/drivers/display -p always``
 
-For Bluetooth samples, you need to program the BLE Controller firmware via JLINK once before running samples. The programming script and binary locate in the SDK
-ambiqsuite/tools/apollo510L_scripts/firmware_updates/cm4_ble_updates/ble_v1p2. Please contact with our Sales team to get the SDK.
+For Bluetooth samples, you need to program the BLE Controller firmware via JLINK once before running samples. The programming script and binary locate in ambiq SDK
+ambiqsuite/tools/apollo510L_scripts/firmware_updates/cm4_ble_updates/ble_v1p2. Please get the SDK from `Ambiq Content Portal`_.
+
+For MSPI samples, please refer to `How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst <doc/ambiq/How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst>`_
+
+For USB samples, please refer to `How_to_Run_Zephyr_USB_Samples.rst <doc/ambiq/How_to_Run_Zephyr_USB_Samples.rst>`_
+
+For MCU_Boot samples, please refer to `How_to_Run_MCUBoot_Samples_and_Tests.rst <doc/ambiq/How_to_Run_MCUBoot_Samples_and_Tests.rst>`_
 
 .. start_include_here
 
@@ -308,4 +314,5 @@ Additional Resources
 .. _Zephyr Tech Talks: https://www.zephyrproject.org/tech-talks
 .. _Ambiq SoC: https://contentportal.ambiq.com/soc
 .. _Ambiq Products: https://ambiq.com/products/
+.. _Ambiq Content Portal: https://contentportal.ambiq.com/
 .. _Ambiq HAL Repository: https://github.com/AmbiqMicro/ambiqhal_ambiq_alpha
