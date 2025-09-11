@@ -182,7 +182,9 @@ static int stimer_init(void)
 	uint32_t oldCfg;
 
 	oldCfg = am_hal_stimer_config(TIMER_CLKSRC | AM_HAL_STIMER_CFG_FREEZE);
-
+	am_hal_stimer_counter_clear();
+	am_hal_stimer_int_disable(0xFFFFFFFF);
+	am_hal_stimer_int_clear(0xFFFFFFFF);
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
 	am_hal_stimer_config((oldCfg & ~(AM_HAL_STIMER_CFG_FREEZE | CTIMER_STCFG_CLKSEL_Msk)) |
 			     TIMER_CLKSRC | AM_HAL_STIMER_CFG_COMPARE_A_ENABLE |
