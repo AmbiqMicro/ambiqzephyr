@@ -80,3 +80,7 @@ Deprecations
 
 Known Issues
 ------------
+- The ``test_cpu_idle`` test under tests/kernel/context may fail when using the STIMER
+  with default configurations (XTAL 32.768 kHz source, ``CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC=32768``,
+  ``CONFIG_SYS_CLOCK_TICKS_PER_SEC=1024``), due to tick announced from STIMER being off by one,
+  which may be the result of accumulated error from single digit clock cycle delay.
