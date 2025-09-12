@@ -41,11 +41,6 @@
 # 2. Keep tag entries sorted alphabetically
 
 # zephyr-keep-sorted-start
-bluetooth:
-  files:
-    - drivers/bluetooth/
-    - subsys/bluetooth/
-    - subsys/net/l2/bluetooth/
 
 cmsis_dsp:
   files:
@@ -53,18 +48,6 @@ cmsis_dsp:
     # we have no means of telling file changes in a module, so for assume any
     # change to west.yml is updating something we need to re-test for.
     - west.yml
-
-kernel:
-  files:
-    - kernel/
-    - arch/
-
-mcumgr:
-  files:
-    - subsys/mgmt/mcumgr/
-    - tests/subsys/mgmt/mcumgr/
-    - samples/subsys/mgmt/mcumgr/
-    - include/zephyr/mgmt/mcumgr/
 
 net:
   files:
