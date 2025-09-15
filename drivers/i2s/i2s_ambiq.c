@@ -21,7 +21,7 @@
 
 #define DT_DRV_COMPAT ambiq_i2s
 
-LOG_MODULE_REGISTER(ambiq_i2s, LOG_LEVEL_ERR);
+LOG_MODULE_REGISTER(ambiq_i2s, LOG_LEVEL_INF);
 
 struct i2s_ambiq_data {
 	void *i2s_handler;
@@ -371,7 +371,7 @@ static int i2s_ambiq_trigger(const struct device *dev, enum i2s_dir dir, enum i2
 
 	ARG_UNUSED(dir);
 
-	LOG_INF("Direction: %d Command: %d", dir, cmd);
+	//LOG_INF("Direction: %d Command: %d", dir, cmd);
 	switch (cmd) {
 	case I2S_TRIGGER_STOP:
 	case I2S_TRIGGER_DROP:
@@ -383,8 +383,17 @@ static int i2s_ambiq_trigger(const struct device *dev, enum i2s_dir dir, enum i2
 		if (data->i2s_state == I2S_STATE_RUNNING) {
 			am_hal_i2s_dma_transfer_complete(data->i2s_handler);
 			am_hal_i2s_disable(data->i2s_handler);
+			if(dir == I2S_DIR_TX)
+			{
+				I2Sn(data->inst_idx)->I2SCTL = _VAL2FLD(I2S0_I2SCTL_TXRST, 1);
+				k_sem_init(&data->tx_ready_sem, 1, 1);
+			}
+			else if(dir == I2S_DIR_RX)
+			{
+				I2Sn(data->inst_idx)->I2SCTL = _VAL2FLD(I2S0_I2SCTL_RXRST, 1);
+				k_sem_init(&data->rx_done_sem, 0, 1);
+			}
 			data->i2s_state = I2S_STATE_READY;
-			k_sleep(K_MSEC(100));
 		}
 		break;
 
@@ -406,7 +415,12 @@ static int i2s_ambiq_trigger(const struct device *dev, enum i2s_dir dir, enum i2
 		am_hal_i2s_enable(data->i2s_handler);
 		am_hal_i2s_dma_configure(data->i2s_handler, &(data->i2s_hal_cfg),
 					 &(data->i2s_transfer));
-		am_hal_i2s_dma_transfer_start(data->i2s_handler, &(data->i2s_hal_cfg));
+		uint32_t hal_ret = am_hal_i2s_dma_transfer_start(data->i2s_handler, &(data->i2s_hal_cfg));
+		if(hal_ret)
+		{
+			LOG_ERR("Failed to start I2S DMA transfer: %d", hal_ret);
+			LOG_ERR("TXFIFOCNT %d TXFIFOFULL %d", I2Sn(data->inst_idx)->TXFIFOSTATUS_b.TXFIFOCNT, I2Sn(data->inst_idx)->TXFIFOSTATUS_b.TXFIFOFULL);
+		}
 		data->i2s_state = I2S_STATE_RUNNING;
 		break;
 

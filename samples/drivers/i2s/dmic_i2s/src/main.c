@@ -66,10 +66,11 @@ static bool check_i2s_data(uint32_t rxtx_sample_num, void *rx_databuf)
 			break;
 		}
 	}
+	printk("Found 0xCD00 at index %d\n", index_0);
 
 	for (i = 0; i < (rxtx_sample_num - index_0); i++) {
 		if (rx_databuf_16[i + index_0] != (0xCD00 | ((i % SAMPLES_PER_BLOCK) & 0xFF))) {
-			printk("idx %d 0x%x buf[%d] = 0x%x 0x%x", index_0,
+			printk("idx %d 0x%x buf[%d] = 0x%x 0x%x\n", index_0,
 			       rx_databuf_16[i + index_0 - 1], i, rx_databuf_16[i + index_0],
 			       rx_databuf_16[i + index_0 + 1]);
 			return false;
@@ -87,7 +88,7 @@ static bool check_i2s_data(uint32_t rxtx_sample_num, void *rx_databuf)
 
 	for (i = 0; i < (rxtx_sample_num - index_0); i++) {
 		if (rx_databuf_32[i + index_0] != (0xCD0000 | ((i % SAMPLES_PER_BLOCK) & 0xFF))) {
-			printk("idx %d 0x%x buf[%d] = 0x%x 0x%x", index_0,
+			printk("idx %d 0x%x buf[%d] = 0x%x 0x%x\n", index_0,
 			       rx_databuf_32[i + index_0 - 1], i, rx_databuf_32[i + index_0],
 			       rx_databuf_32[i + index_0 + 1]);
 			return false;
@@ -106,12 +107,6 @@ int main(void)
 	const struct device *const i2s_rx_dev = DEVICE_DT_GET(I2S_RX);
 	uint32_t rx_buf_index = 0;
 #endif
-#if CONFIG_I2S_DMIC_INPUT
-	const struct device *const dmic_dev = DEVICE_DT_GET(DT_NODELABEL(dmic_dev));
-#endif
-#if SINE_WAVE_DATA_IN
-	uint32_t ti = 0;
-#endif
 
 	struct i2s_config i2s_config_param;
 	int ret;
@@ -124,14 +119,7 @@ int main(void)
 
 	LOG_INF("DMIC I2S sample");
 
-#if CONFIG_I2S_DMIC_INPUT
-	LOG_INF("PDM to I2S mode");
-
-	if (!device_is_ready(dmic_dev)) {
-		LOG_ERR("%s is not ready", dmic_dev->name);
-		return 0;
-	}
-#elif CONFIG_I2S_LOOPBACK
+#if CONFIG_I2S_LOOPBACK
 	LOG_INF("I2S loopback mode");
 
 	if (!device_is_ready(i2s_rx_dev)) {
@@ -140,50 +128,6 @@ int main(void)
 	}
 #else
 	LOG_INF("I2S TX only mode");
-#endif
-
-#if CONFIG_I2S_DMIC_INPUT
-	struct pcm_stream_cfg stream = {
-		.pcm_width = SAMPLE_BIT_WIDTH,
-		.mem_slab = &mem_slab,
-	};
-	struct dmic_cfg dmic_config_param = {
-		.io = {
-				/* These fields can be used to limit the PDM clock
-				 * configurations that the driver is allowed to use
-				 * to those supported by the microphone.
-				 */
-				.min_pdm_clk_freq = 1000000,
-				.max_pdm_clk_freq = 3500000,
-				.min_pdm_clk_dc = 40,
-				.max_pdm_clk_dc = 60,
-			},
-		.streams = &stream,
-		.channel = {
-				.req_num_streams = 1,
-			},
-	};
-
-	dmic_config_param.channel.req_num_chan = NUMBER_OF_CHANNELS;
-
-#if (NUMBER_OF_CHANNELS == 1)
-	dmic_config_param.channel.req_chan_map_lo = dmic_build_channel_map(0, 0, PDM_CHAN_LEFT);
-#elif (NUMBER_OF_CHANNELS == 2)
-	dmic_config_param.channel.req_chan_map_lo = dmic_build_channel_map(0, 0, PDM_CHAN_LEFT) |
-						    dmic_build_channel_map(1, 0, PDM_CHAN_RIGHT);
-#endif
-
-	dmic_config_param.streams[0].pcm_rate = CONFIG_SAMPLE_FREQ;
-	dmic_config_param.streams[0].block_size = BLOCK_SIZE;
-
-	LOG_INF("PCM output rate: %u, channels: %u", dmic_config_param.streams[0].pcm_rate,
-		dmic_config_param.channel.req_num_chan);
-
-	ret = dmic_configure(dmic_dev, &dmic_config_param);
-	if (ret < 0) {
-		LOG_ERR("Failed to configure PDM: %d", ret);
-		return ret;
-	}
 #endif
 
 	i2s_config_param.word_size = SAMPLE_BIT_WIDTH;
@@ -222,140 +166,92 @@ int main(void)
 
 	LOG_INF("Start streams");
 
-#if CONFIG_I2S_DMIC_INPUT
-	ret = dmic_trigger(dmic_dev, DMIC_TRIGGER_START);
-	if (ret < 0) {
-		LOG_ERR("START trigger failed: %d", ret);
-		return ret;
-	}
-#endif
+	for(int i = 0; i < 3; i++)
+	{
+		while (1) {
 
-	while (1) {
+			void *mem_block;
 
-#if CONFIG_I2S_DMIC_INPUT
-		void *buffer;
-		uint32_t size;
-
-		ret = dmic_read(dmic_dev, 0, &buffer, &size, TIMEOUT);
-		if (ret < 0) {
-			LOG_ERR("Read failed: %d", ret);
-			return ret;
-		}
-
-		if (size != BLOCK_SIZE) {
-			LOG_ERR("Read data size %d and configured size %d are mismatched.\n", size,
-				BLOCK_SIZE);
-			return 0;
-		}
-
-		ret = i2s_write(i2s_dev, buffer, BLOCK_SIZE);
-#else
-		void *mem_block;
-
-		ret = k_mem_slab_alloc(&mem_slab, &mem_block, Z_TIMEOUT_TICKS(TIMEOUT));
-		if (ret < 0) {
-			LOG_ERR("Failed to allocate TX block");
-			return 0;
-		}
-#if SINE_WAVE_DATA_IN
-		const float M_PI = 3.14159265358979323846f;
-		const uint32_t f = 2000;
-		const uint32_t fs = i2s_config_param.frame_clk_freq;
-
-		if (i2s_config_param.word_size == 16) {
-			const uint32_t amp = 0x4000;
-			int16_t *i2s_data_buf_16bit = (int16_t *)mem_block;
-
-			for (size_t i = 0; i < SAMPLES_PER_BLOCK; i++) {
-				i2s_data_buf_16bit[i] =
-					(int16_t)(amp * sinf(2 * M_PI * f * ((ti++) % fs) / fs));
+			ret = k_mem_slab_alloc(&mem_slab, &mem_block, Z_TIMEOUT_TICKS(TIMEOUT));
+			if (ret < 0) {
+				LOG_ERR("Failed to allocate TX block");
+				return 0;
 			}
 
-		} else if ((i2s_config_param.word_size == 24) ||
-			   (i2s_config_param.word_size == 32)) {
-			const uint32_t amp = 0x400000;
-			int32_t *i2s_data_buf_32bit = (int32_t *)mem_block;
-
-			for (size_t i = 0; i < SAMPLES_PER_BLOCK; i++) {
-				i2s_data_buf_32bit[i] =
-					((int32_t)(amp * sinf(2 * M_PI * f * ((ti++) % fs) / fs))) &
-					0xFFFFFF;
+			if (!started) {
+	#if CONFIG_I2S_LOOPBACK
+				i2s_trigger(i2s_rx_dev, I2S_DIR_RX, I2S_TRIGGER_START);
+	#endif
+				i2s_trigger(i2s_dev, I2S_DIR_TX, I2S_TRIGGER_START);
+				started = true;
 			}
-		}
-#elif SEQ_NUM_DATA_IN
-		if (i2s_config_param.word_size == 16) {
-			int16_t *i2s_data_buf_16bit = (int16_t *)mem_block;
+	#if SEQ_NUM_DATA_IN
+			if (i2s_config_param.word_size == 16) {
+				int16_t *i2s_data_buf_16bit = (int16_t *)mem_block;
 
-			for (int i = 0; i < SAMPLES_PER_BLOCK; i++) {
-				i2s_data_buf_16bit[i] = (i & 0xFF) | 0xCD00;
-			}
-		} else {
-			int32_t *i2s_data_buf_32bit = (int32_t *)mem_block;
-
-			for (int i = 0; i < SAMPLES_PER_BLOCK; i++) {
-				i2s_data_buf_32bit[i] = (i & 0xFF) | 0xCD0000;
-			}
-		}
-#endif
-		ret = i2s_write(i2s_dev, mem_block, BLOCK_SIZE);
-#endif
-
-		if (ret < 0) {
-			LOG_ERR("Failed to write data: %d", ret);
-			break;
-		}
-
-		if (!started) {
-#if CONFIG_I2S_LOOPBACK
-			i2s_trigger(i2s_rx_dev, I2S_DIR_RX, I2S_TRIGGER_START);
-#endif
-			i2s_trigger(i2s_dev, I2S_DIR_TX, I2S_TRIGGER_START);
-			started = true;
-		}
-
-#if CONFIG_I2S_LOOPBACK
-		void *rx_buffer;
-		uint32_t rx_size = 0;
-
-		ret = i2s_read(i2s_rx_dev, &rx_buffer, &rx_size);
-
-		if (ret < 0) {
-			LOG_ERR("Failed to read data: %d", ret);
-			break;
-		}
-
-#if SEQ_NUM_DATA_IN
-		memcpy(&rx_temp_buf[rx_buf_index], rx_buffer, rx_size);
-		rx_buf_index += rx_size;
-		if (rx_buf_index >= (BLOCK_SIZE * 100)) {
-			if (check_i2s_data(SAMPLES_PER_BLOCK * 100, (void *)rx_temp_buf)) {
-				LOG_INF("%d bytes passed", BLOCK_SIZE * 100);
+				for (int i = 0; i < SAMPLES_PER_BLOCK; i++) {
+					i2s_data_buf_16bit[i] = (i & 0xFF) | 0xCD00;
+				}
 			} else {
-				LOG_INF("Failed");
+				int32_t *i2s_data_buf_32bit = (int32_t *)mem_block;
+
+				for (int i = 0; i < SAMPLES_PER_BLOCK; i++) {
+					i2s_data_buf_32bit[i] = (i & 0xFF) | 0xCD0000;
+				}
 			}
-			rx_buf_index = 0;
+	#endif
+			ret = i2s_write(i2s_dev, mem_block, BLOCK_SIZE);
+
+			if (ret < 0) {
+				LOG_ERR("Failed to write data: %d %d %d", i, tx_count, ret);
+				break;
+			}
+
+	#if CONFIG_I2S_LOOPBACK
+			void *rx_buffer;
+			uint32_t rx_size = 0;
+
+			ret = i2s_read(i2s_rx_dev, &rx_buffer, &rx_size);
+
+			if (ret < 0) {
+				LOG_ERR("Failed to read data: %d %d %d", i, tx_count, ret);
+				break;
+			}
+
+	#if SEQ_NUM_DATA_IN
+			memcpy(&rx_temp_buf[rx_buf_index], rx_buffer, rx_size);
+			rx_buf_index += rx_size;
+			if (rx_buf_index >= (BLOCK_SIZE * 100)) {
+				if (check_i2s_data(SAMPLES_PER_BLOCK * 100, (void *)rx_temp_buf)) {
+					LOG_INF("%d %d bytes passed", i, BLOCK_SIZE * 100);
+				} else {
+					LOG_INF("%d Failed", i);
+				}
+				rx_buf_index = 0;
+			}
+	#endif
+			k_mem_slab_free(&mem_slab, rx_buffer);
+	#endif
+			if (++tx_count >= 100) {
+				tx_count = 0;
+				break;
+			}
 		}
-#endif
-		k_mem_slab_free(&mem_slab, rx_buffer);
-#endif
-		if (tx_count++ > 100) {
-			break;
+
+		if (i2s_trigger(i2s_dev, I2S_DIR_TX, I2S_TRIGGER_STOP) < 0) {
+			LOG_ERR("Send I2S TX trigger STOP failed: %d", ret);
+			return 0;
 		}
-	}
+	#if CONFIG_I2S_LOOPBACK
+		if (i2s_trigger(i2s_rx_dev, I2S_DIR_RX, I2S_TRIGGER_STOP) < 0) {
+			LOG_ERR("Send I2S RX trigger STOP failed: %d", ret);
+			return 0;
+		}
+	#endif
+		started = false;
+		k_sleep(K_MSEC(1000));
 
-#if CONFIG_I2S_DMIC_INPUT
-	ret = dmic_trigger(dmic_dev, DMIC_TRIGGER_STOP);
-	if (ret < 0) {
-		LOG_ERR("STOP trigger failed: %d", ret);
-		return ret;
 	}
-#endif
-
-	if (i2s_trigger(i2s_dev, I2S_DIR_TX, I2S_TRIGGER_STOP) < 0) {
-		LOG_ERR("Send I2S trigger STOP failed: %d", ret);
-		return 0;
-	}
-
 	LOG_INF("Streams stopped");
 	return 0;
 }
