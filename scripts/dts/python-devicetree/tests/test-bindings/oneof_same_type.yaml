@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: BSD-3-Clause
+
+description: OneOf same-type options
+
+compatible: "oneof-same-type"
+
+properties:
+  mode:
+    required: true
+    oneOf:
+      - name: legacy
+        type: string
+        enum: ["A", "B"]
+      - name: extended
+        type: string
+        enum: ["B", "C", "D"]

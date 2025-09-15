@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: BSD-3-Clause
+
+description: OneOf different types, unlabeled
+
+compatible: "oneof-diff-unlabeled"
+
+properties:
+  foo:
+    required: true
+    oneOf:
+      - type: int
+      - type: string
+

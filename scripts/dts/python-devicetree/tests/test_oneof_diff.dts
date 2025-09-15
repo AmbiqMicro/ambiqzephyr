@@ -1,0 +1,28 @@
+/*
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+/dts-v1/;
+
+/ {
+	unlabeled-int {
+		compatible = "oneof-diff-unlabeled";
+		foo = <1>;
+	};
+
+	unlabeled-str {
+		compatible = "oneof-diff-unlabeled";
+		foo = "x";
+	};
+
+	labeled-int {
+		compatible = "oneof-diff-labeled";
+		foo-i = <2>;
+	};
+
+	labeled-str {
+		compatible = "oneof-diff-labeled";
+		foo-s = "y";
+	};
+};
+

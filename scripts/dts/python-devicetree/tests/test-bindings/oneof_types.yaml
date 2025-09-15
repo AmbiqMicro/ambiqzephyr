@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: BSD-3-Clause
+
+description: OneOf covering many types
+
+compatible: "oneof-types"
+
+properties:
+  p:
+    required: true
+    oneOf:
+      - name: b
+        type: boolean
+      - name: i
+        type: int
+      - name: a
+        type: array
+        enum: [1, 2, 3]
+      - name: u8
+        type: uint8-array
+      - name: s
+        type: string
+      - name: sa
+        type: string-array
+        enum: ["xx", "yy"]
+      - name: ph
+        type: phandle
+      - name: phs
+        type: phandles
+      - name: pha
+        type: phandle-array
+        specifier-space: x
+      - name: pa
+        type: path

@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: BSD-3-Clause
+
+description: OneOf property test
+
+compatible: "oneof"
+
+properties:
+  foo:
+    required: true
+    oneOf:
+      - name: numeric
+        type: int
+        enum: [1, 2, 123]
+      - name: symbolic
+        type: string
+        enum: ["abc", "def"]

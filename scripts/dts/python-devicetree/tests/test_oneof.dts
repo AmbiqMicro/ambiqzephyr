@@ -1,0 +1,27 @@
+/*
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+/dts-v1/;
+
+/ {
+	oneof-int {
+		compatible = "oneof";
+		foo = <123>;
+	};
+
+	oneof-str {
+		compatible = "oneof";
+		foo = "abc";
+	};
+
+	oneof-same-1 {
+		compatible = "oneof-same-type";
+		mode-legacy = "A";
+	};
+
+	oneof-same-2 {
+		compatible = "oneof-same-type";
+		mode-extended = "D";
+	};
+};

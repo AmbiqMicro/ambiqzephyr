@@ -1,0 +1,64 @@
+/*
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+/dts-v1/;
+
+/dts-v1/;
+
+/ {
+	ctrl: ctrl {
+		compatible = "x-ctrl";
+		#x-cells = <1>;
+	};
+
+	ok_bool {
+		compatible = "oneof-types";
+		p; /* boolean */
+	};
+
+	ok_int {
+		compatible = "oneof-types";
+		p = <5>;
+	};
+
+	ok_array {
+		compatible = "oneof-types";
+		p = <1 2 3>;
+	};
+
+	ok_u8 {
+		compatible = "oneof-types";
+		p = [ 01 02 03 ];
+	};
+
+	ok_str {
+		compatible = "oneof-types";
+		p = "x";
+	};
+
+	ok_sarr {
+		compatible = "oneof-types";
+		p = "xx", "yy";
+	};
+
+	ok_ph {
+		compatible = "oneof-types";
+		p-ph = <&ctrl>;
+	};
+
+	ok_phs {
+		compatible = "oneof-types";
+		p-phs = <&ctrl &ctrl>;
+	};
+
+	ok_pha {
+		compatible = "oneof-types";
+		p-pha = <&ctrl 1 &ctrl 2>;
+	};
+
+	ok_path {
+		compatible = "oneof-types";
+		p = &ctrl;
+	};
+};

@@ -749,6 +749,515 @@ def test_additional_property_feature():
     assert child.props["child-only"].val == "ok"
     assert child.props["extra"].val == 9
 
+def test_oneof_feature():
+    with from_here():
+        edt = edtlib.EDT("test_oneof.dts", ["test-bindings"])
+
+    # Mixed-type selection
+    o_int = edt.get_node("/oneof-int")
+    o_str = edt.get_node("/oneof-str")
+    assert o_int.props["foo"].type == "int"
+    assert o_int.props["foo"].val == 123
+    assert o_str.props["foo"].type == "string"
+    assert o_str.props["foo"].val == "abc"
+
+    # Same-type buckets
+    st1 = edt.get_node("/oneof-same-1")
+    st2 = edt.get_node("/oneof-same-2")
+    assert st1.props["mode"].type == "string"
+    assert st1.props["mode"].val == "A"
+    assert st2.props["mode"].val == "D"
+
+def test_oneof_all_types_ok_and_matrix_negatives(tmp_path):
+    with from_here():
+        edt = edtlib.EDT("test_oneof_types.dts", ["test-bindings"])
+
+    # Table of (node, prop, expected_type)
+    cases = [
+        ("/ok_bool", "p", "boolean"),
+        ("/ok_int", "p", "int"),
+        ("/ok_array", "p", "array"),
+        ("/ok_u8", "p", "uint8-array"),
+        ("/ok_str", "p", "string"),
+        ("/ok_sarr", "p", "string-array"),
+        ("/ok_ph", "p", "phandle"),
+        ("/ok_phs", "p", "phandles"),
+        ("/ok_pha", "p", "phandle-array"),
+        ("/ok_path", "p", "path"),
+    ]
+    for node_path, prop_name, typ in cases:
+        node = edt.get_node(node_path)
+        assert node.props[prop_name].type == typ
+
+    # Negative matrix: DTS with multiple conflicting labeled keys
+    # should error at init.
+    # Build a conflicting DTS inline (multiple labeled keys for same prop)
+    dts_conflict = tmp_path / "conflict.dts"
+    dts_conflict.write_text(
+        """
+/dts-v1/;
+
+/ {
+	ctrl: ctrl {
+		compatible = "x-ctrl";
+		#x-cells = <1>;
+	};
+	n {
+		compatible = "oneof-types";
+		p-i = <1>;
+		p-b;
+	};
+};
+""",
+        encoding="utf-8",
+    )
+    with from_here():
+        with pytest.raises(edtlib.EDTError):
+            edtlib.EDT(dts_conflict, ["test-bindings"])
+
+def test_oneof_diff_types_labeled_and_unlabeled():
+    with from_here():
+        edt = edtlib.EDT("test_oneof_diff.dts", ["test-bindings"])
+
+    assert edt.get_node("/unlabeled-int").props["foo"].type == "int"
+    assert edt.get_node("/unlabeled-str").props["foo"].type == "string"
+    assert edt.get_node("/labeled-int").props["foo"].type == "int"
+    assert edt.get_node("/labeled-str").props["foo"].type == "string"
+
+def test_oneof_diff_types_mixed_labeled_unlabeled_rejected(tmp_path):
+    # Binding mixes labeled and unlabeled oneOf options -> reject
+    binding_yaml = tmp_path / "oneof_diff_mixed.yaml"
+    binding_yaml.write_text(
+        """
+description: mixed
+compatible: "oneof-diff-mixed"
+properties:
+  foo:
+    required: true
+    oneOf:
+      - name: i
+        type: int
+      - type: string
+        """,
+        encoding="utf-8",
+    )
+    dts = tmp_path / "mixed.dts"
+    dts.write_text(
+        """
+/dts-v1/;
+
+/ {
+	n {
+		compatible = "oneof-diff-mixed";
+		foo-i = <1>;
+	};
+};
+""",
+        encoding="utf-8",
+    )
+    with from_here():
+        with pytest.raises(edtlib.EDTError):
+            edtlib.EDT(dts, [str(tmp_path)])
+
+def test_oneof_mixed_label_unlabeled_rejected(tmp_path):
+    dts_file = tmp_path / "oneof_mix.dts"
+    with open(dts_file, "w", encoding="utf-8") as f:
+        f.write("/dts-v1/;\n/ { d { compatible = \"oneof\"; foo = <1>; }; };\n")
+
+    # Create a temporary binding that mixes labeled/unlabeled items.
+    binding_yaml = tmp_path / "oneof_mixed.yaml"
+    binding_yaml.write_text(
+        """
+description: tmp
+compatible: "oneof"
+properties:
+  foo:
+    oneOf:
+      - name: a
+        type: int
+      - type: string
+        enum: ["x"]
+        """,
+        encoding="utf-8",
+    )
+
+    # Point edtlib at our temp binding directly
+    with pytest.raises(edtlib.EDTError):
+        edtlib.Binding(str(binding_yaml), {})
+
+def test_oneof_duplicate_labels_rejected(tmp_path):
+    # Duplicate labels in same-type oneOf should error at binding check.
+    binding_yaml = tmp_path / "oneof_dup.yaml"
+    binding_yaml.write_text(
+        """
+description: dup labels
+compatible: "dup"
+properties:
+  p:
+    oneOf:
+      - name: a
+        type: string
+      - name: a
+        type: string
+        """,
+        encoding="utf-8",
+    )
+    with pytest.raises(edtlib.EDTError):
+        edtlib.Binding(str(binding_yaml), {})
+
+def test_oneof_unlabeled_base_key_rejected_when_same_type(tmp_path):
+    # Using unlabeled base key when multiple same-type options exist
+    # should error with guidance to use labeled key.
+    dts_file = tmp_path / "err_unlabeled.dts"
+    dts = (
+        "/dts-v1/;\n/ { n { compatible = \"oneof-same-type\"; "
+        "mode = \"A\"; }; };\n"
+    )
+    with open(dts_file, "w", encoding="utf-8") as f:
+        f.write(dts)
+    with from_here():
+        with pytest.raises(edtlib.EDTError) as e:
+            edtlib.EDT(dts_file, ["test-bindings"])
+    assert "use a labeled key" in str(e.value)
+
+def test_oneof_multiple_labeled_keys_rejected(tmp_path):
+    # Two labeled variants at once should error.
+    dts_file = tmp_path / "err_multi_labeled.dts"
+    dts = (
+        "/dts-v1/;\n/ { n { compatible = \"oneof-same-type\"; "
+        "mode-legacy = \"A\"; mode-extended = \"D\"; }; };\n"
+    )
+    with open(dts_file, "w", encoding="utf-8") as f:
+        f.write(dts)
+    with from_here():
+        with pytest.raises(edtlib.EDTError) as e:
+            edtlib.EDT(dts_file, ["test-bindings"])
+    assert "multiple labeled variants" in str(e.value)
+
+def test_oneof_base_and_labeled_conflict_rejected(tmp_path):
+    # Base and labeled variant together should error.
+    dts_file = tmp_path / "err_base_and_labeled.dts"
+    dts = (
+        "/dts-v1/;\n/ { n { compatible = \"oneof-same-type\"; "
+        "mode = \"A\"; mode-legacy = \"A\"; }; };\n"
+    )
+    with open(dts_file, "w", encoding="utf-8") as f:
+        f.write(dts)
+    with from_here():
+        with pytest.raises(edtlib.EDTError) as e:
+            edtlib.EDT(dts_file, ["test-bindings"])
+    assert "both base 'mode' and labeled 'mode-legacy'" in str(e.value)
+
+def test_oneof_labeled_value_wrong_type(tmp_path):
+    # Labeled key value must satisfy that option's type/enum.
+    dts_file = tmp_path / "err_wrong_type.dts"
+    dts = (
+        "/dts-v1/;\n/ { n { compatible = \"oneof-same-type\"; "
+        "mode-legacy = <1>; }; };\n"
+    )
+    with open(dts_file, "w", encoding="utf-8") as f:
+        f.write(dts)
+    with from_here():
+        with pytest.raises(edtlib.EDTError) as e:
+            edtlib.EDT(dts_file, ["test-bindings"])
+    assert "does not match labeled schema 'legacy'" in str(e.value)
+
+def test_oneof_unlabeled_ok_when_distinct_types(tmp_path):
+    # Back-compat: different types with no labels allow base key.
+    binding_yaml = tmp_path / "oneof_distinct.yaml"
+    binding_yaml.write_text(
+        """
+description: distinct
+compatible: "distinct"
+properties:
+  foo:
+    oneOf:
+      - type: int
+      - type: string
+        """,
+        encoding="utf-8",
+    )
+    dts_file = tmp_path / "ok_distinct.dts"
+    dts = (
+        "/dts-v1/;\n/ { a { compatible = \"distinct\"; foo = <1>; }; "
+        "b { compatible = \"distinct\"; foo = \"x\"; }; };\n"
+    )
+    with open(dts_file, "w", encoding="utf-8") as f:
+        f.write(dts)
+    # Should not raise
+    with from_here():
+        edtlib.EDT(dts_file, [])
+
+def test_oneof_labeled_const_ok_and_wrong(tmp_path):
+    # Two labeled const alternatives; labeled key must match const.
+    binding_yaml = tmp_path / "oneof_const.yaml"
+    binding_yaml.write_text(
+        """
+description: const opts
+compatible: "const-opts"
+properties:
+  foo:
+    oneOf:
+      - name: zero
+        type: int
+        const: 0
+      - name: one
+        type: int
+        const: 1
+        """,
+        encoding="utf-8",
+    )
+
+    # OK cases
+    dts_ok = tmp_path / "ok_const.dts"
+    dts_ok.write_text(
+        "/dts-v1/;\n/ { n { compatible = \"const-opts\"; "
+        "foo-zero = <0>; }; m { compatible = \"const-opts\"; "
+        "foo-one = <1>; }; };\n",
+        encoding="utf-8",
+    )
+    with from_here():
+        edtlib.EDT(dts_ok, [str(tmp_path)])
+
+    # Wrong value
+    dts_bad = tmp_path / "bad_const.dts"
+    dts_bad.write_text(
+        "/dts-v1/;\n/ { n { compatible = \"const-opts\"; "
+        "foo-zero = <1>; }; };\n",
+        encoding="utf-8",
+    )
+    with from_here():
+        with pytest.raises(edtlib.EDTError):
+            edtlib.EDT(dts_bad, [str(tmp_path)])
+
+def test_oneof_labeled_array_ok_and_wrong(tmp_path):
+    # Labeled array alternative with enum constraints.
+    binding_yaml = tmp_path / "oneof_array.yaml"
+    binding_yaml.write_text(
+        """
+description: array opts
+compatible: "arr-opts"
+properties:
+  foo:
+    oneOf:
+      - name: a
+        type: array
+        enum: [1, 2, 3]
+      - name: b
+        type: array
+        enum: [4, 5]
+        """,
+        encoding="utf-8",
+    )
+    dts_ok = tmp_path / "ok_arr.dts"
+    dts_ok.write_text(
+        "/dts-v1/;\n/ { n { compatible = \"arr-opts\"; "
+        "foo-a = <1 2>; }; };\n",
+        encoding="utf-8",
+    )
+    with from_here():
+        edtlib.EDT(dts_ok, [str(tmp_path)])
+
+    dts_bad = tmp_path / "bad_arr.dts"
+    dts_bad.write_text(
+        "/dts-v1/;\n/ { n { compatible = \"arr-opts\"; "
+        "foo-a = <1 4>; }; };\n",
+        encoding="utf-8",
+    )
+    with from_here():
+        with pytest.raises(edtlib.EDTError):
+            edtlib.EDT(dts_bad, [str(tmp_path)])
+
+def test_oneof_labeled_string_array_ok_and_wrong(tmp_path):
+    # Labeled string-array with enum constraints.
+    binding_yaml = tmp_path / "oneof_strarr.yaml"
+    binding_yaml.write_text(
+        """
+description: str arr opts
+compatible: "sarr-opts"
+properties:
+  foo:
+    oneOf:
+      - name: s
+        type: string-array
+        enum: ["x", "y", "z"]
+      - name: t
+        type: string-array
+        enum: ["u", "v"]
+        """,
+        encoding="utf-8",
+    )
+    dts_ok = tmp_path / "ok_strarr.dts"
+    dts_ok.write_text(
+        "/dts-v1/;\n/ { n { compatible = \"sarr-opts\"; "
+        "foo-s = \"x\", \"z\"; }; };\n",
+        encoding="utf-8",
+    )
+    with from_here():
+        edtlib.EDT(dts_ok, [str(tmp_path)])
+
+    dts_bad = tmp_path / "bad_strarr.dts"
+    dts_bad.write_text(
+        "/dts-v1/;\n/ { n { compatible = \"sarr-opts\"; "
+        "foo-s = \"x\", \"w\"; }; };\n",
+        encoding="utf-8",
+    )
+    with from_here():
+        with pytest.raises(edtlib.EDTError):
+            edtlib.EDT(dts_bad, [str(tmp_path)])
+
+def test_oneof_labeled_undeclared_label_rejected(tmp_path):
+    # Using a labeled key whose label does not exist should be undeclared.
+    binding_yaml = tmp_path / "oneof_decl.yaml"
+    binding_yaml.write_text(
+        """
+description: one
+compatible: "decl"
+properties:
+  foo:
+    oneOf:
+      - name: a
+        type: int
+      - name: c
+        type: int
+        """,
+        encoding="utf-8",
+    )
+    dts_bad = tmp_path / "bad_label.dts"
+    dts_bad.write_text(
+        "/dts-v1/;\n/ { n { compatible = \"decl\"; foo-b = <1>; }; };\n",
+        encoding="utf-8",
+    )
+    with from_here():
+        with pytest.raises(edtlib.EDTError) as e:
+            edtlib.EDT(dts_bad, [str(tmp_path)])
+    assert "'foo-b' appears" in str(e.value)
+
+def test_oneof_labeled_phandle_ok_and_wrong(tmp_path):
+    # Labeled phandle alternatives; value must be a node ref.
+    binding_yaml = tmp_path / "oneof_ph.yaml"
+    binding_yaml.write_text(
+        """
+description: ph opts
+compatible: "ph-opts"
+properties:
+  h:
+    oneOf:
+      - name: a
+        type: phandle
+      - name: b
+        type: phandle
+        """,
+        encoding="utf-8",
+    )
+
+    dts_ok = tmp_path / "ok_ph.dts"
+    dts_ok.write_text(
+        "/dts-v1/;\n/ { ctrl: c { }; n { compatible = \"ph-opts\"; "
+        "h-a = <&ctrl>; }; };\n",
+        encoding="utf-8",
+    )
+    with from_here():
+        edtlib.EDT(dts_ok, [str(tmp_path)])
+
+    dts_bad = tmp_path / "bad_ph.dts"
+    dts_bad.write_text(
+        "/dts-v1/;\n/ { n { compatible = \"ph-opts\"; h-a = <1>; }; };\n",
+        encoding="utf-8",
+    )
+    with from_here():
+        with pytest.raises(edtlib.EDTError):
+            edtlib.EDT(dts_bad, [str(tmp_path)])
+
+def test_oneof_labeled_phandles_ok_and_wrong(tmp_path):
+    # Labeled phandles alternatives; value must be a list of node refs.
+    binding_yaml = tmp_path / "oneof_phs.yaml"
+    binding_yaml.write_text(
+        """
+description: phs opts
+compatible: "phs-opts"
+properties:
+  hs:
+    oneOf:
+      - name: a
+        type: phandles
+      - name: b
+        type: phandles
+        """,
+        encoding="utf-8",
+    )
+    dts_ok = tmp_path / "ok_phs.dts"
+    dts_ok.write_text(
+        "/dts-v1/;\n/ { c1: c1 { }; c2: c2 { }; n { compatible = "
+        "\"phs-opts\"; hs-a = <&c1 &c2>; }; };\n",
+        encoding="utf-8",
+    )
+    with from_here():
+        edtlib.EDT(dts_ok, [str(tmp_path)])
+
+    dts_bad = tmp_path / "bad_phs.dts"
+    dts_bad.write_text(
+        "/dts-v1/;\n/ { n { compatible = \"phs-opts\"; hs-a = <1>; }; };\n",
+        encoding="utf-8",
+    )
+    with from_here():
+        with pytest.raises(edtlib.EDTError):
+            edtlib.EDT(dts_bad, [str(tmp_path)])
+
+def test_oneof_labeled_phandle_array_ok_and_wrong(tmp_path):
+    # Labeled phandle-array with specifier-space; controller must define
+    # '#x-cells'. Value must be list of <&ctrl data...> entries.
+    binding_yaml = tmp_path / "oneof_pharr.yaml"
+    binding_yaml.write_text(
+        """
+description: pharr opts
+compatible: "pharr-opts"
+properties:
+  fa:
+    oneOf:
+      - name: a
+        type: phandle-array
+        specifier-space: x
+      - name: b
+        type: phandle-array
+        specifier-space: x
+        """,
+        encoding="utf-8",
+    )
+
+    # Minimal controller binding for specifier-space 'x'
+    ctrl_binding = tmp_path / "x_ctrl.yaml"
+    ctrl_binding.write_text(
+        """
+description: x ctrl
+compatible: "x-ctrl"
+x-cells: [val]
+        """,
+        encoding="utf-8",
+    )
+
+    dts_ok = tmp_path / "ok_pharr.dts"
+    dts_ok.write_text(
+        "/dts-v1/;\n/ { ctrl: ctrl { compatible = \"x-ctrl\"; "
+        "#x-cells = <1>; }; n { compatible = "
+        "\"pharr-opts\"; fa-a = <&ctrl 1 &ctrl 2>; }; };\n",
+        encoding="utf-8",
+    )
+    with from_here():
+        edtlib.EDT(dts_ok, [str(tmp_path)])
+
+    # Wrong: wrong type
+    dts_bad = tmp_path / "bad_pharr.dts"
+    dts_bad.write_text(
+        "/dts-v1/;\n/ { ctrl: ctrl { compatible = \"x-ctrl\"; "
+        "#x-cells = <1>; }; n { compatible = "
+        "\"pharr-opts\"; fa-a = \"x\"; }; };\n",
+        encoding="utf-8",
+    )
+    with from_here():
+        with pytest.raises(edtlib.EDTError):
+            edtlib.EDT(dts_bad, [str(tmp_path)])
+
 def test_binding_inference():
     '''Test inferred bindings for special zephyr-specific nodes.'''
     warnings = io.StringIO()
