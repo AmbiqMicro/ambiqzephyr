@@ -435,6 +435,26 @@
 			status = "disabled";
 		};
 
+		ios0: ios@40034000 {
+			compatible = "ambiq,ios";
+			reg = <0x40034000 0x1000>;
+			interrupts = <4 0>, <5 0>;
+
+			spi {
+				compatible = "ambiq,spid";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				status = "disabled";
+			};
+
+			i2c {
+				compatible = "ambiq,ios-i2c";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				status = "disabled";
+			};
+		};
+
 		iom0: iom@40050000 {
 			compatible = "ambiq,iom";
 			reg = <0x40050000 0x1000>;
@@ -624,7 +644,7 @@
 
 		mspi0: mspi@40060000 {
 			compatible = "ambiq,mspi-controller";
-			reg = <0x40060000 0x400>,<0x14000000 0x4000000>;
+			reg = <0x40060000 0x400>, <0x14000000 0x4000000>;
 			clock-frequency = <48000000>;
 			interrupts = <20 0>;
 			#address-cells = <1>;
@@ -634,7 +654,7 @@
 
 		mspi1: mspi@40061000 {
 			compatible = "ambiq,mspi-controller";
-			reg = <0x40061000 0x400>,<0x18000000 0x4000000>;
+			reg = <0x40061000 0x400>, <0x18000000 0x4000000>;
 			clock-frequency = <48000000>;
 			interrupts = <21 0>;
 			#address-cells = <1>;
@@ -644,7 +664,7 @@
 
 		mspi2: mspi@40062000 {
 			compatible = "ambiq,mspi-controller";
-			reg = <0x40062000 0x400>,<0x1C000000 0x4000000>;
+			reg = <0x40062000 0x400>, <0x1C000000 0x4000000>;
 			clock-frequency = <48000000>;
 			interrupts = <22 0>;
 			#address-cells = <1>;
