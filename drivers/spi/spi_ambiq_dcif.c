@@ -322,6 +322,13 @@ static int spi_ambiq_init(const struct device *dev)
 	}
 
 	/* Configure display clock */
+#ifdef CONFIG_SOC_APOLLO510L
+	ret = nemadc_clock_control(DISP_CLOCK_ENABLE, DISPCLKSRC_HFRC_192MHz, 1);
+	if (ret != AM_HAL_STATUS_SUCCESS) {
+		LOG_ERR("Failed to configure display clock: %d", ret);
+		return -EIO;
+	}
+#else
 	ret = am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_DISPCLKSEL_HFRC192, NULL);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("Failed to configure display clock: %d", ret);
@@ -333,6 +340,7 @@ static int spi_ambiq_init(const struct device *dev)
 		LOG_ERR("Failed to enable DC clock: %d", ret);
 		return -EIO;
 	}
+#endif
 
 	/* Initialize NemaDC */
 	if (nemadc_init() != 0) {
