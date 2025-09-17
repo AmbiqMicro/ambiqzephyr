@@ -1,6 +1,11 @@
-shield:
-  name: apollo5_eb_display_card
-  full_name: Apollo5 EB Display Card Revision 2.0
-  vendor: ambiq
-  supported_features:
-    - display
+shields:
+  - name: apollo5_eb_display_card
+    full_name: Apollo5 EB Display Card Revision 2.0
+    vendor: ambiq
+    supported_features:
+      - display
+  - name: apollo5_eb_display_card_spi
+    full_name: Apollo5 EB Display Card Revision 2.0 (SPI)
+    vendor: ambiq
+    supported_features:
+      - display

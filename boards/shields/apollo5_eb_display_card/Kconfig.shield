@@ -3,3 +3,6 @@
 
 config SHIELD_APOLLO5_EB_DISPLAY_CARD
 	def_bool $(shields_list_contains,apollo5_eb_display_card)
+
+config SHIELD_APOLLO5_EB_DISPLAY_CARD_SPI
+	def_bool $(shields_list_contains,apollo5_eb_display_card_spi)
