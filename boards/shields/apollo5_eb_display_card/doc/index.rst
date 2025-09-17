@@ -68,7 +68,8 @@ Display Connector J9
 Requirements
 ************
 
-Your board needs to have a ``mipi_dsi`` device tree label to work with this shield.
+Your board needs to have a ``mipi_dsi`` or ``spi`` device tree label to work with
+this shield.
 
 Usage
 *****
@@ -82,6 +83,15 @@ Set ``--shield apollo5_eb_display_card`` when you invoke ``west build``. For exa
    :zephyr-app: samples/drivers/display
    :board: apollo510L_eb
    :shield: apollo5_eb_display_card
+   :goals: build
+
+If the user wants to drive the display with QSPI interface,
+set ``--shield apollo5_eb_display_card_spi`` when you invoke ``west build``. For example:
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/drivers/display
+   :board: apollo510L_eb
+   :shield: apollo5_eb_display_card_spi
    :goals: build
 
 References
