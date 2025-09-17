@@ -27,7 +27,7 @@
 		};
 		group2 {
 			pinmux = <NCE10_P10>;
-			ambiq,nce-src = <0x33>;
+			ambiq,nce-src = <0x1B>;
 			drive-strength = "0.5";
 		};
 	};
@@ -42,7 +42,7 @@
 	 *	};
 	 *	group2 {
 	 *		pinmux = <NCE10_P10>;
-	 *		ambiq,nce-src = <0x32>;
+	 *		ambiq,nce-src = <0x1A>;
 	 *		drive-strength = "0.5";
 	 *	};
 	 *};
