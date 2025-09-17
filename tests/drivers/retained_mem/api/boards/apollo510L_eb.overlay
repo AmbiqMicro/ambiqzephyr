@@ -1,0 +1,30 @@
+/*
+ * SSRAM start address of Apollo5xx is 0x20080000，and the size is 0x200000(2M)
+ * Retained memory region is placed at the end of SSRAM
+ * Retained memory size is 4KB
+ */
+
+/ {
+	sram@201FF000 {
+		compatible = "zephyr,memory-region", "mmio-sram";
+		reg = <0x201FF000 DT_SIZE_K(4)>;
+		zephyr,memory-region = "RetainedMem";
+		status = "okay";
+
+		retainedmem0: retainedmem {
+			compatible = "zephyr,retained-ram";
+			status = "okay";
+		};
+	};
+
+	aliases {
+		retainedmemtestdevice = &retainedmem0;
+	};
+};
+
+&sram0 {
+/* Shrink SRAM size to avoid overlap with retained memory region:
+ * 1536 - 4 = 1532KB = 0x17F000
+ */
+	reg = <0x20080000 0x17F000>;
+};
