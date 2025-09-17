@@ -140,3 +140,4 @@ tests:
     <<: *display-shield-test
     extra_args:
       - platform:apollo510_evb/apollo510:SHIELD=ap510_disp_spi
+      - platform:apollo510L_eb/apollo510L:SHIELD=apollo5_eb_display_card_spi
