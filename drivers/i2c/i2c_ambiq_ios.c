@@ -45,6 +45,8 @@ struct ambiq_i2c_ios_data {
 	const uint8_t *rd_ptr;
 	uint32_t rd_len;
 	uint32_t rd_pos;
+	/* byte-mode read state */
+	bool read_active;
 };
 
 static void i2c_ambiq_ios_feed_fifo(const struct device *dev)
@@ -72,20 +74,52 @@ static void i2c_ambiq_ios_isr(const struct device *dev)
 
 	am_hal_ios_interrupt_status_get(data->i2c_ios_handle, true, &status);
 	if (status & AM_HAL_IOS_INT_FSIZE) {
-		if (data->tgt && data->tgt->callbacks &&
-		    IS_ENABLED(CONFIG_I2C_TARGET_BUFFER_MODE) &&
-		    data->tgt->callbacks->buf_read_requested && (data->rd_pos == data->rd_len)) {
-			uint8_t *ptr = NULL;
-			uint32_t len = 0;
+		const struct i2c_target_callbacks *cb = data->tgt ? data->tgt->callbacks : NULL;
+		bool byte_mode = cb && (cb->read_requested || cb->read_processed);
+		bool buf_mode =
+			cb && IS_ENABLED(CONFIG_I2C_TARGET_BUFFER_MODE) && cb->buf_read_requested;
 
-			if (data->tgt->callbacks->buf_read_requested(data->tgt, &ptr, &len) == 0 &&
-			    ptr && len) {
-				data->rd_ptr = ptr;
-				data->rd_len = len;
-				data->rd_pos = 0;
+		if (byte_mode) {
+			/* first byte read_requested */
+			if (!data->read_active && cb->read_requested) {
+				uint8_t v = 0;
+				if (cb->read_requested(data->tgt, &v) == 0) {
+					uint32_t wrote = 0;
+					(void)am_hal_ios_fifo_write(data->i2c_ios_handle, &v, 1,
+								    &wrote);
+					if (wrote) {
+						data->read_active = true;
+					}
+				}
 			}
+			/* rest bytes read_processed */
+			if (cb->read_processed) {
+				for (int i = 0; i < 8; i++) {
+					uint8_t v = 0;
+					if (cb->read_processed(data->tgt, &v) != 0) {
+						break;
+					}
+					uint32_t wrote = 0;
+					(void)am_hal_ios_fifo_write(data->i2c_ios_handle, &v, 1,
+								    &wrote);
+					if (!wrote) {
+						break;
+					}
+				}
+			}
+		} else if (buf_mode) {
+			if (data->rd_pos == data->rd_len) {
+				uint8_t *ptr = NULL;
+				uint32_t len = 0;
+				if (cb->buf_read_requested(data->tgt, &ptr, &len) == 0 && ptr &&
+				    len) {
+					data->rd_ptr = ptr;
+					data->rd_len = len;
+					data->rd_pos = 0;
+				}
+			}
+			i2c_ambiq_ios_feed_fifo(dev);
 		}
-		i2c_ambiq_ios_feed_fifo(dev);
 		am_hal_ios_interrupt_clear(data->i2c_ios_handle, AM_HAL_IOS_INT_FSIZE);
 	}
 	am_hal_ios_interrupt_clear(data->i2c_ios_handle, status & ~AM_HAL_IOS_INT_FSIZE);
@@ -98,15 +132,32 @@ static void i2c_ambiq_ios_acc_isr(const struct device *dev)
 
 	if (am_hal_ios_control(data->i2c_ios_handle, AM_HAL_IOS_REQ_ACC_INTGET, &acc_pend) ==
 	    AM_HAL_STATUS_SUCCESS) {
-		if ((acc_pend & AM_HAL_IOS_ACCESS_INT_00) && data->tgt && data->tgt->callbacks &&
-		    IS_ENABLED(CONFIG_I2C_TARGET_BUFFER_MODE) &&
-		    data->tgt->callbacks->buf_write_received) {
+		const struct i2c_target_callbacks *cb = data->tgt ? data->tgt->callbacks : NULL;
+		if ((acc_pend & AM_HAL_IOS_ACCESS_INT_00) && data->tgt && cb) {
 			uint8_t len = am_hal_ios_pui8LRAM[0];
 
 			if (len > 0) {
-				data->tgt->callbacks->buf_write_received(
-					data->tgt, (uint8_t *)&am_hal_ios_pui8LRAM[1],
-					(uint32_t)len);
+				bool has_byte_cbs =
+					(cb->write_requested || cb->write_received || cb->stop);
+				if (has_byte_cbs) {
+					if (cb->write_requested) {
+						(void)cb->write_requested(data->tgt);
+					}
+					for (uint32_t i = 0; i < len; i++) {
+						if (cb->write_received) {
+							(void)cb->write_received(
+								data->tgt,
+								am_hal_ios_pui8LRAM[1 + i]);
+						}
+					}
+					if (cb->stop) {
+						(void)cb->stop(data->tgt);
+					}
+				} else if (IS_ENABLED(CONFIG_I2C_TARGET_BUFFER_MODE) &&
+					   cb->buf_write_received) {
+					cb->buf_write_received(data->tgt, (uint8_t*)&am_hal_ios_pui8LRAM[1],
+							       len);
+				}
 				am_hal_ios_pui8LRAM[0] = 0;
 			}
 		}
