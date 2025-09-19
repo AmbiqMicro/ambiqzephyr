@@ -544,6 +544,7 @@
 			interrupts = <27 0>;
 			num-bidir-endpoints = <6>;
 			maximum-speed = "high-speed";
+			has-internal-usb-ldo;
 			status = "disabled";
 		};
 
