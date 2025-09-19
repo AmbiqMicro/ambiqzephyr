@@ -510,7 +510,7 @@ static int usb_power_rails_set(const struct device *dev, bool on)
 		}
 	}
 
-#ifdef MCUCTRL_USBLDOCTRL_USBLDOPDNB_Msk
+#if DT_INST_PROP(0, has_internal_usb_ldo)
 	/* Enable Internal USB power regulator */
 	am_hal_mcuctrl_usb_phy_ldo0p9_enable(on);
 	am_hal_delay_us(1000);
@@ -537,79 +537,14 @@ static int usb_power_rails_set(const struct device *dev, bool on)
 #if CONFIG_SOC_AMBIQ_HAS_CLKMGR
 static int usb_init_clksrc(const struct udc_ambiq_data *priv)
 {
-	uint32_t am_ret = AM_HAL_STATUS_SUCCESS;
-	am_hal_clkmgr_board_info_t board;
-	am_hal_usb_phyclksrc_e phyclksrc;
-
-	/* Decide PHY clock source according to USB speed and board configuration*/
-	am_hal_clkmgr_board_info_get(&board);
-
-#if CONFIG_SOC_APOLLO510
-	if (priv->usb_speed == AM_HAL_USB_SPEED_FULL) {
-		phyclksrc = AM_HAL_USB_PHYCLKSRC_HFRC_24M;
-	} else if (board.sXtalHs.ui32XtalHsFreq == 48000000) {
-		phyclksrc = AM_HAL_USB_PHYCLKSRC_XTAL_HS_DIV2;
-	} else if (board.sXtalHs.ui32XtalHsFreq == 24000000) {
-		phyclksrc = AM_HAL_USB_PHYCLKSRC_XTAL_HS;
-	} else if (board.ui32ExtRefClkFreq == 48000000) {
-		phyclksrc = AM_HAL_USB_PHYCLKSRC_EXTREFCLK;
-	} else if (board.ui32ExtRefClkFreq == 24000000) {
-		phyclksrc = AM_HAL_USB_PHYCLKSRC_EXTREFCLK_DIV2;
-	} else {
-		phyclksrc = AM_HAL_USB_PHYCLKSRC_PLL;
-	}
-
-	if (phyclksrc == AM_HAL_USB_PHYCLKSRC_PLL) {
-		am_ret = am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_SYSPLL, 24000000, NULL);
-		if (am_ret != AM_HAL_STATUS_SUCCESS) {
-			LOG_WRN("Unable to configure SYSPLL for USB. Fallback to HFRC clock "
-				"source");
-			phyclksrc = AM_HAL_USB_PHYCLKSRC_HFRC_24M;
-		}
-	}
-	am_hal_usb_set_phy_clk_source(priv->usb_handle, phyclksrc);
+	am_hal_usb_phyclksrc_e eUsbRefClkSel = AM_HAL_USB_PHYCLKSRC_DEFAULT;
+#if DT_INST_PROP(0, has_internal_usb_ldo)
+	am_hal_usb_phyclksrc_div_e eUsbRefClkDiv = AM_HAL_USB_PHYCLKSRC_DIV_1;
+	am_hal_usb_set_phy_clk_source(priv->usb_handle, eUsbRefClkSel, eUsbRefClkDiv);
 #else
-	am_hal_usb_phyclksrc_div_e phyclkdiv;
-
-	if (priv->usb_speed == AM_HAL_USB_SPEED_FULL) {
-		phyclksrc = AM_HAL_USB_PHYCLKSRC_HFRC_48M;
-		phyclkdiv = AM_HAL_USB_PHYCLKSRC_DIV_2;
-	} else if (board.sXtalHs.ui32XtalHsFreq == 48000000) {
-		phyclksrc = AM_HAL_USB_PHYCLKSRC_RF_XTAL_48M;
-		phyclkdiv = AM_HAL_USB_PHYCLKSRC_DIV_2;
-	} else if (board.sXtalHs.ui32XtalHsFreq == 24000000) {
-		phyclksrc = AM_HAL_USB_PHYCLKSRC_RF_XTAL_48M;
-		phyclkdiv = AM_HAL_USB_PHYCLKSRC_DIV_1;
-	} else if (board.ui32ExtRefClkFreq == 48000000) {
-		phyclksrc = AM_HAL_USB_PHYCLKSRC_EXTREF_CLK;
-		phyclkdiv = AM_HAL_USB_PHYCLKSRC_DIV_2;
-	} else if (board.ui32ExtRefClkFreq == 24000000) {
-		phyclksrc = AM_HAL_USB_PHYCLKSRC_EXTREF_CLK;
-		phyclkdiv = AM_HAL_USB_PHYCLKSRC_DIV_1;
-	} else {
-		phyclksrc = AM_HAL_USB_PHYCLKSRC_PLLPOSTDIV;
-		phyclkdiv = AM_HAL_USB_PHYCLKSRC_DIV_1;
-	}
-
-	if (phyclksrc == AM_HAL_USB_PHYCLKSRC_PLLPOSTDIV) {
-		am_ret = am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_PLLPOSTDIV,
-						    24000000 * ((uint8_t)phyclkdiv + 1), NULL);
-		if (am_ret != AM_HAL_STATUS_SUCCESS) {
-			LOG_WRN("Unable to configure SYSPLL for USB. Fallback to HFRC clock "
-				"source");
-			phyclksrc = AM_HAL_USB_PHYCLKSRC_HFRC_48M;
-		}
-	} else if (phyclksrc == AM_HAL_USB_PHYCLKSRC_PLLFOUT2) {
-		am_ret = am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_PLLPOSTDIV,
-						    24000000 * 4 * ((uint8_t)phyclkdiv + 1), NULL);
-		if (am_ret != AM_HAL_STATUS_SUCCESS) {
-			LOG_WRN("Unable to configure SYSPLL for USB. Fallback to HFRC clock "
-				"source");
-			phyclksrc = AM_HAL_USB_PHYCLKSRC_HFRC_48M;
-		}
-	}
-	am_hal_usb_set_phy_clk_source(priv->usb_handle, phyclksrc, phyclkdiv);
+	am_hal_usb_set_phy_clk_source(priv->usb_handle, eUsbRefClkSel);
 #endif
+
 	am_hal_usb_phy_clock_enable(priv->usb_handle, true, priv->usb_speed);
 
 	return 0;
