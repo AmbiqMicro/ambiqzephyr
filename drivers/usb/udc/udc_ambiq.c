@@ -538,8 +538,9 @@ static int usb_power_rails_set(const struct device *dev, bool on)
 static int usb_init_clksrc(const struct udc_ambiq_data *priv)
 {
 	am_hal_usb_phyclksrc_e eUsbRefClkSel = AM_HAL_USB_PHYCLKSRC_DEFAULT;
-#if DT_INST_PROP(0, has_internal_usb_ldo)
+#if CONFIG_SOC_AMBIQ_HAS_CRM
 	am_hal_usb_phyclksrc_div_e eUsbRefClkDiv = AM_HAL_USB_PHYCLKSRC_DIV_1;
+
 	am_hal_usb_set_phy_clk_source(priv->usb_handle, eUsbRefClkSel, eUsbRefClkDiv);
 #else
 	am_hal_usb_set_phy_clk_source(priv->usb_handle, eUsbRefClkSel);
