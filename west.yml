@@ -40,7 +40,7 @@ manifest:
     - name: hal-zephyr-alpha
       remote: github_ambiqmicro
       path: modules/hal/ambiq
-      revision: 5dc59c5bb36cecd9960f6f3c92cebb26df546126
+      revision: a9f92d883c04067118493714374f1909f8f4916a
       groups:
         - hal
     - name: babblesim_base
