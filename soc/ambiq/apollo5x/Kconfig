@@ -59,3 +59,10 @@ config SOC_AMBIQ_HAS_CLKMGR
 	default y
 	help
 	  This option enables the Ambiq clock manager support.
+
+config SOC_AMBIQ_HAS_CRM
+	bool "Ambiq Clock and Reset Management (CRM) support"
+	default y
+	depends on SOC_APOLLO510L
+	help
+	  This option enables the Ambiq Clock and Reset Management (CRM) support on Apollo510L
