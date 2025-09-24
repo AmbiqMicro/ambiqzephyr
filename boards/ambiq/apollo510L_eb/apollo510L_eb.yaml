@@ -26,6 +26,7 @@ supported:
   - bluetooth
   - sdhc
   - mipi_dsi
+  - pdm
 testing:
   ignore_tags:
     - net

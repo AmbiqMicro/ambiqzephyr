@@ -280,4 +280,10 @@
 				 ambiq,sdif-cdwp = <4>;
 		};
 	};
+	pdm0_default: pdm0_default {
+		group0 {
+			pinmux = <PDM0_CLK_P107>,
+				 <PDM0_DATA_P108>;
+		};
+	};
 };
