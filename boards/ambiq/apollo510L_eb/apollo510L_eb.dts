@@ -236,3 +236,9 @@ zephyr_udc0: &usb {
 	rxdelay = <11>;
 	status = "okay";
 };
+
+&pdm0 {
+	pinctrl-0 = <&pdm0_default>;
+	pinctrl-names = "default";
+	status = "disabled";
+};
