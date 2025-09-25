@@ -1,0 +1,8 @@
+# Copyright (c) 2025 Ambiq Micro Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: Sharp LS014B7DD01 display
+
+compatible: "sharp,ls014b7dd01"
+
+include: ["display-controller.yaml", "pinctrl-device.yaml", "jdi-device.yaml"]
