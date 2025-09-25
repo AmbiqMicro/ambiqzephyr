@@ -663,6 +663,17 @@
 			status = "disabled";
 		};
 
+		mipi_dsi: mipi_dsi@400a8000 {
+			compatible = "ambiq,mipi-dsi";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x400A8000 0x100>;
+			dbi-width = <16>;
+			phy-clock = <384000000>;
+			interrupts = <29 0>;/* DC interrupt */
+			status = "disabled";
+		};
+
 		pinctrl: pin-controller@40010000 {
 			compatible = "ambiq,apollo4-pinctrl";
 			reg = <0x40010000 0x800>;
