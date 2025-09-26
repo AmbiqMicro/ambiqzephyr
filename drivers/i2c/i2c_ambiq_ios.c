@@ -22,7 +22,7 @@ LOG_MODULE_REGISTER(i2c_ambiq_ios, CONFIG_I2C_LOG_LEVEL);
 #define IOS_ADDR_INTERVAL 1
 #endif
 
-#define AMBIQ_I2C_IOS_FIFO_BASE   0x78
+#define AMBIQ_I2C_IOS_FIFO_BASE   0x20
 #define AMBIQ_I2C_IOS_FIFO_END    0x100
 #define AMBIQ_I2C_IOS_FIFO_LENGTH (AMBIQ_I2C_IOS_FIFO_END - AMBIQ_I2C_IOS_FIFO_BASE)
 
@@ -39,7 +39,7 @@ struct ambiq_i2c_ios_data {
 	void *i2c_ios_handle;
 	struct i2c_target_config *tgt;
 	bool enabled;
-	uint8_t sram_buf[256];
+	uint8_t sram_buf[1023];
 
 	/* read buffer-mode staging */
 	const uint8_t *rd_ptr;
@@ -47,7 +47,16 @@ struct ambiq_i2c_ios_data {
 	uint32_t rd_pos;
 	/* byte-mode read state */
 	bool read_active;
+	uint16_t active_offset;
 };
+
+static void i2c_ambiq_ios_reset_read_state(struct ambiq_i2c_ios_data *data)
+{
+	data->rd_ptr = NULL;
+	data->rd_len = 0U;
+	data->rd_pos = 0U;
+	data->read_active = false;
+}
 
 static void i2c_ambiq_ios_feed_fifo(const struct device *dev)
 {
@@ -67,12 +76,42 @@ static void i2c_ambiq_ios_feed_fifo(const struct device *dev)
 	am_hal_ios_control(data->i2c_ios_handle, AM_HAL_IOS_REQ_FIFO_UPDATE_CTR, NULL);
 }
 
+static void i2c_ambiq_ios_handle_genad(struct ambiq_i2c_ios_data *data)
+{
+	uint32_t gadata = 0;
+	uint32_t fifo_ptr = AMBIQ_I2C_IOS_FIFO_BASE;
+	const struct i2c_target_callbacks *cb = data->tgt ? data->tgt->callbacks : NULL;
+
+	if (am_hal_ios_control(data->i2c_ios_handle, AM_HAL_IOS_REQ_READ_GADATA, &gadata) ==
+	    AM_HAL_STATUS_SUCCESS) {
+		data->active_offset = (uint16_t)(gadata & 0xFFu);
+		i2c_ambiq_ios_reset_read_state(data);
+		fifo_ptr += gadata;
+		am_hal_ios_control(data->i2c_ios_handle, AM_HAL_IOS_REQ_SET_FIFO_PTR, &fifo_ptr);
+		if (cb && cb->write_requested) {
+			(void)cb->write_requested(data->tgt);
+		}
+		if (cb && cb->write_received) {
+			(void)cb->write_received(data->tgt, (uint8_t)data->active_offset);
+		}
+		if (cb && cb->stop) {
+			(void)cb->stop(data->tgt);
+		}
+	}
+}
+
 static void i2c_ambiq_ios_isr(const struct device *dev)
 {
 	struct ambiq_i2c_ios_data *data = dev->data;
 	uint32_t status = 0;
 
 	am_hal_ios_interrupt_status_get(data->i2c_ios_handle, true, &status);
+
+	if (status & AM_HAL_IOS_INT_GENAD) {
+		i2c_ambiq_ios_handle_genad(data);
+		am_hal_ios_interrupt_clear(data->i2c_ios_handle, AM_HAL_IOS_INT_GENAD);
+	}
+
 	if (status & AM_HAL_IOS_INT_FSIZE) {
 		const struct i2c_target_callbacks *cb = data->tgt ? data->tgt->callbacks : NULL;
 		bool byte_mode = cb && (cb->read_requested || cb->read_processed);
@@ -122,7 +161,7 @@ static void i2c_ambiq_ios_isr(const struct device *dev)
 		}
 		am_hal_ios_interrupt_clear(data->i2c_ios_handle, AM_HAL_IOS_INT_FSIZE);
 	}
-	am_hal_ios_interrupt_clear(data->i2c_ios_handle, status & ~AM_HAL_IOS_INT_FSIZE);
+	am_hal_ios_interrupt_clear(data->i2c_ios_handle, status & ~(AM_HAL_IOS_INT_GENAD | AM_HAL_IOS_INT_FSIZE));
 }
 
 static void i2c_ambiq_ios_acc_isr(const struct device *dev)
@@ -254,7 +293,7 @@ static int i2c_ambiq_ios_target_register(const struct device *dev, struct i2c_ta
 	}
 
 	am_hal_ios_interrupt_clear(data->i2c_ios_handle, AM_HAL_IOS_INT_ALL);
-	am_hal_ios_interrupt_enable(data->i2c_ios_handle, AM_HAL_IOS_INT_FSIZE);
+	am_hal_ios_interrupt_enable(data->i2c_ios_handle, AM_HAL_IOS_INT_GENAD | AM_HAL_IOS_INT_FSIZE);
 	am_hal_ios_control(data->i2c_ios_handle, AM_HAL_IOS_REQ_ACC_INTEN, &acc_mask);
 
 	data->tgt = tcfg;

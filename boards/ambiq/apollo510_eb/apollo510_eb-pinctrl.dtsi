@@ -7,6 +7,37 @@
 #include <apollo510/ambiq-apollo510-pinmux.h>
 
 &pinctrl {
+    /* IOS I2C target pins: SCL=P11, SDA=P52 */
+    ios_i2c0_default: ios_i2c0_default {
+        group1 {
+            pinmux = <SLSCL_P11>, <SLSDAWIR3_P52>;
+            drive-open-drain;
+            drive-strength = "0.5";
+            bias-pull-up;
+        };
+    };
+
+    ios_i2c0_sleep: ios_i2c0_sleep {
+        group1 {
+            pinmux = <GPIO_P11>, <GPIO_P52>;
+        };
+    };
+
+    /* IOM5 I2C master pins: SCL=P47, SDA=P48 */
+    i2c5_default: i2c5_default {
+        group1 {
+            pinmux = <M5SCL_P47>, <M5SDAWIR3_P48>;
+            drive-open-drain;
+            drive-strength = "0.5";
+            bias-pull-up;
+        };
+    };
+
+    i2c5_sleep: i2c5_sleep {
+        group1 {
+            pinmux = <GPIO_P47>, <GPIO_P48>;
+        };
+    };
 	uart0_default: uart0_default {
 		group1 {
 			pinmux = <UART0TX_P30>;

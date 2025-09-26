@@ -63,6 +63,43 @@ static void to_display_format(const uint8_t *src, size_t size, char *dst)
 	}
 }
 
+static int ambiq_ios_send_general_call(const struct device *i2c, uint8_t offset)
+{
+    uint8_t payload = offset;
+
+    return i2c_write(i2c, &payload, sizeof(payload), 0x00);
+}
+
+static int ios_fifo_read(const struct device *i2c, uint8_t addr,
+                         const uint8_t *offset_buf, size_t offset_len,
+                         uint8_t *rx_buf, size_t rx_len)
+{
+    int ret;
+    uint8_t fifo_reg = 0x7F;
+
+    if (offset_len == 1U) {
+        ret = ambiq_ios_send_general_call(i2c, offset_buf[0]);
+        if (ret != 0) {
+            return ret;
+        }
+    } else if (offset_len > 1U) {
+        ret = i2c_write(i2c, offset_buf, offset_len, addr);
+        if (ret != 0) {
+            return ret;
+        }
+    }
+
+    struct i2c_msg wr_rd[2];
+    wr_rd[0].buf = &fifo_reg;
+    wr_rd[0].len = 1;
+    wr_rd[0].flags = I2C_MSG_WRITE;
+    wr_rd[1].buf = rx_buf;
+    wr_rd[1].len = rx_len;
+    wr_rd[1].flags = I2C_MSG_READ | I2C_MSG_RESTART | I2C_MSG_STOP;
+
+    return i2c_transfer(i2c, wr_rd, ARRAY_SIZE(wr_rd), addr);
+}
+
 static int run_full_read(const struct device *i2c, uint8_t addr,
 			 uint8_t addr_width, const uint8_t *comp_buffer)
 {
@@ -74,7 +111,7 @@ static int run_full_read(const struct device *i2c, uint8_t addr,
 
 	/* Read EEPROM from I2C Master requests, then compare */
 	memset(start_addr, 0, sizeof(start_addr));
-	ret = i2c_write_read(i2c, addr, start_addr, (addr_width >> 3), i2c_buffer, TEST_DATA_SIZE);
+	ret = ios_fifo_read(i2c, addr, start_addr, (addr_width >> 3), i2c_buffer, TEST_DATA_SIZE);
 	zassert_equal(ret, 0, "Failed to read EEPROM");
 
 	if (memcmp(i2c_buffer, comp_buffer, TEST_DATA_SIZE)) {
@@ -112,7 +149,7 @@ static int run_partial_read(const struct device *i2c, uint8_t addr,
 		return -EINVAL;
 	}
 
-	ret = i2c_write_read(i2c, addr,
+	ret = ios_fifo_read(i2c, addr,
 			     start_addr, (addr_width >> 3), i2c_buffer, TEST_DATA_SIZE-offset);
 	zassert_equal(ret, 0, "Failed to read EEPROM");
 
@@ -137,6 +174,7 @@ static int run_program_read(const struct device *i2c, uint8_t addr,
 	int ret, i;
 	uint8_t start_addr[2];
 	struct i2c_msg msg[2];
+    uint8_t write_data[TEST_DATA_SIZE + 1];
 
 	TC_PRINT("Testing program. Master: %s, address: 0x%x, off=%d\n",
 		i2c->name, addr, offset);
@@ -144,6 +182,8 @@ static int run_program_read(const struct device *i2c, uint8_t addr,
 	for (i = 0 ; i < TEST_DATA_SIZE-offset ; ++i) {
 		i2c_buffer[i] = i & 0xFF;
 	}
+    write_data[0] = TEST_DATA_SIZE;
+    memcpy(&write_data[1], i2c_buffer, TEST_DATA_SIZE);
 
 	switch (addr_width) {
 	case 8:
@@ -159,8 +199,8 @@ static int run_program_read(const struct device *i2c, uint8_t addr,
 	msg[0].buf = start_addr;
 	msg[0].len = (addr_width >> 3);
 	msg[0].flags = I2C_MSG_WRITE;
-	msg[1].buf = &i2c_buffer[0];
-	msg[1].len = TEST_DATA_SIZE;
+	msg[1].buf = &write_data[0];
+	msg[1].len = TEST_DATA_SIZE + 1;
 	msg[1].flags = I2C_MSG_WRITE | I2C_MSG_STOP;
 
 	ret = i2c_transfer(i2c, &msg[0], 2, addr);
@@ -169,7 +209,7 @@ static int run_program_read(const struct device *i2c, uint8_t addr,
 	(void)memset(i2c_buffer, 0xFF, TEST_DATA_SIZE);
 
 	/* Read back EEPROM from I2C Master requests, then compare */
-	ret = i2c_write_read(i2c, addr,
+	ret = ios_fifo_read(i2c, addr,
 			     start_addr, (addr_width >> 3), i2c_buffer, TEST_DATA_SIZE-offset);
 	zassert_equal(ret, 0, "Failed to read EEPROM");
 
