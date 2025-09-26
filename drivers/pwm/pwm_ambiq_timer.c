@@ -108,6 +108,21 @@ static int ambiq_timer_pwm_set_cycles(const struct device *dev, uint32_t channel
 		return -ENOTSUP;
 	}
 
+	if (channel > 1) {
+		LOG_ERR("A timer has at most 2 channels");
+		return -ENOTSUP;
+	} else {
+		if ((channel == 1) && (config->pincfg->states->pin_cnt == 2)) {
+			am_hal_timer_output_config(config->pincfg->states->pins[1].pin_num,
+						   AM_HAL_TIMER_OUTPUT_TMR0_OUT1 +
+							   config->timer_num * 2);
+		} else {
+			am_hal_timer_output_config(config->pincfg->states->pins[0].pin_num,
+						   AM_HAL_TIMER_OUTPUT_TMR0_OUT0 +
+							   config->timer_num * 2);
+		}
+	}
+
 	if (flags & PWM_POLARITY_INVERTED) {
 		if (pulse_cycles == 0) {
 			/* make pulse cycles greater than period so event never occurs */
@@ -126,7 +141,7 @@ static int ambiq_timer_pwm_set_cycles(const struct device *dev, uint32_t channel
 	am_hal_timer_clear(config->timer_num);
 	am_hal_timer_compare0_set(config->timer_num, period_cycles);
 	am_hal_timer_compare1_set(config->timer_num, pulse_cycles);
-
+	am_hal_timer_enable(config->timer_num);
 	return 0;
 }
 
@@ -134,6 +149,11 @@ static int ambiq_timer_pwm_get_cycles_per_sec(const struct device *dev, uint32_t
 					      uint64_t *cycles)
 {
 	struct pwm_ambiq_timer_data *data = dev->data;
+
+	if (channel > 1) {
+		LOG_ERR("A timer has at most 2 channels");
+		return -ENOTSUP;
+	}
 
 	/* cycles of the timer clock */
 	*cycles = (uint64_t)data->cycles;
@@ -160,15 +180,9 @@ static int ambiq_timer_pwm_init(const struct device *dev)
 	pwm_timer_config.eInputClock = config->clock_sel;
 	data->cycles = get_clock_cycles(config->clock_sel);
 
-	am_hal_timer_output_config(config->pincfg->states->pins->pin_num,
-				   AM_HAL_TIMER_OUTPUT_TMR0_OUT0 + config->timer_num * 2);
-
 	am_hal_timer_config(config->timer_num, &pwm_timer_config);
-
-	am_hal_timer_clear(config->timer_num);
-	am_hal_timer_compare0_set(config->timer_num, 0);
-	am_hal_timer_compare1_set(config->timer_num, 1);
-
+	am_hal_timer_clear_stop(config->timer_num);
+	am_hal_timer_disable(config->timer_num);
 	return 0;
 }
 
