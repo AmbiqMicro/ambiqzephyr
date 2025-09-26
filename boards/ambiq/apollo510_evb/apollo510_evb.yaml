@@ -28,6 +28,7 @@ supported:
   - flash
   - nvs
   - zms
+  - pwm
 testing:
   ignore_tags:
     - net
