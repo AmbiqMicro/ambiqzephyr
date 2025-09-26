@@ -21,6 +21,7 @@ supported:
   - nvs
   - zms
   - pm
+  - pwm
 testing:
   ignore_tags:
     - net
