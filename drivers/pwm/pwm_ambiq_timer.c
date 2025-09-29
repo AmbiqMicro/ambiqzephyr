@@ -111,16 +111,14 @@ static int ambiq_timer_pwm_set_cycles(const struct device *dev, uint32_t channel
 	if (channel > 1) {
 		LOG_ERR("A timer has at most 2 channels");
 		return -ENOTSUP;
+	}
+
+	if ((channel == 1) && (config->pincfg->states->pin_cnt == 2)) {
+		am_hal_timer_output_config(config->pincfg->states->pins[1].pin_num,
+					   AM_HAL_TIMER_OUTPUT_TMR0_OUT1 + config->timer_num * 2);
 	} else {
-		if ((channel == 1) && (config->pincfg->states->pin_cnt == 2)) {
-			am_hal_timer_output_config(config->pincfg->states->pins[1].pin_num,
-						   AM_HAL_TIMER_OUTPUT_TMR0_OUT1 +
-							   config->timer_num * 2);
-		} else {
-			am_hal_timer_output_config(config->pincfg->states->pins[0].pin_num,
-						   AM_HAL_TIMER_OUTPUT_TMR0_OUT0 +
-							   config->timer_num * 2);
-		}
+		am_hal_timer_output_config(config->pincfg->states->pins[0].pin_num,
+					   AM_HAL_TIMER_OUTPUT_TMR0_OUT0 + config->timer_num * 2);
 	}
 
 	if (flags & PWM_POLARITY_INVERTED) {
