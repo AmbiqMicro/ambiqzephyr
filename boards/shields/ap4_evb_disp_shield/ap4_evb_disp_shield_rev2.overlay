@@ -20,28 +20,28 @@
 
 &mipi_dsi {
 	status = "okay";
-	phy-clock = <240000000>;	/*The frequency should be a multiple of 12MHz.*/
+	phy-clock = <120000000>;	/*The frequency should be a multiple of 12MHz.*/
 	/*apollo510_evb designed with a loadswitch to control power Vdd18.*/
-	vdd18-gpios = <&gpio32_63 26 (GPIO_PULL_DOWN)>;
+	vdd18-gpios = <&gpio96_127 104 (GPIO_PULL_DOWN)>;
 	/*disp-te;*/
 
 	co5300: co5300@0 {
 		status = "okay";
 		compatible = "chipone,co5300";
-		reset-gpios = <&gpio32_63 31 (GPIO_PULL_UP)>;
+		reset-gpios = <&gpio0_31 29 (GPIO_PULL_UP)>;
 		reg = <0x0>;
 		data-lanes = <1>;
 		pixel-format = <PANEL_PIXEL_FORMAT_RGB_888>;
 		rotation = <0>;
 		mode-flags = <0>;
-		width = <468>;	/*Its value should be an integer multiple of 4.*/
-		hfp = <1>;	/*Please use this recommended value.*/
-		hbp = <1>;	/*Please use this recommended value.*/
-		hsync = <1>;	/*Please use this recommended value.*/
-		height = <468>;	/**/
-		vfp = <1>;	/*Please use this recommended value.*/
-		vbp = <1>;	/*Please use this recommended value.*/
-		vsync = <1>;	/*Please use this recommended value.*/
+		width = <456>;	/*Its value should be an integer multiple of 4.*/
+		hfp = <4>;	/*Please use this recommended value.*/
+		hbp = <10>;	/*Please use this recommended value.*/
+		hsync = <10>;	/*Please use this recommended value.*/
+		height = <456>;	/**/
+		vfp = <10>;	/*Please use this recommended value.*/
+		vbp = <50>;	/*Please use this recommended value.*/
+		vsync = <10>;	/*Please use this recommended value.*/
 	};
 };
 
