@@ -66,3 +66,5 @@ config SOC_AMBIQ_HAS_CRM
 	depends on SOC_APOLLO510L
 	help
 	  This option enables the Ambiq Clock and Reset Management (CRM) support on Apollo510L
+
+rsource "Kconfig.gpu"
