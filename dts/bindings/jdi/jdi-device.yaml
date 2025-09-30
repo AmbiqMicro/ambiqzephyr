@@ -14,10 +14,10 @@ properties:
   input-pixel-format:
     type: int
     required: true
-    description:
+    description: |
       Input pixel format. Available formats in dt-bindings/jdi/jdi.h.
 
   mode-flags:
     type: int
-    description:
+    description: |
       Supported mode. Available mode in zephyr/drivers/jdi.h.

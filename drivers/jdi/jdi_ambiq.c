@@ -35,7 +35,6 @@ struct jdi_ambiq_data {
 	uint32_t vck_gck_max_frequency;
 	uint32_t hck_bck_max_frequency;
 
-	struct jdi_msg jdi_ctx;
 	nemadc_layer_t dc_layer;
 	nemadc_initial_config_t dc_config;
 };
@@ -189,21 +188,30 @@ static ssize_t jdi_ambiq_transfer(const struct device *dev, const struct jdi_msg
 {
 	struct jdi_ambiq_data *data = dev->data;
 
-	if (msg->starty >= msg->endy) {
+	if (!msg->h) {
 		LOG_ERR("Invalid parameters.");
 		return -EINVAL;
+	}
+
+	if (msg->w != data->dc_config.ui16ResX) {
+		data->dc_config.ui16ResX = msg->w;
+		data->dc_layer.resx = data->dc_config.ui16ResX;
+		data->dc_layer.sizex = data->dc_config.ui16ResX;
+		data->dc_layer.stride =
+			nemadc_stride_size(data->dc_layer.format, data->dc_config.ui16ResX);
 	}
 
 	/* Reset JDI used parameters before transfer frame */
 	nemadc_reset_mip_parameters();
 
 	if (msg->tx_len) {
-		data->dc_layer.startx = msg->startx;
+		data->dc_layer.startx = msg->x;
+		data->dc_layer.starty = msg->y;
 		data->dc_layer.baseaddr_virt = (void *)msg->tx_buf;
 		data->dc_layer.baseaddr_phys = (unsigned int)(data->dc_layer.baseaddr_virt);
-		nemadc_mip_setup(LAYER_ACTIVE, &data->dc_layer, LAYER_INACTIVE, &data->dc_layer,
-				 LAYER_INACTIVE, &data->dc_layer, LAYER_INACTIVE, &data->dc_layer,
-				 1, msg->starty, msg->endy);
+		nemadc_mip_setup(LAYER_ACTIVE, &data->dc_layer, LAYER_INACTIVE, NULL,
+				 LAYER_INACTIVE, NULL, LAYER_INACTIVE, NULL, 1, msg->y,
+				 msg->y + msg->h);
 		nemadc_transfer_frame_launch();
 		nemadc_wait_vsync();
 	}
@@ -238,14 +246,8 @@ static int jdi_ambiq_init(const struct device *dev)
 		return -EIO;
 	}
 
-	/* Configure clock source, the frequency is up to 192MHz */
-#ifdef CONFIG_SOC_APOLLO510L
-	ret = nemadc_clock_control(DISP_CLOCK_ENABLE, DISPCLKSRC_HFRC_192MHz, 4);
-	if (ret != AM_HAL_STATUS_SUCCESS) {
-		LOG_ERR("Failed to configure display clock: %d", ret);
-		return -EIO;
-	}
-#else
+	/* Configure clock source, the frequency is up to 48MHz */
+#ifdef CONFIG_SOC_APOLLO510
 	ret = am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_DISPCLKSEL_HFRC48, NULL);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("Failed to configure display clock: %d", ret);
@@ -255,6 +257,12 @@ static int jdi_ambiq_init(const struct device *dev)
 	ret = am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_DCCLK_ENABLE, NULL);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("Failed to enable DC clock: %d", ret);
+		return -EIO;
+	}
+#else
+	ret = nemadc_clock_control(DISP_CLOCK_ENABLE, DISPCLKSRC_HFRC_192MHz, 4);
+	if (ret != AM_HAL_STATUS_SUCCESS) {
+		LOG_ERR("Failed to configure display clock: %d", ret);
 		return -EIO;
 	}
 #endif

@@ -37,7 +37,7 @@ extern "C" {
  */
 
 /** Partial update mode */
-#define JDI_MODE_PARTIAL_UPDATE	BIT(0)
+#define JDI_MODE_PARTIAL_UPDATE BIT(0)
 
 /** @} */
 
@@ -54,10 +54,10 @@ struct jdi_device {
 
 /** JDI message. */
 struct jdi_msg {
-	uint32_t startx;
-	uint32_t starty;
-	uint32_t endx;
-	uint32_t endy;
+	uint32_t x;
+	uint32_t y;
+	uint32_t w;
+	uint32_t h;
 	/** Transmit buffer. */
 	void *tx_buf;
 	/** Transmit length. */

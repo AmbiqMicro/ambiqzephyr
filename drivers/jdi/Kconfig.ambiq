@@ -1,5 +1,3 @@
-# Ambiq JDI driver configuration options
-
 # Copyright (c) 2025 Ambiq Micro Inc.
 # SPDX-License-Identifier: Apache-2.0
 
@@ -12,13 +10,3 @@ config JDI_AMBIQ
 	select AMBIQ_COMPONENT_USE_NEMASDK if SOC_SERIES_APOLLO5X
 	help
 	  Enable Ambiq JDI (Japan Display Interface) driver.
-
-if JDI_AMBIQ
-
-config JDI_AMBIQ_LOG_LEVEL
-	int "Ambiq JDI driver log level"
-	default 3
-	depends on LOG
-	help
-	  Set log level for Ambiq JDI driver.
-endif # JDI_AMBIQ
