@@ -182,6 +182,12 @@
 	status = "okay";
 };
 
+&adc0 {
+	pinctrl-0 = <&adc0_default>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
 zephyr_udc0: &usb {
 	vddusb33-gpios = <&gpio0_31 13 GPIO_PULL_UP>;
 	vddusb0p9-gpios = <&gpio0_31 15 GPIO_PULL_UP>;

@@ -135,7 +135,7 @@
 		};
 	};
 
-	mspi0_default: mspi0_default {
+	mspi0_default: mspi0_default{
 		group1 {
 			pinmux = <MSPI0_0_P64>,
 				 <MSPI0_1_P65>,
@@ -150,7 +150,7 @@
 		};
 	};
 
-	mspi1_default: mspi1_default {
+	mspi1_default: mspi1_default{
 		group1 {
 			pinmux = <MSPI1_0_P37>,
 				 <MSPI1_1_P38>,
@@ -165,7 +165,7 @@
 		};
 	};
 
-	mspi2_default: mspi2_default {
+	mspi2_default: mspi2_default{
 		group1 {
 			pinmux = <MSPI2_0_P74>,
 				 <MSPI2_1_P75>,
@@ -194,7 +194,13 @@
 		};
 	};
 
-	pwm2_default: pwm2_default {
+	adc0_default: adc0_default{
+		group1 {
+			pinmux = <ADCSE4_P15>, <ADCSE7_P12>;
+			drive-strength = "0.1";
+		};
+	};
+	pwm2_default: pwm2_default{
 		group1 {
 			pinmux = <CT30_P30>;
 			drive-open-drain;
