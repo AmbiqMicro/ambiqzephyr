@@ -929,7 +929,7 @@ static int mspi_ambiq_dev_config(const struct device         *controller,
 				ret = -EHOSTDOWN;
 				goto e_return;
 			}
-			data->dev_cfg.freq      = io_mode;
+			data->dev_cfg.freq      = data_rate;
 			data->dev_cfg.data_rate = data_rate;
 			data->dev_cfg.ce_num    = ce_num;
 
