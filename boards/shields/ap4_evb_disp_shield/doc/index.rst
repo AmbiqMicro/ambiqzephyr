@@ -1,7 +1,7 @@
-.. _ap4_evb_disp_shield_rev2:
+.. _ap4_evb_disp_shield:
 
-Apollo4 Plus EVB Display Shield Rev2
-####################################
+Apollo4 Plus EVB Display Shield
+###############################
 
 Overview
 ********
@@ -10,7 +10,7 @@ Support for Apollo4 Plus EVB expansion boards (shields)
 controller.
 
 Apollo4 Plus EVB Host Shield
-*****************************
+****************************
 
 Pins Assignment of the Shield Connector
 =======================================
@@ -63,5 +63,5 @@ Pins Assignment of the Shield Connector
 Programming
 ***********
 
-Set ``--shield ap4_evb_disp_shield_rev2`` when you invoke ``west build`` or ``cmake``
-in your Zephyr application.
+Set ``--shield ap4_evb_disp_shield_rev1`` or  ``--shield ap4_evb_disp_shield_rev2``,
+when you invoke ``west build`` or ``cmake`` in your Zephyr application.
