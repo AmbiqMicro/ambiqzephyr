@@ -7,7 +7,7 @@ on:
       branch:
         description: 'Branch name'
         required: true
-        default: 'apollo510L-dev'
+        default: 'ambiq-stable'
       base:
         description: 'Base branch name'
         required: true
