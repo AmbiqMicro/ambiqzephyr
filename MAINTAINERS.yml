@@ -4976,17 +4976,6 @@ West:
   labels:
     - "area: ACPI"
 
-"West project: ambiqhal_ambiq_alpha":
-  status: odd fixes
-  collaborators:
-    - aaronyegx
-    - AlessandroLuo
-    - RichardSWheatley
-  files:
-    - modules/hal_ambiq/
-  labels:
-    - "platform: Ambiq"
-
 "West project: babblesim_base":
   status: maintained
   maintainers:
@@ -5200,6 +5189,17 @@ West:
   files: []
   labels:
     - "platform: Broadcom"
+
+"West project: hal_ambiq_internal":
+  status: odd fixes
+  collaborators:
+    - aaronyegx
+    - AlessandroLuo
+    - RichardSWheatley
+  files:
+    - modules/hal_ambiq/
+  labels:
+    - "platform: Ambiq"
 
 "West project: hal_atmel":
   status: maintained

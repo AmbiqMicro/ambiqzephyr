@@ -345,5 +345,5 @@ Additional Resources
 .. _Ambiq SoC: https://contentportal.ambiq.com/soc
 .. _Ambiq Products: https://ambiq.com/products/
 .. _Ambiq Content Portal: https://contentportal.ambiq.com/
-.. _Ambiq HAL Repository: https://github.com/AmbiqMicro/ambiqhal_ambiq_alpha
+.. _Ambiq HAL Repository: https://github.com/AmbiqMicro/hal-zephyr-alpha
 .. _Zephyr Power Management: https://docs.zephyrproject.org/latest/services/pm/index.html
