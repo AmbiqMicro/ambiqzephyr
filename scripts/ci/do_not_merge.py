@@ -65,7 +65,7 @@ def main(argv):
 
     print_rate_limit(gh, "AmbiqMicro")
 
-    repo = gh.get_repo("AmbiqMicro/zephyr-ambiq-alpha")
+    repo = gh.get_repo("AmbiqMicro/zephyr-ambiq-internal")
     pr = repo.get_pull(args.pull_request)
 
     print(f"pr: {pr.html_url}")
