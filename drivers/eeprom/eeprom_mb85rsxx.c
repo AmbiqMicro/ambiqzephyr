@@ -334,7 +334,7 @@ static DEVICE_API(eeprom, mb85rsxx_driver_api) = {
                                                                                                    \
 	static const struct eeprom_mb85rsxx_config eeprom_mb85rsxx_config_##inst = {             \
 		.spi = SPI_DT_SPEC_INST_GET(                                                       \
-			inst, SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB | SPI_WORD_SET(8), 0),         \
+			inst, SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB | SPI_WORD_SET(8)),         \
 		IF_ENABLED(DT_INST_NODE_HAS_PROP(inst, wp_gpios),                                  \
 			   (.wp_gpio = GPIO_DT_SPEC_INST_GET(inst, wp_gpios),))                    \
 		IF_ENABLED(DT_INST_NODE_HAS_PROP(inst, hold_gpios),                                \
