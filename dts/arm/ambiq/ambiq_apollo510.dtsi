@@ -757,6 +757,15 @@
 			zephyr,pm-device-runtime-auto;
 		};
 
+		dc_jdi: jdi@DC_BASE_NAME {
+			compatible = "ambiq,jdi";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <DC_REG_BASE DC_REG_SIZE>;
+			interrupts = <29 0>;/* DC interrupt */
+			status = "disabled";
+		};
+
 		dc_spi: spi@DC_BASE_NAME {
 			compatible = "ambiq,spi-dcif";
 			#address-cells = <1>;
