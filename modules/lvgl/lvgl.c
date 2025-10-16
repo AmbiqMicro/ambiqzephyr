@@ -21,6 +21,7 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(lvgl, CONFIG_LV_Z_LOG_LEVEL);
 
+
 #if CONFIG_LV_Z_LOG_LEVEL != 0
 static void lvgl_log(lv_log_level_t level, const char *buf)
 {
