@@ -329,10 +329,10 @@ static DEVICE_API(eeprom, mb85rsxx_driver_api) = {
 	.size = &eeprom_mb85rsxx_size,
 };
 
-#define MB85RSXX_INIT(inst)                                                                        \
-	static struct eeprom_mb85rsxx_data eeprom_mb85rsxx_data_##inst;                            \
+#define MB85RSXX_INIT(inst)                                                                       \
+	static struct eeprom_mb85rsxx_data eeprom_mb85rsxx_data_##inst;                          \
                                                                                                    \
-	static const struct eeprom_mb85rsxx_config eeprom_mb85rsxx_config_##inst = {               \
+	static const struct eeprom_mb85rsxx_config eeprom_mb85rsxx_config_##inst = {             \
 		.spi = SPI_DT_SPEC_INST_GET(                                                       \
 			inst, SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB | SPI_WORD_SET(8), 0),         \
 		IF_ENABLED(DT_INST_NODE_HAS_PROP(inst, wp_gpios),                                  \
@@ -343,8 +343,8 @@ static DEVICE_API(eeprom, mb85rsxx_driver_api) = {
 		.readonly = DT_INST_PROP(inst, read_only),                                         \
 	};                                                                                         \
                                                                                                    \
-	DEVICE_DT_INST_DEFINE(inst, eeprom_mb85rsxx_init, NULL, &eeprom_mb85rsxx_data_##inst,      \
-			      &eeprom_mb85rsxx_config_##inst, POST_KERNEL,                         \
+	DEVICE_DT_INST_DEFINE(inst, eeprom_mb85rsxx_init, NULL, &eeprom_mb85rsxx_data_##inst,    \
+			      &eeprom_mb85rsxx_config_##inst, POST_KERNEL,                        \
 			      CONFIG_EEPROM_INIT_PRIORITY, &mb85rsxx_driver_api);
 
 DT_INST_FOREACH_STATUS_OKAY(MB85RSXX_INIT)

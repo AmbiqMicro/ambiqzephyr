@@ -108,7 +108,7 @@
 &rtc {
 	status = "okay";
 	clocks = <&rcc STM32_CLOCK(APB7, 21)>,
-			<&rcc STM32_SRC_LSE RTC_SEL(1)>;
+		 <&rcc STM32_SRC_LSE RTC_SEL(1)>;
 	prescaler = <32768>;
 };
 
@@ -155,6 +155,10 @@ stm32_lp_tick_source: &lptim1 {
 };
 
 &rng {
+	status = "okay";
+};
+
+&ieee802154 {
 	status = "okay";
 };
 

@@ -585,7 +585,10 @@ class DeviceHandler(Handler):
         if self.options.flash_command:
             return self._create_flash_command(hardware)
 
-        command = ["west", "flash", "--skip-rebuild", "-d", self.build_dir]
+        command = ["west"]
+        if self.options.verbose > 2:
+            command.append(f"-{'v' * (self.options.verbose - 2)}")
+        command += ["flash", "--skip-rebuild", "-d", self.build_dir]
         command_extra_args = []
 
         # There are three ways this option is used.
@@ -596,7 +599,7 @@ class DeviceHandler(Handler):
         # 3) Multiple values: --west-flash="--board-id=42,--erase"
         #    This results in options.west_flash == "--board-id=42 --erase"
         if self.options.west_flash and self.options.west_flash != []:
-            command_extra_args.extend(self.options.west_flash.split(','))
+            command_extra_args.extend(next(csv.reader([self.options.west_flash])))
 
         if runner:
             command.append("--runner")
