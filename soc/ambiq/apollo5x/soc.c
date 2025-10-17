@@ -69,21 +69,6 @@ int apollo5x_set_performance_mode(uint32_t mode)
 		return 0;
 	}
 
-	if (mode != AMBIQ_POWER_MODE_LOW_POWER) {
-		if (PWRCTRL->VRSTATUS_b.SIMOBUCKST != PWRCTRL_VRSTATUS_SIMOBUCKST_ACT) {
-			status = am_hal_pwrctrl_control(AM_HAL_PWRCTRL_CONTROL_SIMOBUCK_INIT, NULL);
-			if (status != AM_HAL_STATUS_SUCCESS) {
-				LOG_ERR("Failed to enable SIMOBUCK: 0x%x", status);
-				return -EIO;
-			}
-		}
-
-		if (PWRCTRL->VRSTATUS_b.SIMOBUCKST != PWRCTRL_VRSTATUS_SIMOBUCKST_ACT) {
-			LOG_ERR("SIMOBUCK not active, cannot enter HP mode");
-			return -EIO;
-		}
-	}
-
 	status = am_hal_pwrctrl_mcu_mode_select(target_mode);
 	if (status != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("Failed to switch MCU mode (%d): 0x%x", mode, status);
@@ -143,11 +128,12 @@ void soc_early_init_hook(void)
 	icache_prefill();
 
 	/* Use LFRC instead of XT */
+	am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_RTC_SEL_LFRC, 0);
 	am_hal_rtc_osc_select(AM_HAL_RTC_OSC_LFRC);
 
 	/* Configure XTAL for deepsleep */
 	am_hal_pwrctrl_control(AM_HAL_PWRCTRL_CONTROL_XTAL_PWDN_DEEPSLEEP, 0);
-
+	MCUCTRL->XTALCTRL = 0;
 	am_hal_rtc_osc_disable();
 
 	VCOMP->PWDKEY = VCOMP_PWDKEY_PWDKEY_Key;
