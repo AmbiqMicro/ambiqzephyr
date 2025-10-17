@@ -24,12 +24,16 @@ tests:
   pm.power_wakeup_timer:
     platform_allow:
       - stm32l562e_dk
+      - apollo510_evb
+      - apollo510L_eb
     tags:
       - pm
 
   pm.power_wakeup_timer.pm_device:
     platform_allow:
       - stm32l562e_dk
+      - apollo510_evb
+      - apollo510L_eb
     tags:
       - pm
     extra_args:
