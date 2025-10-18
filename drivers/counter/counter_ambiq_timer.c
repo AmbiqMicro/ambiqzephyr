@@ -118,7 +118,9 @@ static uint32_t get_clock_cycles(uint32_t clock_sel)
 	case 18:
 		ret = 1024;
 		break;
-#else
+#endif /* CONFIG_SOC_SERIES_APOLLO3X */
+
+#if defined(CONFIG_SOC_SERIES_APOLLO4X) || defined(CONFIG_SOC_SERIES_APOLLO5X)
 	case 0:
 	case 1:
 	case 2:
@@ -130,7 +132,10 @@ static uint32_t get_clock_cycles(uint32_t clock_sel)
 	case 6:
 		ret = 1000;
 		break;
-#if defined(CONFIG_SOC_SERIES_APOLLO4X) || defined(CONFIG_SOC_APOLLO510)
+#endif /* CONFIG_SOC_SERIES_APOLLO4X || CONFIG_SOC_SERIES_APOLLO5X */
+
+#if defined(CONFIG_SOC_SERIES_APOLLO4X) ||                                                         \
+	defined(CONFIG_SOC_APOLLO510) || defined(CONFIG_SOC_APOLLO510B)
 	case 7:
 		ret = 500;
 		break;
@@ -154,7 +159,9 @@ static uint32_t get_clock_cycles(uint32_t clock_sel)
 	case 17:
 		ret = 100;
 		break;
-#if defined(CONFIG_SOC_APOLLO510)
+#endif /* CONFIG_SOC_SERIES_APOLLO4X || CONFIG_SOC_APOLLO510/B */
+
+#if defined(CONFIG_SOC_APOLLO510) || defined(CONFIG_SOC_APOLLO510B)
 	case 18:
 		ret = 512;
 		break;
@@ -171,8 +178,9 @@ static uint32_t get_clock_cycles(uint32_t clock_sel)
 	case 27:
 		ret = 48000000 / (1 << (clock_sel - 25));
 		break;
-#endif
-#else
+#endif /* CONFIG_SOC_APOLLO510/B */
+
+#if defined(CONFIG_SOC_APOLLO510L)
 	case 7:
 		ret = 31;
 		break;
@@ -219,8 +227,8 @@ static uint32_t get_clock_cycles(uint32_t clock_sel)
 		am_hal_clkmgr_board_info_get(&board);
 		ret = board.ui32ExtRefClkFreq / (1 << (clock_sel - 21));
 	} break;
-#endif
-#endif
+#endif /* CONFIG_SOC_APOLLO510L */
+
 	default:
 		ret = 32768;
 		break;
