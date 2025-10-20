@@ -26,6 +26,15 @@ static int ap4p_ap4_evb_disp_shield_init(void)
 	am_hal_gpio_state_write(AM_BSP_GPIO_MSPI1_MUX_OE, AM_HAL_GPIO_OUTPUT_CLEAR);
 #endif
 
+	// am_hal_gpio_pinconfig(AM_BSP_GPIO_DISP_IFSEL1, am_hal_gpio_pincfg_output);
+	// am_hal_gpio_pinconfig(AM_BSP_GPIO_DISP_IFSEL2, am_hal_gpio_pincfg_output);
+
+	// am_hal_gpio_state_write(AM_BSP_GPIO_DISP_IFSEL1, AM_HAL_GPIO_OUTPUT_CLEAR);
+	// am_hal_gpio_state_write(AM_BSP_GPIO_DISP_IFSEL2, AM_HAL_GPIO_OUTPUT_CLEAR);
+
+	am_hal_gpio_pinconfig(AM_BSP_GPIO_DISP_DEVICE_EN, am_hal_gpio_pincfg_output);
+	am_hal_gpio_state_write(AM_BSP_GPIO_DISP_DEVICE_EN, AM_HAL_GPIO_OUTPUT_SET);
+
 	return 0;
 }
 
