@@ -59,6 +59,7 @@ static __always_inline void zmemset(void *dst, uint8_t v, size_t len)
 
 /* Provide definition to align LVGL buffers */
 #define LV_ATTRIBUTE_MEM_ALIGN __aligned(CONFIG_LV_ATTRIBUTE_MEM_ALIGN_SIZE)
+#define LV_ATTRIBUTE_LARGE_CONST Z_GENERIC_SECTION(CONFIG_LV_Z_LARGE_CONST_SECTION)
 
 #ifdef CONFIG_LV_COLOR_16_SWAP
 #define LV_COLOR_16_SWAP 1
