@@ -805,6 +805,25 @@
 			vsync = <1>;
 		};
 
+		mipi_dbi: mipi_dbi@DC_BASE_NAME {
+			compatible = "ambiq,mipi-dbi";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <DC_REG_BASE DC_REG_SIZE>;
+			interrupts = <29 0>;/* DC interrupt */
+			status = "disabled";
+
+			clock-frequency = <192000000>;
+			hactive = <480>;/*Its value should be an integer multiple of 4.*/
+			hfp = <1>;
+			hbp = <1>;
+			hsync = <1>;
+			vactive = <800>;
+			vfp = <1>;
+			vbp = <1>;
+			vsync = <1>;
+		};
+
 		mipi_dsi: mipi_dsi@DSI_BASE_NAME {
 			compatible = "ambiq,mipi-dsi";
 			#address-cells = <1>;
