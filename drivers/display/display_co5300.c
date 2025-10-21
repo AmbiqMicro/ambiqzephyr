@@ -408,7 +408,7 @@ static int co5300_init(const struct device *dev)
 
 #define CO5300_DEFINE(node_id)                                                                     \
 	static const struct co5300_config co5300_config_##node_id = {                              \
-		.spi = SPI_DT_SPEC_GET(node_id, SPI_WORD_SET(8) | CO5300_GET_DATA_LINES(node_id)),     \
+		.spi = SPI_DT_SPEC_GET(node_id, SPI_WORD_SET(8) | CO5300_GET_DATA_LINES(node_id)), \
 		.reset = GPIO_DT_SPEC_GET_OR(node_id, reset_gpios, {0}),                           \
 		.rotation = DT_PROP(node_id, rotation),                                            \
 	};                                                                                         \
