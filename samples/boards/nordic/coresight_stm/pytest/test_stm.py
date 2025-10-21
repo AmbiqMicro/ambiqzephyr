@@ -12,6 +12,7 @@ from pathlib import Path
 from time import sleep
 
 import psutil
+
 from twister_harness import DeviceAdapter
 
 logger = logging.getLogger(__name__)

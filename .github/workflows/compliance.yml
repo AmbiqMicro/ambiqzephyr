@@ -120,7 +120,7 @@ jobs:
           exit 1;
         fi
 
-        warns=("ClangFormat" "LicenseAndCopyrightCheck")
+        warns=("ClangFormat")
         files=($(./scripts/ci/check_compliance.py -l))
 
         for file in "${files[@]}"; do

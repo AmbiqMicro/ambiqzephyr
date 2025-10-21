@@ -37,6 +37,7 @@ from bumble.sdp import (
 )
 from bumble.snoop import BtSnooper
 from bumble.transport import open_transport_or_link
+
 from twister_harness import DeviceAdapter, Shell
 
 logger = logging.getLogger(__name__)

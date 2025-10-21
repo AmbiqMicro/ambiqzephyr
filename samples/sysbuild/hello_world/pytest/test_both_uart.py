@@ -10,6 +10,7 @@ import time
 
 import pytest
 import serial
+
 from twister_harness import DeviceAdapter
 from twister_harness.fixtures import determine_scope
 
