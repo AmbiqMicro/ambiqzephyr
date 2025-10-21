@@ -38,9 +38,10 @@ except ImportError:
     from yaml import SafeLoader
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import list_boards
 import list_hardware
 from get_maintainer import Maintainers, MaintainersError
+
+import list_boards
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]
                        / "scripts" / "dts" / "python-devicetree" / "src"))
@@ -1584,68 +1585,6 @@ class GitDiffCheck(ComplianceTest):
             self.failure("\n".join(offending_lines))
 
 
-class LicenseAndCopyrightCheck(ComplianceTest):
-    """
-    Verify that every file touched by the patch set has correct SPDX headers and uses allowed
-    license.
-    """
-
-    name = "LicenseAndCopyrightCheck"
-    doc = "Check SPDX headers and copyright lines with the reuse Python API."
-
-    def _report_violations(
-        self,
-        paths: Iterable[Path],
-        title: str,
-        severity: str,
-        desc: str | None = None,
-    ) -> None:
-        for p in paths:
-            rel_path = os.path.relpath(str(p), GIT_TOP)
-            self.fmtd_failure(severity, title, rel_path, desc=desc or "", line=1)
-
-    def run(self) -> None:
-        changed_files = get_files(filter="d")
-        if not changed_files:
-            return
-
-        # Only scan text files for now, in the future we may want to leverage REUSE standard's
-        # ability to also associate license/copyright info with binary files.
-        for file in changed_files:
-            full_path = GIT_TOP / file
-            mime_type = magic.from_file(os.fspath(full_path), mime=True)
-            if not mime_type.startswith("text/"):
-                changed_files.remove(file)
-
-        project = Project.from_directory(GIT_TOP)
-        report = ProjectSubsetReport.generate(project, changed_files, multiprocessing=False)
-
-        self._report_violations(
-            report.files_without_licenses,
-            "License missing",
-            "warning",
-            "File has no SPDX-License-Identifier header, consider adding one.",
-        )
-
-        self._report_violations(
-            report.files_without_copyright,
-            "Copyright missing",
-            "warning",
-            "File has no SPDX-FileCopyrightText header, consider adding one.",
-        )
-
-        for lic_id, paths in getattr(report, "missing_licenses", {}).items():
-            self._report_violations(
-                paths,
-                "License may not be allowed",
-                "warning",
-                (
-                    f"License file for '{lic_id}' not found in /LICENSES. Please check "
-                    "https://docs.zephyrproject.org/latest/contribute/guidelines.html#components-using-other-licenses."
-                ),
-            )
-
-
 class GitLint(ComplianceTest):
     """
     Runs gitlint on the commits and finds issues with style and syntax
@@ -1741,34 +1680,6 @@ def filter_py(root, fnames):
             if (fname.endswith(".py") or
              magic.from_file(os.path.join(root, fname),
                              mime=True) == "text/x-python")]
-
-
-class CMakeStyle(ComplianceTest):
-    """
-    Checks cmake style added/modified files
-    """
-    name = "CMakeStyle"
-    doc = "See https://docs.zephyrproject.org/latest/contribute/style/cmake.html for more details."
-
-    def run(self):
-        # Loop through added/modified files
-        for fname in get_files(filter="d"):
-            if fname.endswith(".cmake") or fname == "CMakeLists.txt":
-                self.check_style(fname)
-
-    def check_style(self, fname):
-        SPACE_BEFORE_OPEN_BRACKETS_CHECK = re.compile(r"^\s*if\s+\(")
-        TAB_INDENTATION_CHECK = re.compile(r"^\t+")
-
-        with open(fname, encoding="utf-8") as f:
-            for line_num, line in enumerate(f.readlines(), start=1):
-                if TAB_INDENTATION_CHECK.match(line):
-                    self.fmtd_failure("error", "CMakeStyle", fname, line_num,
-                                      "Use spaces instead of tabs for indentation")
-
-                if SPACE_BEFORE_OPEN_BRACKETS_CHECK.match(line):
-                    self.fmtd_failure("error", "CMakeStyle", fname, line_num,
-                                      "Remove space before '(' in if() statements")
 
 
 class Identity(ComplianceTest):

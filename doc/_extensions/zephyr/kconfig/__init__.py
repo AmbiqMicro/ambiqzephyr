@@ -63,8 +63,9 @@ sys.path.insert(0, str(Path(__file__).parents[4] / "scripts"))
 sys.path.insert(0, str(Path(__file__).parents[4] / "scripts/kconfig"))
 
 import kconfiglib
-import list_boards
 import list_hardware
+
+import list_boards
 import zephyr_module
 
 RESOURCES_DIR = Path(__file__).parent / "static"

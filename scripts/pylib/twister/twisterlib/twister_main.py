@@ -13,6 +13,7 @@ from collections.abc import Sequence
 
 import colorama
 from colorama import Fore
+
 from twisterlib.coverage import run_coverage
 from twisterlib.environment import (
     TwisterEnv,

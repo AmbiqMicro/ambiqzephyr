@@ -6,6 +6,7 @@
 '''Common fixtures for use in testing the twister tool.'''
 import logging
 import os
+from pathlib import Path
 
 import pytest
 
@@ -13,7 +14,7 @@ from twisterlib.environment import TwisterEnv, add_parse_arguments, parse_argume
 from twisterlib.testinstance import TestInstance
 from twisterlib.testplan import TestConfiguration, TestPlan
 
-from . import ZEPHYR_BASE
+ZEPHYR_BASE = os.getenv("ZEPHYR_BASE", str(Path(__file__).parents[3]))
 
 pytest_plugins = ["pytester"]
 

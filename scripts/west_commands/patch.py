@@ -18,8 +18,9 @@ import yaml
 from west.commands import WestCommand
 
 sys.path.append(os.fspath(Path(__file__).parent.parent))
-import zephyr_module
 from zephyr_ext_common import ZEPHYR_BASE
+
+import zephyr_module
 
 try:
     from yaml import CSafeDumper as SafeDumper
