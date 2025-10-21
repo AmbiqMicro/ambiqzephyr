@@ -27,6 +27,7 @@ from pathlib import Path
 from queue import Empty, Queue
 
 import psutil
+
 from twisterlib.environment import ZEPHYR_BASE, strip_ansi_sequences
 from twisterlib.error import TwisterException
 from twisterlib.platform import Platform

@@ -61,6 +61,7 @@ int eth_stm32_tx(const struct device *dev, struct net_pkt *pkt)
 	int res;
 	size_t total_len;
 	uint8_t *dma_buffer;
+
 	__IO ETH_DMADescTypeDef *dma_tx_desc;
 	HAL_StatusTypeDef hal_ret = HAL_OK;
 
