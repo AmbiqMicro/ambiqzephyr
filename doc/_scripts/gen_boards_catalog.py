@@ -10,14 +10,13 @@ import sys
 from collections import namedtuple
 from pathlib import Path
 
+import list_boards
 import list_hardware
 import list_shields
 import yaml
+import zephyr_module
 from gen_devicetree_rest import VndLookup
 from runners.core import ZephyrBinaryRunner
-
-import list_boards
-import zephyr_module
 
 ZEPHYR_BASE = Path(__file__).parents[2]
 ZEPHYR_BINDINGS = ZEPHYR_BASE / "dts/bindings"

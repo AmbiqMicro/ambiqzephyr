@@ -20,7 +20,6 @@ from string import Template
 import junitparser.junitparser as junit
 import yaml
 from pytest import ExitCode
-
 from twisterlib.constants import SUPPORTED_SIMS_IN_PYTEST
 from twisterlib.environment import PYTEST_PLUGIN_INSTALLED, ZEPHYR_BASE
 from twisterlib.error import ConfigurationError, StatusAttributeError
