@@ -166,7 +166,7 @@ manifest:
     - name: hal_ambiq_internal
       remote: github_ambiqmicro
       path: modules/hal/ambiq
-      revision: f69ac715d46ddd92a253f7eb05ac2323bb5207cc
+      revision: 96b3aeb345ab809162996ce6e897d436e929c3d3
       groups:
         - hal
     - name: hal_atmel
@@ -319,7 +319,9 @@ manifest:
       revision: fb00b383072518c918e2258b0916c996f2d4eebe
       path: modules/lib/loramac-node
     - name: lvgl
-      revision: b03edc8e6282a963cd312cd0b409eb5ce263ea75
+      remote: github_ambiqmicro
+      repo-path: LVGL
+      revision: 11332c818b495bf85d1a0ce567ede4f36fcfa549
       path: modules/lib/gui/lvgl
     - name: mbedtls
       revision: 85440ef5fffa95d0e9971e9163719189cf34d979
