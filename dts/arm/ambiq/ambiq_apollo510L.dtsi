@@ -5,6 +5,7 @@
 #include <mem.h>
 #include <freq.h>
 #include <apollo510L/am_apollo510L.h>
+#include <zephyr/dt-bindings/power/ambiq_power.h>
 #include <zephyr/dt-bindings/memory-attr/memory-attr-arm.h>
 #include <zephyr/dt-bindings/adc/adc.h>
 #include <zephyr/dt-bindings/i2c/i2c.h>
@@ -36,6 +37,28 @@
 		extrefclk: extrefclk {
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
+		};
+	};
+
+	performance-states {
+		compatible = "zephyr,pstates";
+
+		pstate_hp: pstate_hp {
+			compatible = "ambiq,pstate";
+			load-threshold = <80>;
+			ambiq,perf-mode = <AMBIQ_POWER_MODE_HIGH_PERFORMANCE_2>;
+		};
+
+		pstate_hp1: pstate_hp1 {
+			compatible = "ambiq,pstate";
+			load-threshold = <60>;
+			ambiq,perf-mode = <AMBIQ_POWER_MODE_HIGH_PERFORMANCE>;
+		};
+
+		pstate_lp: pstate_lp {
+			compatible = "ambiq,pstate";
+			load-threshold = <0>;
+			ambiq,perf-mode = <AMBIQ_POWER_MODE_LOW_POWER>;
 		};
 	};
 

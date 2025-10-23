@@ -9,6 +9,8 @@
 
 #include <am_mcu_apollo.h>
 
+int apollo5x_set_performance_mode(uint32_t mode);
+
 bool buf_in_nocache(uintptr_t buf, size_t len_bytes);
 
 #endif /* __SOC_H__ */

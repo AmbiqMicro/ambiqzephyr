@@ -20,9 +20,78 @@
 #include "icache_prefill.h"
 #endif
 
+#include <zephyr/dt-bindings/power/ambiq_power.h>
+
 #include <soc.h>
 
 LOG_MODULE_REGISTER(soc, CONFIG_SOC_LOG_LEVEL);
+
+static am_hal_pwrctrl_mcu_mode_e ambiq_perf_mode_to_hal(uint32_t mode)
+{
+#if defined(CONFIG_SOC_APOLLO510L)
+	switch (mode) {
+	case AMBIQ_POWER_MODE_LOW_POWER:
+		return AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER;
+	case AMBIQ_POWER_MODE_HIGH_PERFORMANCE:
+		return AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE1;
+	case AMBIQ_POWER_MODE_HIGH_PERFORMANCE_2:
+		return AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE2;
+	default:
+		return AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER;
+	}
+#else
+	switch (mode) {
+	case AMBIQ_POWER_MODE_LOW_POWER:
+		return AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER;
+	case AMBIQ_POWER_MODE_HIGH_PERFORMANCE_2:
+		/* fall through */
+	case AMBIQ_POWER_MODE_HIGH_PERFORMANCE:
+		return AM_HAL_PWRCTRL_MCU_MODE_HIGH_PERFORMANCE;
+	default:
+		return AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER;
+	}
+#endif
+}
+
+int apollo5x_set_performance_mode(uint32_t mode)
+{
+	uint32_t status;
+	am_hal_pwrctrl_mcu_mode_e current_mode;
+	am_hal_pwrctrl_mcu_mode_e target_mode = ambiq_perf_mode_to_hal(mode);
+
+	status = am_hal_pwrctrl_mcu_mode_status(&current_mode);
+	if (status != AM_HAL_STATUS_SUCCESS) {
+		LOG_ERR("Failed to read MCU mode: 0x%x", status);
+		return -EIO;
+	}
+
+	if (current_mode == target_mode) {
+		return 0;
+	}
+
+	if (mode != AMBIQ_POWER_MODE_LOW_POWER) {
+		if (PWRCTRL->VRSTATUS_b.SIMOBUCKST != PWRCTRL_VRSTATUS_SIMOBUCKST_ACT) {
+			status = am_hal_pwrctrl_control(AM_HAL_PWRCTRL_CONTROL_SIMOBUCK_INIT, NULL);
+			if (status != AM_HAL_STATUS_SUCCESS) {
+				LOG_ERR("Failed to enable SIMOBUCK: 0x%x", status);
+				return -EIO;
+			}
+		}
+
+		if (PWRCTRL->VRSTATUS_b.SIMOBUCKST != PWRCTRL_VRSTATUS_SIMOBUCKST_ACT) {
+			LOG_ERR("SIMOBUCK not active, cannot enter HP mode");
+			return -EIO;
+		}
+	}
+
+	status = am_hal_pwrctrl_mcu_mode_select(target_mode);
+	if (status != AM_HAL_STATUS_SUCCESS) {
+		LOG_ERR("Failed to switch MCU mode (%d): 0x%x", mode, status);
+		return -EIO;
+	}
+
+	return 0;
+}
 
 #define SCRATCH0_OEM_RCV_RETRY_MAGIC 0xA86
 
