@@ -53,7 +53,7 @@ As of now, Ambiq provides zephyr support for a set of peripherals/drivers:
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |  MSPI  |  coming soon   |                    |                                           |                  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|   PDM  |  coming soon   |                    |                                           |                  |
+|   PDM  |       -        |    apollo510L-dev  |    samples\\drivers\\audio\\dmic          |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |   PM   |       -        |    apollo510L-dev  |    samples\\subsys\\pm\\device\_pm        |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
@@ -241,6 +241,36 @@ For USB samples, please refer to `How_to_Run_Zephyr_USB_Samples.rst <doc/ambiq/H
 
 For MCU_Boot samples, please refer to `How_to_Run_MCUBoot_Samples_and_Tests.rst <doc/ambiq/How_to_Run_MCUBoot_Samples_and_Tests.rst>`_
 
+
+Power Management Instructions
+-----------------------------
+
+To achieve lowest power consumption, customer needs to follow the following process for inspection and configuration optimization:
+
+1. According to the acutal usage of memory, adjust the memory configurations in soc_early_init_hook;
+
+2. Make sure ``CONFIG_PM=y``, ``CONFIG_PM_DEVICE=y``, and ``CONFIG_PM_DEVICE_RUNTIME=y``, and explicitly enable ``CONFIG_PM_DEVICE_SYSTEM_MANAGED=y``
+   so remaining devices are suspended automatically before deep sleep.
+
+3. Audit the Devicetree to disable unused peripherals ``status = "disabled"`` or keep ``zephyr,pm-device-runtime-auto`` on blocks that should be power-managed automatically;
+   remove the property from peripherals that must stay on.
+
+4. In application code, call pm_device_runtime_put() / pm_device_runtime_get() around peripherals that should power-cycle on demand to ensure their usage count returns to zero after use.
+
+Check `Zephyr Power Management`_ for more detailed information.
+
+Currently drivers below has fully PM_DEVICE support:
+I2C
+MSPI
+SDHC
+SPI
+UART
+
+And following drivers' PM_DEVICE is in testing:
+ADC
+I2S
+PDM
+
 .. start_include_here
 
 Community Support
@@ -316,3 +346,4 @@ Additional Resources
 .. _Ambiq Products: https://ambiq.com/products/
 .. _Ambiq Content Portal: https://contentportal.ambiq.com/
 .. _Ambiq HAL Repository: https://github.com/AmbiqMicro/ambiqhal_ambiq_alpha
+.. _Zephyr Power Management: https://docs.zephyrproject.org/latest/services/pm/index.html
