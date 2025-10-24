@@ -25,69 +25,69 @@ Status
 As of now, Ambiq provides zephyr support for a set of peripherals/drivers:
 
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-| Driver |   Apollo510L   |   Stable codes at  |              Sample                       |       Board      |
+| Driver |   PM_DEVICE    |   Stable codes at  |              Sample                       |       Board      |
 +========+================+====================+===========================================+==================+
-|   ADC  |       -        |    apollo510L-dev  | samples\\drivers\\adc\\adc\_dt            |        All       |
+|   ADC  |      WIP       |    ambiq-stable    | samples\\drivers\\adc\\adc\_dt            |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|   BLE  |       -        |    apollo510L-dev  | samples\\bluetooth                        |apollo510L_eb only|
+| AUDADC |      WIP       |    ambiq-stable    | samples\\drivers\\adc\\adc\_dt            |  apollo510 only  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-| COUNTER|       -        |    apollo510L-dev  | samples\\drivers\\counter\\alarm          |        All       |
+|   BLE  |                |    ambiq-stable    | samples\\bluetooth                        | blue boards only |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-| CRYPTO |  coming soon   |                    |                                           |                  |
+| COUNTER|                |    ambiq-stable    | samples\\drivers\\counter\\alarm          |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-| DISPLAY|       -        |    apollo510L-dev  |  samples\\drivers\\display                |  with disp card  |
+| CRYPTO |                |     coming soon    |                                           |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-| FLASH  |       -        |    apollo510L-dev  |  samples\\subsys\\mgmt\\mcumgr\\smp_svr   |        All       |
+| DISPLAY|                |    ambiq-stable    |  samples\\drivers\\display                |  with disp card  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-| HWINFO |       -        |    apollo510L-dev  |  tests\\drivers\\hwinfo\\api              |        All       |
+| FLASH  |                |    ambiq-stable    |  samples\\subsys\\mgmt\\mcumgr\\smp_svr   |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|   I2C  |       -        |    apollo510L-dev  |  samples\\drivers\\eeprom                 |apollo510L_eb only|
+| HWINFO |                |    ambiq-stable    |  tests\\drivers\\hwinfo\\api              |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|   I2S  |  coming soon   |                    |                                           |                  |
+|   I2C  |       -        |    ambiq-stable    |  samples\\drivers\\eeprom                 |  eb boards only  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|   I3C  |  coming soon   |                    |                                           |                  |
+|   I2S  |      WIP       |    ambiq-stable    |  samples\\drivers\\audio\\amic            |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|  INPUT |  coming soon   |                    |                                           |                  |
+|   I3C  |                |     coming soon    |                                           |  apollo510L only |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|MIPI_DSI|       -        |    apollo510L-dev  |  samples\\drivers\\display                |  with disp card  |
+|  INPUT |                |    ambiq-stable    |samples\\subsys\\input\\draw\_touch\_events|  with disp card  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|  MSPI  |  coming soon   |                    |                                           |                  |
+|MIPI_DSI|                |    ambiq-stable    |  samples\\drivers\\display                |  with disp card  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|   PDM  |  coming soon   |                    |                                           |                  |
+|  MSPI  |       -        |    ambiq-stable    |   samples\\drivers\\mspi\\mspi\_flash     |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|   PM   |       -        |    apollo510L-dev  |    samples\\subsys\\pm\\device\_pm        |        All       |
+|   PDM  |      WIP       |    ambiq-stable    |    samples\\drivers\\audio\\dmic          |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|   PWM  |       -        |    apollo510L-dev  |  tests\\drivers\\pwm\\pwm\_api            |        All       |
+|   PWM  |                |    ambiq-stable    |  tests\\drivers\\pwm\\pwm\_api            |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|   RTC  |       -        |    apollo510L-dev  |    samples\\drivers\\rtc                  |        All       |
+|   RTC  |                |    ambiq-stable    |    samples\\drivers\\rtc                  |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|  SDHC  |       -        |    apollo510L-dev  |  tests\\subsys\\sd\\sdio                  |        All       |
+|  SDHC  |       -        |    ambiq-stable    |  tests\\subsys\\sd\\sdio                  |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|   SPI  |       -        |    apollo510L-dev  |    samples\\sensor\\accel_polling         |apollo510L_eb only|
+|   SPI  |       -        |    ambiq-stable    | samples\\boards\\ambiq\\spi\_serial\_flash|  eb boards only  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|  TIMER |       -        |    apollo510L-dev  |    samples\\philosophers                  |        All       |
+|  TIMER |                |    ambiq-stable    |    samples\\philosophers                  |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|  TRNG  |       -        |    apollo510L-dev  |  tests\\drivers\\entropy\\api             |        All       |
+|  TRNG  |                |    ambiq-stable    |  tests\\drivers\\entropy\\api             |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|  UART  |       -        |    apollo510L-dev  |   samples\\drivers\\uart\\echo\_bot       |        All       |
+|  UART  |       -        |    ambiq-stable    |   samples\\drivers\\uart\\echo\_bot       |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|   USB  |       -        |    apollo510L-dev  |  samples\\drivers\\subsys\\usb\\mass      |        All       |
+|   USB  |                |    ambiq-stable    |  samples\\drivers\\subsys\\usb\\mass      |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|   WDT  |       -        |    apollo510L-dev  |    samples\\drivers\\watchdog             |        All       |
+|   WDT  |                |    ambiq-stable    |    samples\\drivers\\watchdog             |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 
 And also there are supports for some third-party libs:
 
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|   Lib  |   Apollo510L   |   Stable codes at  |              Sample                       |       Board      |
+|   Lib  |     Status     |   Stable codes at  |              Sample                       |       Board      |
 +========+================+====================+===========================================+==================+
-|coremark|       -        |    apollo510L-dev  |   samples\\benchmarks\\coremark           |        All       |
+|coremark|       -        |    ambiq-stable    |   samples\\benchmarks\\coremark           |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|  fatfs |       -        |    apollo510L-dev  |  samples\\subsys\\fs\\fs_sample           |        All       |
+|  fatfs |       -        |    ambiq-stable    |  samples\\subsys\\fs\\fs_sample           |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-| mbedtls|       -        |    apollo510L-dev  |  tests\\benchmarks\\mbedtls               |        All       |
+| mbedtls|       -        |    ambiq-stable    |  tests\\benchmarks\\mbedtls               |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|  lvgl  |  coming soon   |                    |                                           |                  |
+|  lvgl  |       -        |    ambiq-stable    |  samples\\modules\\lvgl\\demos            |  with disp card  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 
 
@@ -129,7 +129,7 @@ Execute ``git remote -v`` again to check if it configures successfully.
 
 Execute ``git fetch upstream`` to fetch the upstream repository.
 
-Execute ``git checkout apollo510L-dev`` to get the latest apollo510L development branch.
+Execute ``git checkout ambiq-stable`` to get the latest ambiq soc development branch.
 
 
 Get to Know Ambiq Components
@@ -141,17 +141,21 @@ Get to Know Ambiq Components
   │
   ├── boards/
   │   ├── ambiq/
-  │   │   └── apollo510L_eb
   │   └── shields/
+  │       ├── ap4_evb_disp_shield_rev2
+  │       ├── ap510_disp
   │       └── apollo5_eb_display_card
   ├── drivers/
   │   ├── adc/
-  │   │   └── adc_ambiq.c
+  │   │   ├── adc_ambiq.c
+  │   │   └── amic_ambiq_audadc.c
   │   ├── audio/
   │   │   └── dmic_ambiq_pdm.c
   │   ├── bluetooth/
   │   │   └── hci/
+  │   │       ├── apollox_blue.c
   │   │       ├── apollox_ipc_support.c
+  │   │       ├── hci_ambiq.c
   │   │       └── ipc.c
   │   ├── clock_control/
   │   │   └── clock_control_ambiq.c
@@ -176,11 +180,14 @@ Get to Know Ambiq Components
   │   ├── mipi_dsi/
   │   │   └── dsi_ambiq.c
   │   ├── mspi/
+  │   │   ├── mspi_ambiq_ap3.c
+  │   │   ├── mspi_ambiq_ap4.c
   │   │   ├── mspi_ambiq_ap5.c
   │   │   └── mspi_ambiq_timing_scan.c
   │   ├── pinctrl/
   │   │   └── pinctrl_ambiq.c
   │   ├── pwm/
+  │   │   ├── pwm_ambiq_ctimer.c
   │   │   └── pwm_ambiq_timer.c
   │   ├── rtc/
   │   │   └── rtc_ambiq.c
@@ -189,6 +196,8 @@ Get to Know Ambiq Components
   │   ├── serial/
   │   │   └── uart_ambiq.c
   │   ├── spi/
+  │   │   ├── spi_ambiq_bleif.c
+  │   │   ├── spi_ambiq_dcif.c
   │   │   ├── spi_ambiq_spic.c
   │   │   └── spi_ambiq_spid.c
   │   ├── timer/
@@ -201,12 +210,10 @@ Get to Know Ambiq Components
   ├── dts/
   │   └── arm/
   │       └── ambiq/
-  │           └── ambiq_apollo510L.dtsi
   ├── modules/
   │   └── hal_ambiq
   └── soc/
       └── ambiq/
-          └── apollo5x
 
 
 Build and Flash the Samples
@@ -240,6 +247,24 @@ For MSPI samples, please refer to `How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst 
 For USB samples, please refer to `How_to_Run_Zephyr_USB_Samples.rst <doc/ambiq/How_to_Run_Zephyr_USB_Samples.rst>`_
 
 For MCU_Boot samples, please refer to `How_to_Run_MCUBoot_Samples_and_Tests.rst <doc/ambiq/How_to_Run_MCUBoot_Samples_and_Tests.rst>`_
+
+
+Power Management Instructions
+-----------------------------
+
+To achieve lowest power consumption, customer needs to follow the following process for inspection and configuration optimization:
+
+1. According to the acutal usage of memory, adjust the memory configurations in soc_early_init_hook;
+
+2. Make sure ``CONFIG_PM=y``, ``CONFIG_PM_DEVICE=y``, and ``CONFIG_PM_DEVICE_RUNTIME=y``, and explicitly enable ``CONFIG_PM_DEVICE_SYSTEM_MANAGED=y``
+   so remaining devices are suspended automatically before deep sleep.
+
+3. Audit the Devicetree to disable unused peripherals ``status = "disabled"`` or keep ``zephyr,pm-device-runtime-auto`` on blocks that should be power-managed automatically;
+   remove the property from peripherals that must stay on.
+
+4. In application code, call pm_device_runtime_put() / pm_device_runtime_get() around peripherals that should power-cycle on demand to ensure their usage count returns to zero after use.
+
+Check `Zephyr Power Management`_ for more detailed information.
 
 .. start_include_here
 
@@ -316,3 +341,4 @@ Additional Resources
 .. _Ambiq Products: https://ambiq.com/products/
 .. _Ambiq Content Portal: https://contentportal.ambiq.com/
 .. _Ambiq HAL Repository: https://github.com/AmbiqMicro/hal_ambiq_internal
+.. _Zephyr Power Management: https://docs.zephyrproject.org/latest/services/pm/index.html
