@@ -37,12 +37,6 @@ manifest:
     - name: acpica
       revision: 8d24867bc9c9d81c81eeac59391cda59333affd4
       path: modules/lib/acpica
-    - name: hal-zephyr-alpha
-      remote: github_ambiqmicro
-      path: modules/hal/ambiq
-      revision: a9f92d883c04067118493714374f1909f8f4916a
-      groups:
-        - hal
     - name: babblesim_base
       remote: babblesim
       repo-path: base
@@ -288,6 +282,12 @@ manifest:
     - name: hal_xtensa
       revision: b38620c7cc61e349e192ed86a54940a5cd0636b7
       path: modules/hal/xtensa
+      groups:
+        - hal
+    - name: hal-zephyr-alpha
+      remote: github_ambiqmicro
+      path: modules/hal/ambiq
+      revision: fff2133603188e6821a3172777d70941158343d7
       groups:
         - hal
     - name: hostap

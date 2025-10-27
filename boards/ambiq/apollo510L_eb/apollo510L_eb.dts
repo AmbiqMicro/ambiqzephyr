@@ -242,3 +242,9 @@ zephyr_udc0: &usb {
 	pinctrl-names = "default";
 	status = "disabled";
 };
+
+&i2s0 {
+	pinctrl-0 = <&i2s0_default>;
+	pinctrl-names = "default";
+	status = "disabled";
+};

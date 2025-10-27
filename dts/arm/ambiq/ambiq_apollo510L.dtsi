@@ -672,6 +672,13 @@
 			status = "disabled";
 		};
 
+		i2s0: i2s0@I2S0_BASE_NAME {
+			compatible = "ambiq,i2s";
+			reg = <I2S0_REG_BASE I2S0_REG_SIZE>;
+			interrupts = <44 0>;
+			status = "disabled";
+		};
+
 		pinctrl: pin-controller@GPIO_BASE_NAME {
 			compatible = "ambiq,apollo5-pinctrl";
 			reg = <GPIO_REG_BASE GPIO_REG_SIZE>;
