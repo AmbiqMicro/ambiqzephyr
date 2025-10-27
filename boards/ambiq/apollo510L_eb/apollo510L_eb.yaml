@@ -27,6 +27,7 @@ supported:
   - sdhc
   - mipi_dsi
   - pdm
+  - i2s
 testing:
   ignore_tags:
     - net
