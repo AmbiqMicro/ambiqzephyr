@@ -28,6 +28,7 @@ supported:
   - flash
   - nvs
   - zms
+  - pm
 testing:
   ignore_tags:
     - net
