@@ -1,0 +1,35 @@
+/ {
+	zephyr,user {
+		k_idle_state_min_residency_time = <300>;
+	};
+};
+
+&cpu0 {
+	cpu-power-states = <&stop0 &stop1 &stop2>;
+};
+
+&{/cpus/power-states} {
+	stop0: stop0 {
+		compatible = "zephyr,power-state";
+		power-state-name = "suspend-to-idle";
+		substate-id = <1>;
+		min-residency-us = <300>;
+		exit-latency-us = <50>;
+	};
+
+	stop1: stop1 {
+		compatible = "zephyr,power-state";
+		power-state-name = "suspend-to-idle";
+		substate-id = <2>;
+		min-residency-us = <700>;
+		exit-latency-us = <300>;
+	};
+
+	stop2: stop2 {
+		compatible = "zephyr,power-state";
+		power-state-name = "suspend-to-idle";
+		substate-id = <3>;
+		min-residency-us = <1000>;
+		exit-latency-us = <400>;
+	};
+};

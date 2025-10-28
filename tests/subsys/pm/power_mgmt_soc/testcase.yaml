@@ -21,6 +21,8 @@ tests:
       - max32657evkit/max32657
       - max32657evkit/max32657/ns
       - imx95_evk/mimx9596/m7
+      - apollo510_evb
+      - apollo510L_eb
     tags: pm
     integration_platforms:
       - mec15xxevb_assy6853
