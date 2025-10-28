@@ -28,6 +28,7 @@ supported:
   - mipi_dsi
   - pdm
   - i2s
+  - pm
 testing:
   ignore_tags:
     - net
