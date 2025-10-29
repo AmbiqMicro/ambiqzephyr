@@ -4,6 +4,14 @@
 
 if SOC_FAMILY_AMBIQ
 
+config PM_DEVICE_RUNTIME_DISABLE_CONSOLE
+	bool "Keep console UART active"
+	depends on PM_DEVICE_RUNTIME
+	help
+	  Leave the zephyr_console UART out of runtime power management.
+	  Enable this in samples/tests that log from interrupt context while
+	  CONFIG_PM_DEVICE_RUNTIME_DEFAULT_ENABLE is set.
+
 rsource "*/Kconfig"
 
 endif # SOC_FAMILY_AMBIQ
