@@ -43,7 +43,7 @@ As of now, Ambiq provides zephyr support for a set of peripherals/drivers:
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |   I2C  |       -        |    apollo510L-dev  |  samples\\drivers\\eeprom                 |apollo510L_eb only|
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|   I2S  |  coming soon   |                    |                                           |                  |
+|   I2S  |       -        |    apollo510L-dev  |  samples\\drivers\\audio\\amic            |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |   I3C  |  coming soon   |                    |                                           |                  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
@@ -51,7 +51,7 @@ As of now, Ambiq provides zephyr support for a set of peripherals/drivers:
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |MIPI_DSI|       -        |    apollo510L-dev  |  samples\\drivers\\display                |  with disp card  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|  MSPI  |  coming soon   |                    |                                           |                  |
+|  MSPI  |       -        |    apollo510L-dev  |   samples\\drivers\\mspi\\mspi\_flash     |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |   PDM  |       -        |    apollo510L-dev  |    samples\\drivers\\audio\\dmic          |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
@@ -270,6 +270,14 @@ And following drivers' PM_DEVICE is in testing:
 ADC
 I2S
 PDM
+
+Special Note on MSPI
+--------------------
+
+1. The apollo510L_eb supports MSPI hex psram device only by default and flash devices are disabled in the DTS.
+   Board rework is required to run octal psram and octal flash in parallel as the MSPI hardware interface is limited.
+
+2. The CELatency is forced to 1 for apollo510L SoCs temporarily and will be updated in the future so that it is configurable per device in the DTS.
 
 .. start_include_here
 
