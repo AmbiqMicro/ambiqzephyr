@@ -259,7 +259,7 @@ static int i2s_ambiq_clock_settings_derive(uint32_t i2s_bclk_freq, am_hal_i2s_co
 
 	if (AM_HAL_STATUS_SUCCESS !=
 	    am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_PLLVCO, vco_freq, NULL)) {
-		LOG_ERR("i2s_configure: HAL failed to configure PLLVCO")
+		LOG_ERR("i2s_configure: HAL failed to configure PLLVCO");
 		return -EINVAL;
 	}
 
