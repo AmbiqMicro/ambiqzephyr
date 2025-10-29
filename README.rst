@@ -266,6 +266,14 @@ To achieve lowest power consumption, customer needs to follow the following proc
 
 Check `Zephyr Power Management`_ for more detailed information.
 
+Special Note on MSPI
+--------------------
+
+1. The apollo510L_eb supports MSPI hex psram device only by default and flash devices are disabled in the DTS.
+   Board rework is required to run octal psram and octal flash in parallel as the MSPI hardware interface is limited.
+
+2. The CELatency is forced to 1 for apollo510L SoCs temporarily and will be updated in the future so that it is configurable per device in the DTS.
+
 .. start_include_here
 
 Community Support
