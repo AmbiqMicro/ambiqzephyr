@@ -246,8 +246,14 @@ static int jdi_ambiq_init(const struct device *dev)
 		return -EIO;
 	}
 
-	/* Configure clock source, the frequency is up to 48MHz */
-#ifdef CONFIG_SOC_APOLLO510
+	/* Configure clock to 48MHz, the frequency is up to 192MHz */
+#ifdef CONFIG_SOC_APOLLO510L
+	ret = nemadc_clock_control(DISP_CLOCK_ENABLE, DISPCLKSRC_HFRC_192MHz, 4);
+	if (ret != AM_HAL_STATUS_SUCCESS) {
+		LOG_ERR("Failed to configure display clock: %d", ret);
+		return -EIO;
+	}
+#else
 	ret = am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_DISPCLKSEL_HFRC48, NULL);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("Failed to configure display clock: %d", ret);
@@ -257,12 +263,6 @@ static int jdi_ambiq_init(const struct device *dev)
 	ret = am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_DCCLK_ENABLE, NULL);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("Failed to enable DC clock: %d", ret);
-		return -EIO;
-	}
-#else
-	ret = nemadc_clock_control(DISP_CLOCK_ENABLE, DISPCLKSRC_HFRC_192MHz, 4);
-	if (ret != AM_HAL_STATUS_SUCCESS) {
-		LOG_ERR("Failed to configure display clock: %d", ret);
 		return -EIO;
 	}
 #endif

@@ -7,6 +7,6 @@ config JDI_AMBIQ
 	depends on DT_HAS_AMBIQ_JDI_ENABLED
 	select GPIO
 	select AMBIQ_HAL
-	select AMBIQ_COMPONENT_USE_NEMASDK if SOC_SERIES_APOLLO5X
+	select AMBIQ_COMPONENT_USE_NEMADC
 	help
 	  Enable Ambiq JDI (Japan Display Interface) driver.
