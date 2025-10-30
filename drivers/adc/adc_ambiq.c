@@ -177,6 +177,7 @@ static void adc_ambiq_isr(const struct device *dev)
 		}
 		am_hal_adc_disable(data->adcHandle);
 		adc_context_on_sampling_done(&data->ctx, dev);
+		pm_device_runtime_put(dev);
 	}
 
 	if (data->dma_mode) {
@@ -330,10 +331,10 @@ static int adc_ambiq_start_read(const struct device *dev, const struct adc_seque
 		}
 		adc_ambiq_disable(dev);
 		adc_context_on_sampling_done(&data->ctx, dev);
+		pm_device_runtime_put(dev);
 	} else {
 		error = adc_context_wait_for_completion(&data->ctx);
 	}
-	pm_device_runtime_put(dev);
 
 	return error;
 }
@@ -353,6 +354,9 @@ static int adc_ambiq_read(const struct device *dev, const struct adc_sequence *s
 	}
 
 	error = adc_ambiq_start_read(dev, sequence);
+	if (error < 0) {
+		pm_device_runtime_put(dev);
+	}
 
 	adc_context_release(&data->ctx, error);
 
@@ -465,6 +469,9 @@ static int adc_ambiq_read_async(const struct device *dev, const struct adc_seque
 	}
 
 	error = adc_ambiq_start_read(dev, sequence);
+	if (error < 0) {
+		pm_device_runtime_put(dev);
+	}
 
 	adc_context_release(&data->ctx, error);
 
