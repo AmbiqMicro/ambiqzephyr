@@ -5,14 +5,62 @@
 Release Notes
 =============
 
-Release Version: 5.2.alpha.1
-
-Release Date: 2025-09-10
-
 Overview
 --------
 
 This release introduces new features, bug fixes, and performance improvements.
+
+Release Version: v0.2
+=====================
+Release Date: 2025-10-31
+========================
+
+New Features
+------------
+
+Drivers and Sensors
+~~~~~~~~~~~~~~~~~~~
+
+- **dc**: Added support for dc_spi driver of apollo510L.
+- **gpu** Added support for NemaGFX GPU driver of apollo510L.
+- **i2s** Added support for i2s driver of apollo510L.
+- **mspi** Added support for mspi driver of apollo510L.
+- **pdm**: Added support for pdm driver of apollo510L.
+
+HAL
+~~~
+
+- **apollo510L**: Added auto generate USB clock source to am_hal_usb.
+- **NemaGFX**: Refactor HAL to use Zephyr GPU driver.
+
+Libraries / Subsystems
+~~~~~~~~~~~~~~~~~~~~~~
+
+- **cpu_freq**: Added support for cpu HP/LP mode switching of apollo510L.
+- **mcuboot**: Added smp_svr configurations for apollo510L_eb board.
+- **power management**: Ported the tests under tests/subsys/pm to apollo510L_eb board.
+
+Bug Fixes
+---------
+
+
+Deprecations
+------------
+
+
+Known Issues
+------------
+- apollo510L_eb supports MSPI hex psram device only by default and flash devices are disabled in the DTS.
+  Board rework is required to run octal psram and octal flash in parallel as the MSPI hardware interface is limited.
+  The CELatency is forced to 1 for apollo510L SoCs temporarily and will be updated in the future so that
+  it is configurable per device in the DTS.
+
+
+Release Version: v0.1
+=====================
+
+Release Date: 2025-09-10
+========================
 
 New Features
 ------------
