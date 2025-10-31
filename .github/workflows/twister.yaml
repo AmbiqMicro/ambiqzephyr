@@ -14,10 +14,10 @@ on:
 
   push:
     branches:
-      - apollo510L-dev
+      - release-ap510L-v0.2
   pull_request:
     branches:
-      - apollo510L-dev
+      - release-ap510L-v0.2
   schedule:
     # Run at 02:00 UTC on every Sunday
     - cron: '0 2 * * 0'

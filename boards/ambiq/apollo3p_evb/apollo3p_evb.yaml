@@ -18,6 +18,7 @@ supported:
   - pwm
   - uart
   - watchdog
+  - logging
 testing:
   ignore_tags:
     - net
