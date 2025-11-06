@@ -30,6 +30,7 @@
 	aliases {
 		watchdog0 = &wdt0;
 		sdhc0 = &sdio0;
+		sdhc1 = &sdio1;
 		accel0 = &adxl362;
 	};
 
