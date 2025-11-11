@@ -17,7 +17,6 @@ config SOC_APOLLO510
 config SOC_APOLLO510L
 	bool
 	select SOC_SERIES_APOLLO5X
-	select SOC_AMBIQ_BT_SUPPORTED
 	help
 	  Apollo510L
 
