@@ -36,6 +36,7 @@ jobs:
     outputs:
       matrix: ${{ steps.test-plan.outputs.matrix }}
       size: ${{ steps.test-plan.outputs.size }}
+      first_group: ${{ steps.test-plan.outputs.first_group }}
       fullrun: ${{ steps.output-full-run.outputs.fullrun }}
     env:
       BSIM_OUT_PATH: /data/bsim_west/bsim/
@@ -47,7 +48,6 @@ jobs:
       RUNNER_BUILD: '["self-hosted","Linux","zephyr-ci"]'
       RUNNER_AP5_NODES: 6
       RUNNER_BUILD_NODES: 6
-      DEVICE_TESTING: ${{ github.event.inputs.device_test || 'false' }}
     steps:
       - name: Set event variables
         id: set-vars
@@ -62,6 +62,15 @@ jobs:
             else
               echo "BASE_REF=${{ github.event.before }}" >> $GITHUB_ENV
             fi
+          fi
+
+          # Set device testing flag
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "DEVICE_TESTING=${{ github.event.inputs.device_test }}" >> $GITHUB_ENV
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            echo "DEVICE_TESTING=true" >> $GITHUB_ENV
+          else
+            echo "DEVICE_TESTING=false" >> $GITHUB_ENV
           fi
 
       - name: Checkout
@@ -147,10 +156,12 @@ jobs:
             python3 ./scripts/ci/test_plan.py -c ${BASE_SHA}.. --no-detailed-test-id --pull-request -t $TESTS_PER_BUILDER ${VENDOR_OPTIONS}
           fi
 
-          if [ -s .testplan ]; then
+          if [ -s testplan.json ]; then
             PLATFORMS=$(jq -r '.testsuites[].platform' testplan.json | sort -u)
             echo "PLATFORMS=$PLATFORMS"
             echo "PLATFORMS=${PLATFORMS}" > platforms.txt
+          else
+            echo "Nothing to run"
           fi
 
           rm -f testplan.json .testplan
@@ -165,7 +176,8 @@ jobs:
           export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
 
           if [ ! -s platforms.txt ]; then
-            exit 1
+            echo "Nothing to run"
+            exit 0
           fi
 
           matrix=()
@@ -224,11 +236,13 @@ jobs:
           done
 
           json=$(printf '%s\n' "${matrix[@]}" | jq -s .)
+          first_group=$(echo "$json" | jq -r '.[0].group // empty')
           {
             echo "matrix<<EOF"
             echo "$json"
             echo "EOF"
             echo "size=${#matrix[@]}"
+            echo "first_group=${first_group}"
           } >> "$GITHUB_OUTPUT"
 
 
@@ -424,7 +438,7 @@ jobs:
             zephyr/module_tests/twister.xml
             zephyr/testplan.json
 
-      - if: matrix.job.subset == 1 && github.event_name == 'push'
+      - if: ${{ matrix.job.subset == 1 && github.event_name == 'push' && matrix.job.group == needs.twister-build-prep.outputs.first_group }}
         name: Save the list of Python packages
         shell: bash
         working-directory: zephyr
@@ -435,7 +449,7 @@ jobs:
           echo -e "# Generated at $timestamp ($version)\n" > $FREEZE_FILE
           pip freeze | tee -a $FREEZE_FILE
 
-      - if: matrix.job.subset == 1 && github.event_name == 'push'
+      - if: ${{ matrix.job.subset == 1 && github.event_name == 'push' && matrix.job.group == needs.twister-build-prep.outputs.first_group }}
         name: Upload the list of Python packages
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

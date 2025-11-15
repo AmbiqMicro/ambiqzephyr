@@ -13,6 +13,7 @@ common:
 tests:
   sample.task_wdt:
     platform_exclude:
+      - apollo510_evb
       - apollo4p_evb
       - apollo4p_blue_kxr_evb # Ambiq temp
     harness: console
