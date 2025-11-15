@@ -1,0 +1,26 @@
+# CRC configuration options
+
+# Copyright (c) 2025, Ambiq
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig CRC
+	bool "CRC drivers"
+	help
+	  Enable CRC (Cyclic Redundancy Check) driver support.
+
+if CRC
+
+# Ensure Ambiq-specific CRC Kconfig is included
+source "drivers/crc/Kconfig.ambiq"
+
+config CRC_INIT_PRIORITY
+	int "CRC devices init priority"
+	default 90
+	help
+	  CRC devices initialization priority.
+
+module = CRC
+module-str = CRC
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # CRC

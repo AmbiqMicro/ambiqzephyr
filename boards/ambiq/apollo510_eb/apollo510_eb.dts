@@ -27,6 +27,7 @@
 		rtc = &rtc0;
 		sdhc0 = &sdio0;
 		eeprom-0 = &i2c_eeprom;
+		crc0 = &crc32;
 	};
 
 	sram0: memory@SSRAM_BASE_NAME {
@@ -352,4 +353,8 @@ zephyr_udc0: &usb {
 			reg = <0x248000 DT_SIZE_K(32)>;
 		};
 	};
+};
+
+&crc32 {
+	status = "okay";
 };
