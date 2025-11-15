@@ -1,0 +1,12 @@
+# Ambiq CRC configuration options
+
+# Copyright (c) 2025 Ambiq
+# Author: Richard S Wheatley
+# SPDX-License-Identifier: Apache-2.0
+
+config CRC_AMBIQ
+	bool "Ambiq Apollo4P and Apollo510 CRC support"
+	default y
+	depends on SOC_SERIES_APOLLO4X || SOC_SERIES_APOLLO5X
+	help
+	  Enable Ambiq Apollo4P and Apollo510 CRC support.
