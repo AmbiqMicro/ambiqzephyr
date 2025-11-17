@@ -16,6 +16,7 @@
 #include <zephyr/dt-bindings/dma/stm32_dma.h>
 #include <zephyr/dt-bindings/power/stm32_pwr.h>
 #include <freq.h>
+#include <mem.h>
 
 / {
 	chosen {
@@ -225,6 +226,7 @@
 			compatible = "st,stm32g0-exti", "st,stm32-exti";
 			interrupt-controller;
 			#interrupt-cells = <1>;
+			#address-cells = <0>;
 			reg = <0x46022000 0x400>;
 			clocks = <&rcc STM32_CLOCK(APB7, 1)>;
 			num-lines = <32>;
@@ -493,6 +495,7 @@
 			reg = <0x46021000 0x400>;
 			clocks = <&rcc STM32_CLOCK(AHB4, 5)>,
 				 <&rcc STM32_SRC_HCLK1 ADC_SEL(0)>;
+			clock-names = "adcx", "adc_ker";
 			interrupts = <65 0>;
 			#io-channel-cells = <1>;
 			resolutions = <STM32_ADC_RES(12, 0x00)
@@ -502,8 +505,8 @@
 			sampling-times = <2 4 8 13 20 40 80 815>;
 			num-sampling-time-common-channels = <2>;
 			st,adc-clock-source = "ASYNC";
-			st,adc-sequencer = "NOT_FULLY_CONFIGURABLE";
-			st,adc-oversampler = "OVERSAMPLER_MINIMAL";
+			st,adc-sequencer = "fixed";
+			st,adc-oversampler = "minimal";
 			st,adc-internal-regulator = "startup-hw-status";
 			status = "disabled";
 		};

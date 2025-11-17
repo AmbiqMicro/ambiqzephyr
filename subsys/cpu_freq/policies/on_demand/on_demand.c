@@ -8,7 +8,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/cpu_freq/policy.h>
 #include <zephyr/cpu_freq/cpu_freq.h>
-#include <zephyr/cpu_load/cpu_load.h>
+#include <zephyr/sys/cpu_load.h>
 
 LOG_MODULE_REGISTER(cpu_freq_policy_on_demand, CONFIG_CPU_FREQ_LOG_LEVEL);
 
@@ -53,7 +53,7 @@ int cpu_freq_policy_select_pstate(const struct pstate **pstate_out)
 	cpu_id = arch_curr_cpu()->id;
 #endif
 
-	cpu_load = cpu_load_get(cpu_id);
+	cpu_load = cpu_load_metric_get(cpu_id);
 	if (cpu_load < 0) {
 		LOG_ERR("Unable to retrieve CPU load");
 		return cpu_load;

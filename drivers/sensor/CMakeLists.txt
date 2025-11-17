@@ -39,6 +39,7 @@ add_subdirectory(wsen)
 # zephyr-keep-sorted-stop
 
 add_subdirectory_ifdef(CONFIG_A01NYUB a01nyub)
+add_subdirectory_ifdef(CONFIG_ALS31300 als31300)
 add_subdirectory_ifdef(CONFIG_AMD_SB_TSI amd_sb_tsi)
 add_subdirectory_ifdef(CONFIG_AMG88XX amg88xx)
 add_subdirectory_ifdef(CONFIG_APDS9253 apds9253)
@@ -72,6 +73,7 @@ add_subdirectory_ifdef(CONFIG_VEAA_X_3 veaa_x_3)
 add_subdirectory_ifdef(CONFIG_VOLTAGE_DIVIDER voltage_divider)
 add_subdirectory_ifdef(CONFIG_XBR818 xbr818)
 add_subdirectory_ifdef(CONFIG_TACH_ENE_KB1200 ene_tach_kb1200)
+add_subdirectory_ifdef(CONFIG_TACH_GPIO tach_gpio)
 add_subdirectory_ifdef(CONFIG_MB7040 mb7040)
 
 zephyr_syscall_header(${ZEPHYR_BASE}/include/zephyr/drivers/sensor.h)

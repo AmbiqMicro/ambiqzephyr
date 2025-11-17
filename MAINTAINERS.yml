@@ -337,6 +337,7 @@ Arduino Platforms:
     - boards/arduino/
     - boards/shields/arduino_*/
     - drivers/*/*modulino*
+    - dts/vendor/arduino/
 
 Base OS:
   status: maintained
@@ -761,6 +762,8 @@ Build system:
     - scripts/schemas/soc-schema.yaml
     - scripts/list_shields.py
     - scripts/snippets.py
+  files-exclude:
+    - doc/build/dts/
   labels:
     - "area: Build System"
   tests:
@@ -855,8 +858,6 @@ CPU Frequency Scaling:
     - seankyer
   files:
     - include/zephyr/cpu_freq/
-    - include/zephyr/cpu_load/
-    - subsys/cpu_load/
     - subsys/cpu_freq/
     - dts/bindings/p_state/
   labels:
@@ -1275,6 +1276,7 @@ Documentation Infrastructure:
     - martinjaeger
     - str4t0m
   files:
+    - boards/shields/canis_canpico/
     - boards/shields/mcp2515/
     - boards/shields/tcan4550evm/
     - doc/connectivity/canbus/
@@ -1756,6 +1758,8 @@ Documentation Infrastructure:
   status: maintained
   maintainers:
     - rriveramcrus
+  collaborators:
+    - Liam-Ogletree
   files:
     - drivers/haptics/
     - dts/bindings/haptics/
@@ -2916,6 +2920,7 @@ Instrumentation Subsystem:
     - fkokosinski
     - tgorochowik
   files:
+    - doc/services/instrumentation/
     - include/zephyr/instrumentation/
     - samples/subsys/instrumentation/
     - scripts/instrumentation/
@@ -3047,9 +3052,10 @@ JSON Web Token:
     - libraries.encoding.jwt
 
 Kconfig:
-  status: odd fixes
-  collaborators:
+  status: maintained
+  maintainers:
     - tejlmand
+  collaborators:
     - nashif
   files:
     - scripts/kconfig/
@@ -4305,6 +4311,11 @@ Realtek EC Platforms:
   status: maintained
   maintainers:
     - JasonLin-RealTek
+  collaborators:
+    - elmo9999
+    - benson0715
+    - JhanBoChao-Realtek
+    - Titan-Realtek
   files:
     - boards/realtek/
     - drivers/*/*rts5912*
@@ -4376,6 +4387,25 @@ Renesas RA Platforms:
   description: >-
     Renesas RA SOCs, dts files, and related drivers. Boards based
     on Renesas RA SoCs.
+
+Renesas RX Platform:
+  status: maintained
+  maintainers:
+    - duynguyenxa
+  collaborators:
+    - quytranpzz
+  files:
+    - boards/renesas/*rx*/
+    - drivers/*/*renesas_rx*
+    - drivers/pinctrl/renesas/rx/
+    - dts/rx/renesas/
+    - dts/bindings/*/*renesas,rx*
+    - soc/renesas/rx/
+  labels:
+    - "platform: Renesas RX"
+  description: >-
+    Renesas RX SOCs, dts files, and related drivers. Renesas boards based
+    on RX SoCs.
 
 Renesas RZ Platforms:
   status: maintained
@@ -4466,10 +4496,10 @@ STM32 Platforms:
     - FRASTM
     - gautierg-st
     - GeorgeCGV
-    - marwaiehm-st
     - mathieuchopstm
     - djiatsaf-st
     - etienne-lms
+    - juickar
   files:
     - boards/st/
     - drivers/*/*stm32*.c
@@ -4655,6 +4685,7 @@ SiFli SF32LB Platforms:
     - gmarull
   collaborators:
     - cameled
+    - ck-telecom
   files:
     - boards/sifli/
     - drivers/*/*sf32lb*
@@ -4719,6 +4750,7 @@ State machine framework:
   collaborators:
     - keith-zephyr
     - glenn-andrews
+    - vlad-kulikov
   files:
     - doc/services/smf/
     - include/zephyr/smf.h
@@ -4862,10 +4894,13 @@ TI SimpleLink Platforms:
   status: maintained
   maintainers:
     - vaishnavachath
+  collaborators:
+    - bogdanovs
   files:
     - boards/ti/cc*/
     - boards/ti/msp*/
     - drivers/*/*cc13*
+    - drivers/*/*cc23*
     - drivers/*/*cc25*
     - drivers/*/*cc26*
     - drivers/*/*cc32*
@@ -5054,6 +5089,7 @@ USB:
     - jfischer-no
   collaborators:
     - tmon-nordic
+    - josuah
   files:
     - drivers/usb/
     - dts/bindings/usb/
@@ -5702,10 +5738,12 @@ West:
   collaborators:
     - FRASTM
     - gautierg-st
-    - marwaiehm-st
+    - etienne-lms
+    - mathieuchopstm
+    - juickar
+    - djiatsaf-st
     - asm5878
     - HoZHel
-    - benothmn-st
   files:
     - modules/Kconfig.stm32
   labels:
@@ -5715,9 +5753,9 @@ West:
   status: maintained
   maintainers:
     - afontaine-invn
-  collaborators:
     - rbuisson-invn
     - gjabouley-invn
+  collaborators:
     - sriccardi-invn
   files:
     - modules/hal_tdk/Kconfig
@@ -5804,14 +5842,16 @@ West:
   collaborators:
     - nashif
     - inteljiangwe1
+    - dkalowsk
   files: []
   labels:
     - "area: MCTP"
 
 "West project: libmetal":
-  status: odd fixes
-  collaborators:
+  status: maintained
+  maintainers:
     - arnopo
+    - iuliana-prodan
   files:
     - modules/Kconfig.libmetal
   labels:
@@ -5930,7 +5970,7 @@ West:
     - "area: Serialization"
 
 "West project: net-tools":
-  status: odd fixes
+  status: maintained
   maintainers:
     - jukkar
   collaborators:
@@ -5964,10 +6004,12 @@ West:
     - "area: Wi-Fi"
 
 "West project: open-amp":
-  status: odd fixes
+  status: maintained
+  maintainers:
+    - arnopo
+    - iuliana-prodan
   collaborators:
     - uLipe
-    - iuliana-prodan
   files:
     - modules/Kconfig.open-amp
   labels:
@@ -6088,10 +6130,7 @@ West:
     - thrift
 
 "West project: trusted-firmware-a":
-  status: maintained
-  maintainers:
-    - povergoing
-    - sgrrzhf
+  status: odd fixes
   collaborators:
     - wearyzen
     - ithinuel

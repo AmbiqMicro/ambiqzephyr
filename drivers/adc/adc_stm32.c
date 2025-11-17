@@ -20,6 +20,7 @@
 #include <zephyr/init.h>
 #include <zephyr/toolchain.h>
 #include <soc.h>
+#include <stm32_bitops.h>
 #include <stm32_cache.h>
 #include <zephyr/pm/device.h>
 #include <zephyr/pm/policy.h>
@@ -86,8 +87,8 @@ LOG_MODULE_REGISTER(adc_stm32);
 #define ASYNC			2
 
 /* Sequencer type */
-#define NOT_FULLY_CONFIGURABLE	0
-#define FULLY_CONFIGURABLE	1
+#define SEQUENCER_FIXED		0
+#define SEQUENCER_PROGRAMMABLE	1
 
 /* Oversampler type */
 #define OVERSAMPLER_NONE	0
@@ -107,17 +108,17 @@ LOG_MODULE_REGISTER(adc_stm32);
 #define ANY_ADC_SEQUENCER_TYPE_IS(value) \
 	(DT_INST_FOREACH_STATUS_OKAY_VARGS(IS_EQ_STRING_PROP, \
 					   st_adc_sequencer,\
-					   value) 0)
+					   value, SEQUENCER_) 0)
 
 #define ANY_ADC_OVERSAMPLER_TYPE_IS(value) \
 	(DT_INST_FOREACH_STATUS_OKAY_VARGS(IS_EQ_STRING_PROP, \
 					   st_adc_oversampler,\
-					   value) 0)
+					   value, OVERSAMPLER_) 0)
 
 #define ANY_ADC_INTERNAL_REGULATOR_TYPE_IS(value) \
 	(DT_INST_FOREACH_STATUS_OKAY_VARGS(IS_EQ_STRING_PROP, \
 					   st_adc_internal_regulator,\
-					   value) 0)
+					   value, INTERNAL_REGULATOR_) 0)
 
 #define ANY_ADC_HAS_DEEP_POWERDOWN \
 	(DT_INST_FOREACH_STATUS_OKAY_VARGS(IS_EQ_PROP_OR, \
@@ -145,13 +146,13 @@ LOG_MODULE_REGISTER(adc_stm32);
 #define IS_EQ_NODE_PROP_OR(node, prop, default_value, compare_value) \
 	IS_EQ(DT_PROP_OR(node, prop, default_value), compare_value) ||
 
-#define IS_EQ_STRING_PROP(inst, prop, compare_value) \
-	IS_EQ(DT_INST_STRING_UPPER_TOKEN(inst, prop), compare_value) ||
+#define IS_EQ_STRING_PROP(inst, prop, compare_value, prefix) \
+	IS_EQ(CONCAT(prefix, DT_INST_STRING_UPPER_TOKEN(inst, prop)), compare_value) ||
 
 /* reference voltage for the ADC */
 #define STM32_ADC_VREF_MV DT_INST_PROP(0, vref_mv)
 
-#if ANY_ADC_SEQUENCER_TYPE_IS(FULLY_CONFIGURABLE)
+#if ANY_ADC_SEQUENCER_TYPE_IS(SEQUENCER_PROGRAMMABLE)
 
 #if defined(LL_ADC_REG_RANK_28)
 #define MAX_RANK	28
@@ -172,7 +173,7 @@ static const uint32_t table_seq_len[] = {
 	LISTIFY(UTIL_DEC(MAX_RANK), SEQ_LEN, (,))
 };
 
-#endif /* ANY_ADC_SEQUENCER_TYPE_IS(FULLY_CONFIGURABLE) */
+#endif /* ANY_ADC_SEQUENCER_TYPE_IS(SEQUENCER_PROGRAMMABLE) */
 
 /* Number of different sampling time values */
 #define STM32_NB_SAMPLING_TIME	8
@@ -216,8 +217,9 @@ struct adc_stm32_data {
 struct adc_stm32_cfg {
 	ADC_TypeDef *base;
 	void (*irq_cfg_func)(void);
-	const struct stm32_pclken *pclken;
-	size_t pclk_len;
+	const struct stm32_pclken pclken;
+	const struct stm32_pclken pclken_ker;
+	const struct stm32_pclken pclken_pre;
 	uint32_t clk_prescaler;
 	const struct pinctrl_dev_config *pcfg;
 	const uint16_t sampling_time_table[STM32_NB_SAMPLING_TIME];
@@ -225,6 +227,8 @@ struct adc_stm32_cfg {
 	int8_t sequencer_type;
 	int8_t oversampler_type;
 	int8_t internal_regulator;
+	bool has_pclken_ker		:1;
+	bool has_pclken_pre		:1;
 	bool has_deep_powerdown		:1;
 	bool has_channel_preselection	:1;
 	bool has_differential_support	:1;
@@ -471,8 +475,7 @@ static void adc_stm32_calibration_delay(const struct device *dev)
 	const struct device *const clk = DEVICE_DT_GET(STM32_CLOCK_CONTROL_NODE);
 	uint32_t adc_rate, wait_cycles;
 
-	if (clock_control_get_rate(clk,
-		(clock_control_subsys_t) &config->pclken[0], &adc_rate) < 0) {
+	if (clock_control_get_rate(clk, (clock_control_subsys_t)&config->pclken, &adc_rate) < 0) {
 		LOG_ERR("ADC clock rate get error.");
 	}
 
@@ -565,11 +568,12 @@ static void adc_stm32_calibration_start(const struct device *dev, bool single_en
 		 */
 		if ((dev_id != 0x482UL) && (rev_id != 0x2001UL)) {
 			adc_stm32_enable(adc);
-			MODIFY_REG(adc->CR, ADC_CR_CALINDEX, 0x9UL << ADC_CR_CALINDEX_Pos);
+			stm32_reg_modify_bits(&adc->CR, ADC_CR_CALINDEX,
+					      0x9UL << ADC_CR_CALINDEX_Pos);
 			__DMB();
-			MODIFY_REG(adc->CALFACT2, 0xFFFFFF00UL, 0x03021100UL);
+			stm32_reg_modify_bits(&adc->CALFACT2, 0xFFFFFF00UL, 0x03021100UL);
 			__DMB();
-			SET_BIT(adc->CALFACT, ADC_CALFACT_LATCH_COEF);
+			stm32_reg_set_bits(&adc->CALFACT, ADC_CALFACT_LATCH_COEF);
 			adc_stm32_disable(adc);
 		}
 	}
@@ -865,11 +869,10 @@ static void set_reg_value(const struct device *dev, uint32_t reg,
 			  uint32_t shift, uint32_t mask, uint32_t value)
 {
 	const struct adc_stm32_cfg *config = dev->config;
-	ADC_TypeDef *adc = config->base;
+	size_t reg32_offset = reg / sizeof(uint32_t);
+	volatile uint32_t *addr = (volatile uint32_t *)config->base + reg32_offset;
 
-	uintptr_t addr = (uintptr_t)adc + reg;
-
-	MODIFY_REG(*(volatile uint32_t *)addr, (mask << shift), (value << shift));
+	stm32_reg_modify_bits(addr, mask << shift, value << shift);
 }
 
 static int set_resolution(const struct device *dev,
@@ -946,8 +949,8 @@ static int set_sequencer(const struct device *dev)
 
 		channels_mask |= channel;
 
-#if ANY_ADC_SEQUENCER_TYPE_IS(FULLY_CONFIGURABLE)
-		if (config->sequencer_type == FULLY_CONFIGURABLE) {
+#if ANY_ADC_SEQUENCER_TYPE_IS(SEQUENCER_PROGRAMMABLE)
+		if (config->sequencer_type == SEQUENCER_PROGRAMMABLE) {
 #if ANY_ADC_HAS_CHANNEL_PRESELECTION
 			if (config->has_channel_preselection) {
 				/*
@@ -961,11 +964,11 @@ static int set_sequencer(const struct device *dev)
 			LL_ADC_REG_SetSequencerRanks(adc, table_rank[channel_index], channel);
 			LL_ADC_REG_SetSequencerLength(adc, table_seq_len[channel_index]);
 		}
-#endif /* ANY_ADC_SEQUENCER_TYPE_IS(FULLY_CONFIGURABLE) */
+#endif /* ANY_ADC_SEQUENCER_TYPE_IS(SEQUENCER_PROGRAMMABLE) */
 	}
 
-#if ANY_ADC_SEQUENCER_TYPE_IS(NOT_FULLY_CONFIGURABLE)
-	if (config->sequencer_type == NOT_FULLY_CONFIGURABLE) {
+#if ANY_ADC_SEQUENCER_TYPE_IS(SEQUENCER_FIXED)
+	if (config->sequencer_type == SEQUENCER_FIXED) {
 		LL_ADC_REG_SetSequencerChannels(adc, channels_mask);
 
 #ifdef LL_ADC_FLAG_CCRDY
@@ -978,7 +981,7 @@ static int set_sequencer(const struct device *dev)
 		LL_ADC_ClearFlag_CCRDY(adc);
 #endif /* LL_ADC_FLAG_CCRDY */
 	}
-#endif /* ANY_ADC_SEQUENCER_TYPE_IS(NOT_FULLY_CONFIGURABLE) */
+#endif /* ANY_ADC_SEQUENCER_TYPE_IS(SEQUENCER_FIXED) */
 
 #if DT_HAS_COMPAT_STATUS_OKAY(st_stm32f1_adc) || \
 	DT_HAS_COMPAT_STATUS_OKAY(st_stm32f4_adc)
@@ -1006,12 +1009,12 @@ static int start_read(const struct device *dev,
 		return -EINVAL;
 	}
 
-#if ANY_ADC_SEQUENCER_TYPE_IS(FULLY_CONFIGURABLE)
+#if ANY_ADC_SEQUENCER_TYPE_IS(SEQUENCER_PROGRAMMABLE)
 	if (data->channel_count > ARRAY_SIZE(table_seq_len)) {
 		LOG_ERR("Too many channels for sequencer. Max: %d", ARRAY_SIZE(table_seq_len));
 		return -EINVAL;
 	}
-#endif /* ANY_ADC_SEQUENCER_TYPE_IS(FULLY_CONFIGURABLE) */
+#endif /* ANY_ADC_SEQUENCER_TYPE_IS(SEQUENCER_PROGRAMMABLE) */
 
 #if DT_HAS_COMPAT_STATUS_OKAY(st_stm32f1_adc) && !defined(CONFIG_ADC_STM32_DMA)
 	/* Multiple samplings is only supported with DMA for F1 */
@@ -1496,8 +1499,8 @@ static int adc_stm32h7_setup_boost(const struct adc_stm32_cfg *config, ADC_TypeD
 	int presc;
 
 	/* Get the input frequency */
-	clk_src = (clock_control_subsys_t)(adc_stm32_is_clk_sync(config) ? &config->pclken[0]
-									 : &config->pclken[1]);
+	clk_src = (clock_control_subsys_t)(adc_stm32_is_clk_sync(config) ? &config->pclken
+									 : &config->pclken_ker);
 
 	if (clock_control_get_rate(clk, clk_src, &input_freq) != 0) {
 		LOG_ERR("Failed to get ADC clock frequency");
@@ -1534,14 +1537,6 @@ static int adc_stm32h7_setup_boost(const struct adc_stm32_cfg *config, ADC_TypeD
 }
 #endif
 
-/* This symbol takes the value 1 if one of the device instances */
-/* is configured in dts with a domain clock */
-#if STM32_DT_INST_DEV_DOMAIN_CLOCK_SUPPORT
-#define STM32_ADC_DOMAIN_CLOCK_SUPPORT 1
-#else
-#define STM32_ADC_DOMAIN_CLOCK_SUPPORT 0
-#endif
-
 static int adc_stm32_set_clock(const struct device *dev)
 {
 	const struct adc_stm32_cfg *config = dev->config;
@@ -1549,18 +1544,20 @@ static int adc_stm32_set_clock(const struct device *dev)
 	__maybe_unused ADC_TypeDef *adc = config->base;
 	int ret = 0;
 
-	if (clock_control_on(clk,
-		(clock_control_subsys_t) &config->pclken[0]) != 0) {
+	if (clock_control_on(clk, (clock_control_subsys_t)&config->pclken) != 0) {
 		return -EIO;
 	}
 
-	if (IS_ENABLED(STM32_ADC_DOMAIN_CLOCK_SUPPORT) && (config->pclk_len > 1)) {
-		/* Enable ADC clock source */
-		if (clock_control_configure(clk,
-					    (clock_control_subsys_t) &config->pclken[1],
-					    NULL) != 0) {
-			return -EIO;
-		}
+	/* Enable ADC clock source if applicable */
+	if (config->has_pclken_ker &&
+	    clock_control_configure(clk, (clock_control_subsys_t)&config->pclken_ker, NULL) != 0) {
+		return -EIO;
+	}
+
+	/* Configure ADC prescaler (at RCC level) if applicable */
+	if (config->has_pclken_pre &&
+	    clock_control_configure(clk, (clock_control_subsys_t)&config->pclken_pre, NULL) != 0) {
+		return -EIO;
 	}
 
 #if DT_ANY_INST_HAS_PROP_STATUS_OKAY(st_adc_clock_source)
@@ -1735,7 +1732,7 @@ static int adc_stm32_suspend_setup(const struct device *dev)
 	adc_stm32_disable_analog_supply();
 
 	/* Stop device clock. Note: fixed clocks are not handled yet. */
-	err = clock_control_off(clk, (clock_control_subsys_t)&config->pclken[0]);
+	err = clock_control_off(clk, (clock_control_subsys_t)&config->pclken);
 	if (err != 0) {
 		LOG_ERR("Could not disable ADC clock");
 		return err;
@@ -1806,7 +1803,7 @@ static DEVICE_API(adc, api_stm32_driver_api) = {
 
 /* Macro to check if the ADC instance clock setup is correct */
 #define ADC_STM32_CHECK_DT_CLOCK(x)								\
-	BUILD_ASSERT(IS_EQ(ADC_STM32_CLOCK(x), SYNC) || (DT_INST_NUM_CLOCKS(x) > 1),		\
+	BUILD_ASSERT(IS_EQ(ADC_STM32_CLOCK(x), SYNC) || DT_INST_CLOCKS_HAS_NAME(x, adc_ker),	\
 		     "ASYNC clock mode defined without ASYNC clock defined in device tree")
 
 #else /* DT_ANY_INST_HAS_PROP_STATUS_OKAY(st_adc_clock_source) */
@@ -1963,19 +1960,28 @@ ADC_STM32_CHECK_DT_CLOCK(index);					\
 									\
 PINCTRL_DT_INST_DEFINE(index);						\
 									\
-static const struct stm32_pclken pclken_##index[] =			\
-				 STM32_DT_INST_CLOCKS(index);		\
-									\
 static const struct adc_stm32_cfg adc_stm32_cfg_##index = {		\
 	.base = (ADC_TypeDef *)DT_INST_REG_ADDR(index),			\
 	ADC_STM32_IRQ_FUNC(index)					\
-	.pclken = pclken_##index,					\
-	.pclk_len = DT_INST_NUM_CLOCKS(index),				\
+	.pclken = {.bus = DT_INST_CLOCKS_CELL_BY_NAME(index, adcx, bus),			\
+		   .enr = DT_INST_CLOCKS_CELL_BY_NAME(index, adcx, bits)},			\
+	COND_CODE_1(DT_INST_CLOCKS_HAS_NAME(index, adc_ker),					\
+	(.pclken_ker = {.bus = DT_INST_CLOCKS_CELL_BY_NAME(index, adc_ker, bus),		\
+			.enr = DT_INST_CLOCKS_CELL_BY_NAME(index, adc_ker, bits)},		\
+	 .has_pclken_ker = true,),								\
+	(.has_pclken_ker = false,))								\
+	COND_CODE_1(DT_INST_CLOCKS_HAS_NAME(index, adc_pre),					\
+	(.pclken_pre = {.bus = DT_INST_CLOCKS_CELL_BY_NAME(index, adc_pre, bus),		\
+			.enr = DT_INST_CLOCKS_CELL_BY_NAME(index, adc_pre, bits)},		\
+	 .has_pclken_pre = true,),								\
+	(.has_pclken_pre = false,))								\
 	.clk_prescaler = ADC_STM32_DT_PRESC(index),			\
 	.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(index),			\
 	.differential_channels_used = (ANY_CHILD_NODE_IS_DIFFERENTIAL(index) > 0), \
-	.sequencer_type = DT_INST_STRING_UPPER_TOKEN(index, st_adc_sequencer),	\
-	.oversampler_type = DT_INST_STRING_UPPER_TOKEN(index, st_adc_oversampler),	\
+	.sequencer_type = CONCAT(SEQUENCER_,							\
+		DT_INST_STRING_UPPER_TOKEN(index, st_adc_sequencer)),				\
+	.oversampler_type = CONCAT(OVERSAMPLER_,						\
+		DT_INST_STRING_UPPER_TOKEN(index, st_adc_oversampler)),				\
 	.internal_regulator = CONCAT(INTERNAL_REGULATOR_,					\
 		DT_INST_STRING_UPPER_TOKEN(index, st_adc_internal_regulator)),			\
 	.has_deep_powerdown = DT_INST_PROP(index, st_adc_has_deep_powerdown),			\

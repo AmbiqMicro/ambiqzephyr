@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#undef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L /* Required for strtok_r() */
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -135,7 +137,7 @@ static int cpsi_parse_minus(uint8_t *s, uint16_t *a, uint16_t *b)
 
 	*a = (uint16_t)strtoul(tmp, NULL, 10);
 
-	tmp = strtok_r(NULL, NULL, &saveptr);
+	tmp = strtok_r(NULL, "-", &saveptr);
 	if (tmp == NULL) {
 		return -1;
 	}

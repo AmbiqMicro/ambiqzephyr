@@ -103,6 +103,27 @@ typedef int (*_poller_cb_t)(struct k_poll_event *event, uint32_t state);
  * @{
  */
 
+/**
+ * @brief Resets thread longest frame usage data for specified thread
+ *
+ * This routine resets the longest frame value statistic
+ * after printing to zero, enabling observation of the
+ * longest frame from the most recent interval rather than
+ * the longest frame since startup.
+ *
+ * @param thread Pointer to the thread to reset counter.
+ *
+ * @note @kconfig{CONFIG_THREAD_ANALYZER_LONG_FRAME_PER_INTERVAL} must
+ * be set for this function to be effective.
+ */
+static inline void
+	k_thread_runtime_stats_longest_frame_reset(__maybe_unused struct k_thread *thread)
+{
+#ifdef CONFIG_SCHED_THREAD_USAGE_ANALYSIS
+	thread->base.usage.longest = 0ULL;
+#endif
+}
+
 typedef void (*k_thread_user_cb_t)(const struct k_thread *thread,
 				   void *user_data);
 
@@ -667,6 +688,43 @@ __attribute_const__
 __syscall k_tid_t k_sched_current_thread_query(void);
 
 /**
+ * @brief Test whether startup is in the before-main-task phase.
+ *
+ * This routine allows the caller to customize its actions, depending on
+ * whether it being invoked before the kernel is fully active.
+ *
+ * @funcprops \isr_ok
+ *
+ * @return true if invoked before post-kernel initialization
+ * @return false if invoked during/after post-kernel initialization
+ */
+static inline bool k_is_pre_kernel(void)
+{
+	extern bool z_sys_post_kernel; /* in init.c */
+
+	/*
+	 * If called from userspace, it must be post kernel.
+	 * This guard is necessary because z_sys_post_kernel memory
+	 * is not accessible to user threads.
+	 */
+	if (k_is_user_context()) {
+		return false;
+	}
+
+	/*
+	 * Some compilers might optimize by pre-reading
+	 * z_sys_post_kernel. This is absolutely not desirable.
+	 * We are trying to avoid reading it if we are in user
+	 * context as reading z_sys_post_kernel in user context
+	 * will result in access fault. So add a compiler barrier
+	 * here to stop that kind of optimizations.
+	 */
+	compiler_barrier();
+
+	return !z_sys_post_kernel;
+}
+
+/**
  * @brief Get thread ID of the current thread.
  *
  * @return ID of current thread.
@@ -675,6 +733,8 @@ __syscall k_tid_t k_sched_current_thread_query(void);
 __attribute_const__
 static inline k_tid_t k_current_get(void)
 {
+	__ASSERT(!k_is_pre_kernel(), "k_current_get called pre-kernel");
+
 #ifdef CONFIG_CURRENT_THREAD_USE_TLS
 
 	/* Thread-local cache of current thread ID, set in z_thread_entry() */
@@ -1252,24 +1312,6 @@ bool k_is_in_isr(void);
  * @return Non-zero if invoked by a preemptible thread.
  */
 __syscall int k_is_preempt_thread(void);
-
-/**
- * @brief Test whether startup is in the before-main-task phase.
- *
- * This routine allows the caller to customize its actions, depending on
- * whether it being invoked before the kernel is fully active.
- *
- * @funcprops \isr_ok
- *
- * @return true if invoked before post-kernel initialization
- * @return false if invoked during/after post-kernel initialization
- */
-static inline bool k_is_pre_kernel(void)
-{
-	extern bool z_sys_post_kernel; /* in init.c */
-
-	return !z_sys_post_kernel;
-}
 
 /**
  * @}
@@ -5898,10 +5940,14 @@ void *k_heap_realloc(struct k_heap *h, void *ptr, size_t bytes, k_timeout_t time
  */
 void k_heap_free(struct k_heap *h, void *mem) __attribute_nonnull(1);
 
-/* Hand-calculated minimum heap sizes needed to return a successful
- * 1-byte allocation.  See details in lib/os/heap.[ch]
+/* Minimum heap sizes needed to return a successful 1-byte allocation.
+ * Assumes a chunk aligned (8 byte) memory buffer.
  */
+#ifdef CONFIG_SYS_HEAP_RUNTIME_STATS
+#define Z_HEAP_MIN_SIZE ((sizeof(void *) > 4) ? 80 : 52)
+#else
 #define Z_HEAP_MIN_SIZE ((sizeof(void *) > 4) ? 56 : 44)
+#endif /* CONFIG_SYS_HEAP_RUNTIME_STATS */
 
 /**
  * @brief Define a static k_heap in the specified linker section

@@ -182,7 +182,7 @@ struct nvmem_cell {
  * @see NVMEM_CELL_INST_GET_BY_NAME_OR
  */
 #define NVMEM_CELL_GET_BY_NAME_OR(node_id, name, default_value)                                    \
-	COND_CODE_1(DT_NODE_HAS_PROP(node_id, nvmem_cells),                                        \
+	COND_CODE_1(DT_PROP_HAS_NAME(node_id, nvmem_cells, name),                                  \
 		    (NVMEM_CELL_GET_BY_NAME(node_id, name)),                                       \
 		    (default_value))
 
@@ -286,7 +286,7 @@ struct nvmem_cell {
  * @see NVMEM_CELL_INST_GET_BY_IDX_OR
  */
 #define NVMEM_CELL_GET_BY_IDX_OR(node_id, idx, default_value)                                      \
-	COND_CODE_1(DT_NODE_HAS_PROP(node_id, nvmem_cells),                                        \
+	COND_CODE_1(DT_PROP_HAS_IDX(node_id, nvmem_cells, idx),                                    \
 		    (NVMEM_CELL_GET_BY_IDX(node_id, idx)),                                         \
 		    (default_value))
 
@@ -316,7 +316,9 @@ struct nvmem_cell {
  *
  * @kconfig_dep{CONFIG_NVMEM}
  *
- * @return 0 on success, negative errno code on failure.
+ * @retval -EINVAL Invalid offset or length arguments.
+ * @retval -ENXIO  No runtime device API available.
+ * @return the result of the underlying device API call.
  */
 int nvmem_cell_read(const struct nvmem_cell *cell, void *data, off_t off, size_t len);
 
@@ -330,7 +332,10 @@ int nvmem_cell_read(const struct nvmem_cell *cell, void *data, off_t off, size_t
  *
  * @kconfig_dep{CONFIG_NVMEM}
  *
- * @return 0 on success, negative errno code on failure.
+ * @retval -EINVAL Invalid offset or length arguments.
+ * @retval -EROFS  Writing to a read-only NVMEM Cell.
+ * @retval -ENXIO  No runtime device API available.
+ * @return the result of the underlying device API call.
  */
 int nvmem_cell_write(const struct nvmem_cell *cell, const void *data, off_t off, size_t len);
 
