@@ -66,11 +66,11 @@ jobs:
 
           # Set device testing flag
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "DEVICE_TESTING=${{ github.event.inputs.device_test }}" >> $GITHUB_ENV
-          elif [ "${{ github.event_name }}" = "push" ]; then
-            echo "DEVICE_TESTING=true" >> $GITHUB_ENV
+            echo "MANUAL_DISTR=${{ github.event.inputs.device_test }}" >> $GITHUB_ENV
+          elif [ "${{ github.event_name }}" = "push" ] || [ "${{github.event_name}}" = "schedule" ]; then
+            echo "MANUAL_DISTR=true" >> $GITHUB_ENV
           else
-            echo "DEVICE_TESTING=false" >> $GITHUB_ENV
+            echo "MANUAL_DISTR=false" >> $GITHUB_ENV
           fi
 
       - name: Checkout
@@ -208,7 +208,7 @@ jobs:
               continue
             fi
 
-            if [ "$DEVICE_TESTING" = "false" ]; then
+            if [ "$MANUAL_DISTR" = "false" ]; then
                 runner="$RUNNER_BUILD"
             else
               case "$group" in
@@ -509,6 +509,7 @@ jobs:
           git fetch origin "${BASE_REF}"
           git fetch origin "${GIT_REF}"
           git reset --hard "${GIT_REF}"
+          git clean -fdx
 
       - name: Set up Python
         uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
