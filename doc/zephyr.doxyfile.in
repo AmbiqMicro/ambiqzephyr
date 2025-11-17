@@ -527,7 +527,7 @@ LOOKUP_CACHE_SIZE      = 9
 # DOT_NUM_THREADS setting.
 # Minimum value: 0, maximum value: 32, default value: 1.
 
-NUM_PROC_THREADS       = 1
+NUM_PROC_THREADS       = 0
 
 # If the TIMESTAMP tag is set different from NO then each generated page will
 # contain the date or date and time when the page was generated. Setting this to
@@ -1106,7 +1106,11 @@ EXCLUDE_PATTERNS       =
 # wildcard * is used, a substring. Examples: ANamespace, AClass,
 # ANamespace::AClass, ANamespace::*Test
 
-EXCLUDE_SYMBOLS        = _* \
+EXCLUDE_SYMBOLS        = _[^t]* \
+                         _t[^r]* \
+                         _tr[^a]* \
+                         _tra[^c]* \
+                         _trac[^k]* \
                          *.__unnamed__ \
                          z_* \
                          Z_*
@@ -1679,7 +1683,7 @@ TOC_EXPAND             = NO
 # protocol see https://www.sitemaps.org
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-SITEMAP_URL            =
+SITEMAP_URL            = $(DOXYGEN_SITEMAP_URL)
 
 # If the GENERATE_QHP tag is set to YES and both QHP_NAMESPACE and
 # QHP_VIRTUAL_FOLDER are set, an additional index file will be generated that
