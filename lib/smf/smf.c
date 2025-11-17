@@ -22,7 +22,8 @@ struct internal_ctx {
 };
 
 #ifdef CONFIG_SMF_ANCESTOR_SUPPORT
-static bool share_parent(const struct smf_state *test_state, const struct smf_state *target_state)
+static bool is_descendant_of(const struct smf_state *test_state,
+			     const struct smf_state *target_state)
 {
 	for (const struct smf_state *state = test_state; state != NULL; state = state->parent) {
 		if (target_state == state) {
@@ -36,19 +37,17 @@ static bool share_parent(const struct smf_state *test_state, const struct smf_st
 static const struct smf_state *get_child_of(const struct smf_state *states,
 					    const struct smf_state *parent)
 {
-	const struct smf_state *tmp = states;
+	const struct smf_state *state = states;
 
-	while (true) {
-		if (tmp->parent == parent) {
-			return tmp;
+	while (state != NULL) {
+		if (state->parent == parent) {
+			return state;
 		}
 
-		if (tmp->parent == NULL) {
-			return NULL;
-		}
-
-		tmp = tmp->parent;
+		state = state->parent;
 	}
+
+	return NULL;
 }
 
 /**
@@ -65,7 +64,7 @@ static const struct smf_state *get_lca_of(const struct smf_state *source,
 	for (const struct smf_state *ancestor = source->parent; ancestor != NULL;
 	     ancestor = ancestor->parent) {
 		/* First common ancestor */
-		if (share_parent(dest, ancestor)) {
+		if (is_descendant_of(dest, ancestor)) {
 			return ancestor;
 		}
 	}
@@ -301,10 +300,10 @@ void smf_set_state(struct smf_ctx *const ctx, const struct smf_state *new_state)
 #ifdef CONFIG_SMF_ANCESTOR_SUPPORT
 	const struct smf_state *topmost;
 
-	if (share_parent(ctx->executing, new_state)) {
+	if (is_descendant_of(ctx->executing, new_state)) {
 		/* new state is a parent of where we are now*/
 		topmost = new_state;
-	} else if (share_parent(new_state, ctx->executing)) {
+	} else if (is_descendant_of(new_state, ctx->executing)) {
 		/* we are a parent of the new state */
 		topmost = ctx->executing;
 	} else {

@@ -3137,7 +3137,7 @@ static enum net_verdict tcp_in(struct tcp *conn, struct net_pkt *pkt)
 				 * the TCP context and put the connection into
 				 * active close (TCP_FIN_WAIT_1).
 				 */
-				net_tcp_put(conn->context);
+				net_tcp_put(conn->context, false);
 				break;
 			}
 
@@ -3690,7 +3690,7 @@ out:
 }
 
 /* Active connection close: send FIN and go to FIN_WAIT_1 state */
-int net_tcp_put(struct net_context *context)
+int net_tcp_put(struct net_context *context, bool force_close)
 {
 	struct tcp *conn = context->tcp;
 
@@ -3705,6 +3705,17 @@ int net_tcp_put(struct net_context *context)
 		({ const char *state = net_context_state(context);
 					state ? state : "<unknown>"; }));
 
+	if (force_close) {
+		k_work_cancel_delayable(&conn->send_data_timer);
+		keep_alive_timer_stop(conn);
+
+		k_mutex_unlock(&conn->lock);
+
+		tcp_conn_close(conn, -ENETRESET);
+
+		return 0;
+	}
+
 	if (conn->state == TCP_ESTABLISHED ||
 	    conn->state == TCP_SYN_RECEIVED) {
 		/* Send all remaining data if possible. */
@@ -3713,18 +3724,18 @@ int net_tcp_put(struct net_context *context)
 				conn->send_data_total);
 			conn->in_close = true;
 
-			/* How long to wait until all the data has been sent?
-			 */
+			/* How long to wait until all the data has been sent? */
 			k_work_reschedule_for_queue(&tcp_work_q,
 						    &conn->send_data_timer,
 						    K_MSEC(TCP_RTO_MS));
+
 		} else {
 			NET_DBG("[%p] TCP connection in %s close, "
 				"not disposing yet (waiting %dms)",
 				conn, "active", tcp_max_timeout_ms);
 			k_work_reschedule_for_queue(&tcp_work_q,
-						    &conn->fin_timer,
-						    FIN_TIMEOUT);
+							&conn->fin_timer,
+							FIN_TIMEOUT);
 
 			tcp_out(conn, FIN | ACK);
 			conn_seq(conn, + 1);
@@ -4411,7 +4422,7 @@ enum net_verdict tp_input(struct net_conn *net_conn,
 		if (is("CLOSE2", tp->op)) {
 			struct tcp *conn =
 				(void *)sys_slist_peek_head(&tcp_conns);
-			net_tcp_put(conn->context);
+			net_tcp_put(conn->context, false);
 		}
 		if (is("RECV", tp->op)) {
 #define HEXSTR_SIZE 64
@@ -4732,6 +4743,39 @@ struct k_sem *net_tcp_conn_sem_get(struct net_context *context)
 	struct tcp *conn = context->tcp;
 
 	return &conn->connect_sem;
+}
+
+static void close_tcp_conn(struct tcp *conn, void *user_data)
+{
+	struct net_if *iface = user_data;
+	struct net_context *context = conn->context;
+
+	if (!net_context_is_used(context)) {
+		return;
+	}
+
+	if (net_context_get_iface(context) != iface) {
+		return;
+	}
+
+	/* net_tcp_put() will handle decrementing refcount on stack's behalf */
+	if (net_context_get_state(context) != NET_CONTEXT_LISTENING) {
+		net_tcp_put(context, true);
+	} else {
+		if (context->conn_handler) {
+			net_conn_unregister(context->conn_handler);
+			context->conn_handler = NULL;
+		}
+
+		if (conn->accept_cb != NULL) {
+			conn->accept_cb(conn->context, NULL, 0, -ENETDOWN, context->user_data);
+		}
+	}
+}
+
+void net_tcp_close_all_for_iface(struct net_if *iface)
+{
+	net_tcp_foreach(close_tcp_conn, iface);
 }
 
 void net_tcp_init(void)

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 config SOC_SERIES_IT8XXX2
-	select CPU_HAS_FPU if "$(ZEPHYR_TOOLCHAIN_VARIANT)" != "zephyr" || RISCV_ISA_EXT_M
+	select RISCV_ISA_EXT_F if "$(ZEPHYR_TOOLCHAIN_VARIANT)" != "zephyr" || RISCV_ISA_EXT_M
 	select HAS_PM
 	select ARCH_HAS_CUSTOM_CPU_IDLE
 	select ARCH_HAS_CUSTOM_CPU_ATOMIC_IDLE
@@ -186,6 +186,9 @@ config SOC_IT8XXX2_EXT_32K
 	bool "Use external 32.768 kHz clock source"
 
 endchoice
+
+config ARCH_IRQ_VECTOR_TABLE_ALIGN
+	default 4
 
 config SOC_IT8XXX2_USE_ILM
 	bool

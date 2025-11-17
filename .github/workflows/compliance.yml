@@ -84,6 +84,17 @@ jobs:
         west config manifest.group-filter -- +ci,-optional
         west update --path-cache "${CACHE_DEP}" -o=--depth=1 -n 2>&1 1> west.update.log || west update --path-cache "${CACHE_DEP}" -o=--depth=1 -n 2>&1 1> west.update2.log
 
+    - name: Setup Node.js
+      uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+      with:
+        node-version: "lts/*"
+        cache: npm
+        check-latest: true
+        cache-dependency-path: ./scripts/ci/package-lock.json
+
+    - name: Install Node dependencies
+      run: npm --prefix ./scripts/ci ci
+
     - name: Run Compliance Tests
       working-directory: zephyr
       continue-on-error: true
@@ -105,11 +116,19 @@ jobs:
         ./scripts/ci/check_compliance.py --annotate $excludes -c origin/${BASE_REF}..
 
     - name: upload-results
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       continue-on-error: true
       with:
         name: compliance.xml
         path: zephyr/compliance.xml
+
+    - name: Upload dts linter patch
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      continue-on-error: true
+      if: hashFiles('dts_linter.patch') != ''
+      with:
+        name: dts_linter.patch
+        path: dts_linter.patch
 
     - name: check-warns
       working-directory: zephyr
@@ -118,7 +137,7 @@ jobs:
           exit 1;
         fi
 
-        warns=("ClangFormat")
+        warns=("ClangFormat" "LicenseAndCopyrightCheck")
         files=($(./scripts/ci/check_compliance.py -l))
 
         for file in "${files[@]}"; do
