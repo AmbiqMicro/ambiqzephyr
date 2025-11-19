@@ -132,11 +132,12 @@ static int co5300_blanking_off(const struct device *dev)
 static int co5300_write(const struct device *dev, uint16_t x, uint16_t y,
 			const struct display_buffer_descriptor *desc, const void *buf)
 {
-	const struct co5300_config *cfg = dev->config;
 	struct co5300_data *data = dev->data;
 	uint8_t cmd[4];
 
 #if (DT_HAS_COMPAT_ON_BUS_STATUS_OKAY(chipone_co5300, mipi_dsi))
+	const struct co5300_config *cfg = dev->config;
+
 	(void)pm_device_runtime_get(cfg->mipi_dsi);
 #endif
 
