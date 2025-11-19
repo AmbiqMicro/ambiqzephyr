@@ -12,6 +12,8 @@
 #include <zephyr/drivers/spi.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/pm/device.h>
+#include <zephyr/pm/device_runtime.h>
 
 LOG_MODULE_REGISTER(co5300, CONFIG_DISPLAY_LOG_LEVEL);
 
@@ -130,8 +132,13 @@ static int co5300_blanking_off(const struct device *dev)
 static int co5300_write(const struct device *dev, uint16_t x, uint16_t y,
 			const struct display_buffer_descriptor *desc, const void *buf)
 {
+	const struct co5300_config *cfg = dev->config;
 	struct co5300_data *data = dev->data;
 	uint8_t cmd[4];
+
+#if (DT_HAS_COMPAT_ON_BUS_STATUS_OKAY(chipone_co5300, mipi_dsi))
+	(void)pm_device_runtime_get(cfg->mipi_dsi);
+#endif
 
 	if (data->xstart != x || data->width != desc->width) {
 		data->xstart = x;
@@ -155,6 +162,11 @@ static int co5300_write(const struct device *dev, uint16_t x, uint16_t y,
 	}
 
 	co5300_dcs_write(dev, MIPI_DCS_WRITE_MEMORY_START, buf, desc->buf_size);
+
+#if (DT_HAS_COMPAT_ON_BUS_STATUS_OKAY(chipone_co5300, mipi_dsi))
+	(void)pm_device_runtime_put(cfg->mipi_dsi);
+#endif
+
 	return 0;
 }
 
@@ -338,6 +350,7 @@ static int co5300_init(const struct device *dev)
 		k_msleep(150);
 	}
 #if (DT_HAS_COMPAT_ON_BUS_STATUS_OKAY(chipone_co5300, mipi_dsi))
+	(void)pm_device_runtime_get(cfg->mipi_dsi);
 	/* attach to MIPI-DSI host */
 	ret = mipi_dsi_attach(cfg->mipi_dsi, cfg->channel, &cfg->device);
 	if (ret < 0) {
@@ -350,6 +363,10 @@ static int co5300_init(const struct device *dev)
 		LOG_ERR("DSI init sequence failed! (%d)", ret);
 		return ret;
 	}
+
+#if (DT_HAS_COMPAT_ON_BUS_STATUS_OKAY(chipone_co5300, mipi_dsi))
+	(void)pm_device_runtime_put(cfg->mipi_dsi);
+#endif
 	return 0;
 }
 

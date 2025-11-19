@@ -814,6 +814,7 @@
 			phy-clock = <384000000>;
 			interrupts = <29 0>;/* DC interrupt */
 			status = "disabled";
+			zephyr,pm-device-runtime-auto;
 		};
 
 		pinctrl: pin-controller@GPIO_BASE_NAME {
