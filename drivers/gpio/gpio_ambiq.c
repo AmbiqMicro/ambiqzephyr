@@ -32,13 +32,57 @@ struct ambiq_gpio_data {
 	struct gpio_driver_data common;
 	sys_slist_t cb;
 	struct k_spinlock lock;
+#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+	gpio_port_pins_t output_enabled;
+#endif
 	gpio_port_pins_t int_trig_low;
 	gpio_port_pins_t int_trig_high;
 };
 
+#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+static gpio_port_pins_t ambiq_gpio_output_mask(const struct device *dev)
+{
+	struct ambiq_gpio_data *const data = dev->data;
+	gpio_port_pins_t mask;
+	k_spinlock_key_t key = k_spin_lock(&data->lock);
+
+	mask = data->output_enabled;
+
+	k_spin_unlock(&data->lock, key);
+
+	return mask;
+}
+
+static gpio_port_pins_t ambiq_gpio_filter_outputs(const struct device *dev,
+						  gpio_port_pins_t pins)
+{
+	return ambiq_gpio_output_mask(dev) & pins;
+}
+#endif
+
+static void ambiq_gpio_set_trig_bits_locked(struct ambiq_gpio_data *data, gpio_pin_t pin,
+					    bool trig_low, bool trig_high)
+{
+	if (trig_low) {
+		data->int_trig_low |= BIT(pin);
+	} else {
+		data->int_trig_low &= ~BIT(pin);
+	}
+
+	if (trig_high) {
+		data->int_trig_high |= BIT(pin);
+	} else {
+		data->int_trig_high &= ~BIT(pin);
+	}
+}
+
 static int ambiq_gpio_pin_configure(const struct device *dev, gpio_pin_t pin, gpio_flags_t flags)
 {
 	const struct ambiq_gpio_config *const dev_cfg = dev->config;
+#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+	struct ambiq_gpio_data *const dev_data = dev->data;
+	gpio_pin_t logical_pin = pin;
+#endif
 	int ret = 0;
 
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
@@ -124,6 +168,20 @@ static int ambiq_gpio_pin_configure(const struct device *dev, gpio_pin_t pin, gp
 	if (am_hal_gpio_pinconfig(pin, pincfg) != AM_HAL_STATUS_SUCCESS) {
 		ret = -ENOTSUP;
 	}
+
+#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+	if (ret == 0) {
+		k_spinlock_key_t key = k_spin_lock(&dev_data->lock);
+
+		if (flags & GPIO_OUTPUT) {
+			dev_data->output_enabled |= BIT(logical_pin);
+		} else {
+			dev_data->output_enabled &= ~BIT(logical_pin);
+		}
+
+		k_spin_unlock(&dev_data->lock, key);
+	}
+#endif
 
 	return ret;
 }
@@ -274,13 +332,19 @@ static int ambiq_gpio_port_get_raw(const struct device *dev, gpio_port_value_t *
 {
 	const struct ambiq_gpio_config *const dev_cfg = dev->config;
 	uint32_t pin_offset;
-
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
+	gpio_port_value_t rd_value;
+	gpio_port_value_t wt_value;
+	gpio_port_pins_t out_mask = ambiq_gpio_output_mask(dev);
+
 	pin_offset = dev_cfg->offset;
+	rd_value = *AM_HAL_GPIO_RDn(pin_offset);
+	wt_value = *AM_HAL_GPIO_WTn(pin_offset);
+	*value = (rd_value & ~out_mask) | (wt_value & out_mask);
 #else
 	pin_offset = dev_cfg->offset >> 2;
-#endif
 	*value = (*AM_HAL_GPIO_RDn(pin_offset)) | (*AM_HAL_GPIO_WTn(pin_offset));
+#endif
 
 	return 0;
 }
@@ -291,6 +355,8 @@ static int ambiq_gpio_port_set_masked_raw(const struct device *dev, gpio_port_pi
 	const struct ambiq_gpio_config *const dev_cfg = dev->config;
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
 	uint32_t pin_offset = dev_cfg->offset;
+
+	mask = ambiq_gpio_filter_outputs(dev, mask);
 #else
 	uint32_t pin_offset = dev_cfg->offset >> 2;
 #endif
@@ -308,6 +374,8 @@ static int ambiq_gpio_port_set_bits_raw(const struct device *dev, gpio_port_pins
 	const struct ambiq_gpio_config *const dev_cfg = dev->config;
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
 	uint32_t pin_offset = dev_cfg->offset;
+
+	pins = ambiq_gpio_filter_outputs(dev, pins);
 #else
 	uint32_t pin_offset = dev_cfg->offset >> 2;
 #endif
@@ -326,6 +394,8 @@ static int ambiq_gpio_port_clear_bits_raw(const struct device *dev, gpio_port_pi
 	const struct ambiq_gpio_config *const dev_cfg = dev->config;
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
 	uint32_t pin_offset = dev_cfg->offset;
+
+	pins = ambiq_gpio_filter_outputs(dev, pins);
 #else
 	uint32_t pin_offset = dev_cfg->offset >> 2;
 #endif
@@ -344,6 +414,8 @@ static int ambiq_gpio_port_toggle_bits(const struct device *dev, gpio_port_pins_
 	const struct ambiq_gpio_config *const dev_cfg = dev->config;
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
 	uint32_t pin_offset = dev_cfg->offset;
+
+	pins = ambiq_gpio_filter_outputs(dev, pins);
 #else
 	uint32_t pin_offset = dev_cfg->offset >> 2;
 #endif
@@ -512,24 +584,12 @@ static int ambiq_gpio_pin_interrupt_configure(const struct device *dev, gpio_pin
 			pincfg.eIntDir = AM_HAL_GPIO_PIN_INTDIR_NONE;
 			break;
 		}
-		k_spinlock_key_t key = k_spin_lock(&data->lock);
-
-		if (trig_l) {
-			data->int_trig_low |= BIT(pin);
-		} else {
-			data->int_trig_low &= ~BIT(pin);
-		}
-		if (trig_h) {
-			data->int_trig_high |= BIT(pin);
-		} else {
-			data->int_trig_high &= ~BIT(pin);
-		}
-
 		ret = am_hal_gpio_pinconfig(gpio_pin, pincfg);
 		if (ret) {
-			k_spin_unlock(&data->lock, key);
 			return ret;
 		}
+
+		k_spinlock_key_t key = k_spin_lock(&data->lock);
 
 		AM_HAL_GPIO_MASKCREATE(GpioIntMask);
 		int_ret = am_hal_gpio_interrupt_clear(AM_HAL_GPIO_MASKBIT(pGpioIntMask, gpio_pin));
@@ -539,6 +599,9 @@ static int ambiq_gpio_pin_interrupt_configure(const struct device *dev, gpio_pin
 		int_ret = am_hal_gpio_interrupt_enable(AM_HAL_GPIO_MASKBIT(pGpioIntMask, gpio_pin));
 		if (!ret && int_ret) {
 			ret = int_ret;
+		}
+		if (!ret) {
+			ambiq_gpio_set_trig_bits_locked(data, pin, trig_l, trig_h);
 		}
 
 		k_spin_unlock(&data->lock, key);
@@ -650,6 +713,9 @@ static int ambiq_gpio_pin_interrupt_configure(const struct device *dev, gpio_pin
 							(void *)&gpio_pin);
 		if (!ret && int_ret) {
 			ret = int_ret;
+		}
+		if (!ret) {
+			ambiq_gpio_set_trig_bits_locked(data, pin, trig_l, trig_h);
 		}
 
 		k_spin_unlock(&data->lock, key);
