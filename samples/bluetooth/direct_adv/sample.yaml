@@ -1,17 +1,19 @@
 sample:
   name: Bluetooth Direct Advertising
 tests:
+  sample.bluetooth.direct_adv:
+    harness: bluetooth
+    platform_allow: qemu_x86
+    integration_platforms:
+      - qemu_x86
+    tags: bluetooth
   sample.bluetooth.direct_adv.console:
+    tags: bluetooth
     harness: console
     harness_config:
       type: one_line
       regex:
         - "Advertising successfully started"
     platform_allow:
+      - apollo510b_evb
       - apollo510L_eb
-  sample.bluetooth.direct_adv.bluetooth_harness:
-    harness: bluetooth
-    platform_allow: qemu_x86
-    integration_platforms:
-      - qemu_x86
-    tags: bluetooth

@@ -8,9 +8,11 @@ tests:
   sample.benchmark.coremark:
     platform_allow:
       - apollo510_evb
+      - apollo510b_evb
       - apollo510L_eb
     integration_platforms:
       - apollo510_evb
+      - apollo510b_evb
       - apollo510L_eb
     harness: console
     harness_config:
