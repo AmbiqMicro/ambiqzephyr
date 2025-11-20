@@ -36,6 +36,9 @@ For example:
    :shield: apollo5_eb_display_8080_card
    :goals: build
 
+The user can notice a pure color bar at the top of the display. Its color
+changes over time.
+
 References
 **********
 
