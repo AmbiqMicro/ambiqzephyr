@@ -43,7 +43,7 @@ jobs:
       BSIM_COMPONENTS_PATH: /data/bsim_west/bsim/components
       TESTS_PER_BUILDER: 500
       VENDOR_OPTIONS: ' --vendor ambiq'
-      GROUP_AP5: "apollo510_evb/apollo510 apollo510_eb/apollo510 apollo510L_eb/apollo510L"
+      GROUP_AP5: "apollo510_evb/apollo510 apollo510_eb/apollo510 apollo510b_evb/apollo510b apollo510L_eb/apollo510L"
       GROUP_AP4: "apollo4p_blue_kxr_evb/apollo4p_blue apollo4p_evb/apollo4p"
       GROUP_AP3: "apollo3p_evb/apollo3p_blue apollo3_evb/apollo3_blue"
       GROUP_AP2: "apollo2_evb/apollo2"
