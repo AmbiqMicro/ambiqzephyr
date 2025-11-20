@@ -16,30 +16,6 @@ The following are the subsystems and drivers related to MCUboot in Zephyr:
 - **Subsystems**: MCUmgr, DFU, Retention System
 - **Drivers**: FLASH, FLASH_MAP, STREAM_FLASH, NVS
 
-.. uml::
-
-   @startuml
-   ' define component
-   node "Zephyr" {
-     component MCUmgr
-     component DFU
-     component RetentionSystem
-   }
-   node "MCUboot" {
-     component "MCUboot" as MCUBoot
-     component "Boot sharing" as BootSharing
-   }
-   component "Flash map" as FlashMap
-   component "Flash drivers" as FlashDrivers
-   component "NVS"
-   ' define relation
-   MCUboot--> FlashMap
-   Zephyr--> FlashMap
-   FlashMap --> FlashDrivers
-   FlashMap --> NVS
-   @enduml
-
-
 2. Related Modules, Subsystems, and Drivers
 ===========================================
 
