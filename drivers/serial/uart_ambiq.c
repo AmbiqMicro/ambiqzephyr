@@ -233,6 +233,7 @@ static void uart_ambiq_poll_out(const struct device *dev, unsigned char c)
 
 	key = irq_lock();
 
+#if defined(CONFIG_PM_DEVICE)
 	/* If an interrupt transmission is in progress, the pm constraint is already managed by the
 	 * call of uart_ambiq_irq_tx_[en|dis]able
 	 */
@@ -241,6 +242,7 @@ static void uart_ambiq_poll_out(const struct device *dev, unsigned char c)
 
 		am_hal_uart_interrupt_enable(data->uart_handler, AM_HAL_UART_INT_TXCMP);
 	}
+#endif
 
 	/* Send a character */
 	am_hal_uart_fifo_write(data->uart_handler, &c, 1, NULL);
