@@ -90,9 +90,10 @@ jobs:
         node-version: "lts/*"
         cache: npm
         check-latest: true
-        cache-dependency-path: ./scripts/ci/package-lock.json
+        cache-dependency-path: zephyr/scripts/ci/package-lock.json
 
     - name: Install Node dependencies
+      working-directory: zephyr
       run: npm --prefix ./scripts/ci ci
 
     - name: Run Compliance Tests
