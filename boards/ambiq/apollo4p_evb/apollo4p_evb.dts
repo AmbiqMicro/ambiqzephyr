@@ -73,6 +73,7 @@
 };
 
 &uart0 {
+	compatible = "ambiq,uart";
 	current-speed = <115200>;
 	pinctrl-0 = <&uart0_default>;
 	pinctrl-names = "default";
