@@ -118,5 +118,6 @@
 	};
 };
 
+mspi_is25wx064: &mspi1 {};
 accel_spi: &iom1 {};
 mspi_aps256n: &mspi0 {};

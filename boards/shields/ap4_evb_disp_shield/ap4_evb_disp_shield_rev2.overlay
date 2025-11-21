@@ -123,7 +123,7 @@
 	status = "okay";
 };
 
-&mspi1 {
+&mspi_is25wx064 {
 	pinctrl-0 = <&mspi1_default>;
 	pinctrl-1 = <&mspi1_sleep>;
 	pinctrl-2 = <&mspi1_flash>;
