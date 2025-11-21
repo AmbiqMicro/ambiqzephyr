@@ -65,3 +65,8 @@ tests:
       - adafruit_qt_py_rp2040/rp2040
     extra_args:
       - platform:adafruit_qt_py_rp2040/rp2040:SHIELD="adafruit_lis3dh"
+  sample.sensor.accel_polling.apollo4p_evb_shield:
+    extra_args:
+      - SHIELD="ap4_evb_disp_shield_rev2"
+    platform_allow:
+      - apollo4p_evb/apollo4p

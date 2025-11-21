@@ -15,7 +15,30 @@
 	aliases {
 		psram0 = &aps256n;
 		flash0 = &is25wx064;
+		accel0 = &adxl362_test;
 	};
+};
+
+&accel_spi {
+	spi {
+		status = "okay";
+
+		adxl362_test: adxl362@0 {
+			compatible = "adi,adxl362";
+			reg = <0>;
+			spi-max-frequency = <8000000>;
+			int1-gpios = <&gpio0_31 31 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+			status = "okay";
+		};
+	};
+};
+
+&gpio0_31 {
+	status = "okay";
+};
+
+&gpio64_95 {
+	status = "okay";
 };
 
 &pinctrl {

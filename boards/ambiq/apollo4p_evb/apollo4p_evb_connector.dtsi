@@ -117,4 +117,6 @@
 			<104 0 &gpio96_127 8 0>; /* VDD18_SWITCH */
 	};
 };
+
+accel_spi: &iom1 {};
 mspi_aps256n: &mspi0 {};
