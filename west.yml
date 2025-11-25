@@ -292,7 +292,7 @@ manifest:
     - name: hal-zephyr-alpha
       remote: github_ambiqmicro
       path: modules/hal/ambiq
-      revision: fff2133603188e6821a3172777d70941158343d7
+      revision: c416a1baa26f91e9aaa527a0ad14bbb6cd5e32df
       groups:
         - hal
     - name: hostap
