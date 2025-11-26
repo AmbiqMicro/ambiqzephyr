@@ -600,7 +600,9 @@ class DevicetreeLintingCheck(ComplianceTest):
         self.npx_exe = self.NPX_EXECUTABLE
         # Get changed DTS files
         dts_files = [
-            file for file in get_files(filter="d") if file.endswith((".dts", ".dtsi", ".overlay"))
+            file
+            for file in get_files(filter="d")
+            if file.endswith((".dts", ".dtsi", ".overlay")) and is_ambiq_path(file)
         ]
 
         if not self.ensure_npx():
@@ -680,6 +682,8 @@ class KconfigCheck(ComplianceTest):
     CONFIG_ = "CONFIG_"
 
     def run(self):
+        if not any(is_ambiq_path(path) for path in get_files()):
+            return
         kconf = self.parse_kconfig()
 
         self.check_top_menu_not_too_long(kconf)
@@ -1423,6 +1427,8 @@ Missing SoC names or CONFIG_SOC vs soc.yml out of sync:
         # splitlines() supports various line terminators
         for grep_line in grep_stdout.splitlines():
             path, lineno, line = grep_line.split("\0")
+            if not is_ambiq_path(path):
+                continue
 
             # Extract symbol references (might be more than one) within the
             # line
@@ -1883,20 +1889,23 @@ class LicenseAndCopyrightCheck(ComplianceTest):
             self.fmtd_failure(severity, title, rel_path, desc=desc or "", line=1)
 
     def run(self) -> None:
-        changed_files = get_files(filter="d")
+        changed_files = [f for f in get_files(filter="d") if is_ambiq_path(f)]
         if not changed_files:
             return
 
         # Only scan text files for now, in the future we may want to leverage REUSE standard's
         # ability to also associate license/copyright info with binary files.
+        text_files = []
         for file in changed_files:
             full_path = GIT_TOP / file
             mime_type = magic.from_file(os.fspath(full_path), mime=True)
-            if not mime_type.startswith("text/"):
-                changed_files.remove(file)
+            if mime_type.startswith("text/"):
+                text_files.append(file)
+        if not text_files:
+            return
 
         project = Project.from_directory(GIT_TOP)
-        report = ProjectSubsetReport.generate(project, changed_files, multiprocessing=False)
+        report = ProjectSubsetReport.generate(project, text_files, multiprocessing=False)
 
         self._report_violations(
             report.files_without_licenses,
@@ -1969,7 +1978,7 @@ class PyLint(ComplianceTest):
         )
 
         # List of files added/modified by the commit(s).
-        files = get_files(filter="d")
+        files = [f for f in get_files(filter="d") if is_ambiq_path(f)]
 
         # Filter out everything but Python files. Keep filenames
         # relative (to GIT_TOP) to stay farther from any command line
@@ -2041,6 +2050,11 @@ def filter_py(root, fnames):
         )
     ]
 
+AMBIQ_KEYWORDS = ("ambiq", "apollo")
+
+def is_ambiq_path(path: str) -> bool:
+    lower = path.lower()
+    return any(keyword in lower for keyword in AMBIQ_KEYWORDS)
 
 class CMakeStyle(ComplianceTest):
     """
@@ -2053,6 +2067,8 @@ class CMakeStyle(ComplianceTest):
     def run(self):
         # Loop through added/modified files
         for fname in get_files(filter="d"):
+            if not is_ambiq_path(fname):
+                continue
             if fname.endswith(".cmake") or fname.endswith("CMakeLists.txt"):
                 self.check_style(fname)
 
@@ -2157,6 +2173,8 @@ class BinaryFiles(ComplianceTest):
         for stat in git("diff", "--numstat", "--diff-filter=A", COMMIT_RANGE).splitlines():
             added, deleted, fname = stat.split("\t")
             if added == "-" and deleted == "-":
+                if not is_ambiq_path(fname):
+                    continue
                 if fname.startswith(BINARY_ALLOW_PATHS) and fname.endswith(BINARY_ALLOW_EXT):
                     continue
                 self.failure(f"Binary file not allowed: {fname}")
@@ -2463,18 +2481,22 @@ class Ruff(ComplianceTest):
     doc = "Check python files with ruff."
 
     def run(self):
+        files = [f for f in get_files(filter="d") if is_ambiq_path(f)]
+        py_files = [f for f in files if f.endswith((".py", ".pyi"))]
+        if not py_files:
+            return
+
         try:
             subprocess.run(
-                "ruff check --output-format=json",
+                ["ruff", "check", "--output-format=json", *py_files],
                 check=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
-                shell=True,
                 cwd=GIT_TOP,
             )
         except subprocess.CalledProcessError as ex:
-            output = ex.output.decode("utf-8")
-            messages = json.loads(output)
+            output = (ex.stdout or b"").decode("utf-8")
+            messages = json.loads(output) if output else []
             for m in messages:
                 self.fmtd_failure(
                     "error",
@@ -2487,15 +2509,11 @@ class Ruff(ComplianceTest):
                     desc=m.get("message"),
                 )
 
-        for file in get_files(filter="d"):
-            if not file.endswith((".py", ".pyi")):
-                continue
-
+        for file in py_files:
             try:
                 subprocess.run(
-                    f"ruff format --force-exclude --diff {file}",
+                    ["ruff", "format", "--force-exclude", "--diff", file],
                     check=True,
-                    shell=True,
                     cwd=GIT_TOP,
                 )
             except subprocess.CalledProcessError:
@@ -2515,7 +2533,9 @@ class PythonCompatCheck(ComplianceTest):
     MAX_VERSION_STR = f"{MAX_VERSION[0]}.{MAX_VERSION[1]}"
 
     def run(self):
-        py_files = [f for f in get_files(filter="d") if f.endswith(".py")]
+        py_files = [
+            f for f in get_files(filter="d") if f.endswith(".py") and is_ambiq_path(f)
+        ]
         if not py_files:
             return
         cmd = [
