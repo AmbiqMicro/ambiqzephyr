@@ -19,7 +19,6 @@ supported:
   - rtc
   - hwinfo
   - clock_control
-  - usbd
   - pdm
   - audadc
   - i2s
