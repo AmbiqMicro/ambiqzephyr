@@ -260,14 +260,15 @@ To achieve lowest power consumption, customer needs to follow the following proc
 Check `Zephyr Power Management`_ for more detailed information.
 
 Currently drivers below has fully PM_DEVICE support:
+ADC
 I2C
+MIPI-DSI
 MSPI
 SDHC
 SPI
 UART
 
 And following drivers' PM_DEVICE is in testing:
-ADC
 I2S
 PDM
 

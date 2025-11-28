@@ -10,10 +10,75 @@ Overview
 
 This release introduces new features, bug fixes, and performance improvements.
 
-Release Version: v0.2
-=====================
-Release Date: 2025-10-31
-========================
+Release Information
+===================
+
+- **Version:** v0.3
+- **Release Date:** 2025-11-28
+
+New Features
+------------
+
+Boards & SoC Support
+~~~~~~~~~~~~~~~~~~~~
+
+- **apollo5_eb_display_8080_card**: Added support for apollo5_eb_display_8080_card.
+
+Drivers and Sensors
+~~~~~~~~~~~~~~~~~~~
+
+- **mipi_dbi**: Added support for mipi dbi driver.
+- **sdhc**: Added multiple mmcs, mmc bandwidth and sdio card tests.
+
+Improvements
+------------
+
+Build system and Infrastructure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- **arch**: Upgraded code base to zephyr v4.3.0 release.
+
+Drivers and Sensors
+~~~~~~~~~~~~~~~~~~~
+
+- **adc**: Enhanced adc context handling and interrupt clearing.
+- **mipi_dsi**: Added PM runtime device support for mipi dsi driver.
+
+HAL
+~~~
+
+- **apollo510L**: Upgraded HAL to SDK5.2.alpha.2.
+- **NemaGFX**: Updated nema_dc_hal to enhance compatibility for other ambiq platforms.
+
+Libraries / Subsystems
+~~~~~~~~~~~~~~~~~~~~~~
+
+- **power management**:
+  - Enabled ``CONFIG_PM_DEVICE_RUNTIME_DEFAULT_ENABLE`` to enable PM device runtime globally.
+  - Added ``CONFIG_PM_DEVICE_RUNTIME_DISABLE_CONSOLE`` to disable runtime PM for the console UART
+    by default to prevent CI issues with ISR log output.
+
+Bug Fixes
+---------
+
+- **power management**: min-residency-us of apollo510L has to be greater than 1 tick which is 1ms.
+- **soc**: Moved kconfig define to prevent leakage, and bumped common kconfig to ambiq family level.
+- **uart**: Wrap the TXCMP enable logic with CONFIG_PM_DEVICE so it is only used when PM runtime is active.
+
+Deprecations
+------------
+
+- **mspi**: Removed async PIO operations.
+
+Known Issues
+------------
+
+
+Release Information
+===================
+
+- **Version:** v0.2
+- **Release Date:** 2025-10-31
 
 New Features
 ------------
@@ -22,9 +87,9 @@ Drivers and Sensors
 ~~~~~~~~~~~~~~~~~~~
 
 - **dc**: Added support for dc_spi driver of apollo510L.
-- **gpu** Added support for NemaGFX GPU driver of apollo510L.
-- **i2s** Added support for i2s driver of apollo510L.
-- **mspi** Added support for mspi driver of apollo510L.
+- **gpu**: Added support for NemaGFX GPU driver of apollo510L.
+- **i2s**: Added support for i2s driver of apollo510L.
+- **mspi**: Added support for mspi driver of apollo510L.
 - **pdm**: Added support for pdm driver of apollo510L.
 
 HAL
@@ -56,11 +121,11 @@ Known Issues
   it is configurable per device in the DTS.
 
 
-Release Version: v0.1
-=====================
+Release Information
+===================
 
-Release Date: 2025-09-10
-========================
+- **Version:** v0.1
+- **Release Date:** 2025-09-10
 
 New Features
 ------------
