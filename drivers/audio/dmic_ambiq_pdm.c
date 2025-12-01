@@ -118,7 +118,11 @@ static void dmic_ambiq_rx_dmacpl_handler(const struct device *dev)
 	dma_msg item;
 	struct dmic_ambiq_pdm_data *data = dev->data;
 
+#if defined(CONFIG_SOC_APOLLO510) || defined(CONFIG_SOC_APOLLO510B)
 	PDMn(data->inst_idx)->DMASTAT_b.DMACPL = 0;
+#elif defined(CONFIG_SOC_APOLLO510L)
+	PDMn(data->inst_idx)->DMASTAT_b.DMACPL = 1;
+#endif
 
 	if (data->rx_tip_buffer == NULL) {
 		goto rx_exit;
@@ -257,7 +261,7 @@ static int pdm_clock_settings_derive(const struct device *dev, struct dmic_cfg *
 		data->hal_cfg.ePDMClkSpeed = AM_HAL_PDM_CLK_PLL;
 		data->hal_cfg.eClkDivider = mclk_div - 1;
 		data->hal_cfg.ePDMAClkOutDivder = pdma_div - 1;
-		data->hal_cfg.ui32DecimationRate = osr;
+		data->hal_cfg.ui32DecimationRate = osr / 2;
 		return 0;
 	} else {
 		return -EINVAL;
@@ -338,7 +342,7 @@ static int pdm_clock_settings_derive(const struct device *dev, struct dmic_cfg *
 		data->hal_cfg.ePDMClkSpeed = AM_HAL_PDM_CLK_PLL;
 		data->hal_cfg.eClkDivider = mclk_div - 1;
 		data->hal_cfg.ePDMAClkOutDivder = pdma_div - 1;
-		data->hal_cfg.ui32DecimationRate = osr;
+		data->hal_cfg.ui32DecimationRate = osr / 2;
 		return 0;
 	} else {
 		return -EINVAL;
