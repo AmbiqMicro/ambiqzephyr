@@ -26,7 +26,7 @@ supported:
   - bluetooth
   - sdhc
   - mipi_dsi
-  - pdm
+  - dmic
   - i2s
   - pm
   - mspi
