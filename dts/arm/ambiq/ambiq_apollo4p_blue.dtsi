@@ -713,6 +713,12 @@
 			status = "disabled";
 		};
 
+		crc32: crc32@40030030 {
+			compatible = "ambiq,hw-crc32";
+			reg = <0x40030030 0x4>;
+			status = "disabled";
+		};
+
 	};
 };
 

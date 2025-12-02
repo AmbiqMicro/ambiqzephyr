@@ -35,6 +35,7 @@
 		sw1 = &button1;
 		pwm-led0 = &pwm_led0;
 		sdhc0 = &sdio0;
+		crc0 = &crc32;
 	};
 
 	sram0: memory@SSRAM_BASE_NAME {
@@ -343,4 +344,8 @@ zephyr_udc0: &usb {
 			reg = <0x248000 DT_SIZE_K(32)>;
 		};
 	};
+};
+
+&crc32 {
+	status = "okay";
 };
