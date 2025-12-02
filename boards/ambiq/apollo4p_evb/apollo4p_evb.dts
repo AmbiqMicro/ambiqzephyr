@@ -28,6 +28,7 @@
 		rtc = &rtc0;
 		sdhc0 = &sdio0;
 		pwm-led0 = &pwm_led0;
+		crc0 = &crc32;
 	};
 
 	leds {
@@ -185,6 +186,10 @@
 		disk-name = "SD2";
 		status = "okay";
 	};
+};
+
+&crc32 {
+	status = "okay";
 };
 
 zephyr_udc0: &usb {

@@ -1,0 +1,20 @@
+sample:
+  name: CRC Sample
+  description: Sample application demonstrating CRC driver usage
+common:
+  tags: crc drivers
+  platform_allow:
+    - apollo4p_evb
+    - apollo4p_blue_kxr_evb
+    - apollo510_evb
+    - apollo510_eb
+  integration_platforms:
+    - apollo4p_evb
+tests:
+  sample.drivers.crc:
+    tags: crc drivers
+    platform_allow:
+      - apollo4p_evb
+      - apollo4p_blue_kxr_evb
+      - apollo510_evb
+      - apollo510_eb
