@@ -117,6 +117,7 @@
 
 		#address-cells = <1>;
 		#size-cells = <1>;
+
 		/* Flash region */
 		flash0: flash@MRAM_BASE_NAME {
 			compatible = "soc-nv-flash";
@@ -183,6 +184,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -200,6 +202,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -217,6 +220,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -234,6 +238,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -251,6 +256,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -268,6 +274,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -285,6 +292,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -302,6 +310,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -319,6 +328,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -336,6 +346,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -353,6 +364,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -370,6 +382,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -387,6 +400,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -404,6 +418,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -437,6 +452,46 @@
 			zephyr,pm-device-runtime-auto;
 		};
 
+		ios0: ios@IOSLAVEFD0_BASE_NAME {
+			compatible = "ambiq,ios";
+			reg = <IOSLAVEFD0_REG_BASE IOSLAVEFD0_REG_SIZE>;
+			interrupts = <96 0>, <97 0>;
+
+			spi {
+				compatible = "ambiq,spid";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				status = "disabled";
+			};
+
+			i2c {
+				compatible = "ambiq,ios-i2c";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				status = "disabled";
+			};
+		};
+
+		ios1: ios@IOSLAVEFD1_BASE_NAME {
+			compatible = "ambiq,ios";
+			reg = <IOSLAVEFD1_REG_BASE IOSLAVEFD1_REG_SIZE>;
+			interrupts = <98 0>, <99 0>;
+
+			spi {
+				compatible = "ambiq,spid";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				status = "disabled";
+			};
+
+			i2c {
+				compatible = "ambiq,ios-i2c";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				status = "disabled";
+			};
+		};
+
 		iom0: iom@IOM0_BASE_NAME {
 			compatible = "ambiq,iom";
 			reg = <IOM0_REG_BASE IOM0_REG_SIZE>;
@@ -449,6 +504,7 @@
 				status = "disabled";
 				zephyr,pm-device-runtime-auto;
 			};
+
 			i2c {
 				compatible = "ambiq,i2c";
 				#address-cells = <1>;
@@ -470,6 +526,7 @@
 				status = "disabled";
 				zephyr,pm-device-runtime-auto;
 			};
+
 			i2c {
 				compatible = "ambiq,i2c";
 				#address-cells = <1>;
@@ -491,6 +548,7 @@
 				status = "disabled";
 				zephyr,pm-device-runtime-auto;
 			};
+
 			i2c {
 				compatible = "ambiq,i2c";
 				#address-cells = <1>;
@@ -512,6 +570,7 @@
 				status = "disabled";
 				zephyr,pm-device-runtime-auto;
 			};
+
 			i2c {
 				compatible = "ambiq,i2c";
 				#address-cells = <1>;
@@ -533,6 +592,7 @@
 				status = "disabled";
 				zephyr,pm-device-runtime-auto;
 			};
+
 			i2c {
 				compatible = "ambiq,i2c";
 				#address-cells = <1>;
@@ -554,6 +614,7 @@
 				status = "disabled";
 				zephyr,pm-device-runtime-auto;
 			};
+
 			i2c {
 				compatible = "ambiq,i2c";
 				#address-cells = <1>;
@@ -708,12 +769,10 @@
 				compatible = "ambiq,gpio";
 				gpio-map-mask = <0xffffffe0 0xffffffc0>;
 				gpio-map-pass-thru = <0x1f 0x3f>;
-				gpio-map = <
-					0x00 0x0 &gpio0_31 0x0 0x0
-					0x20 0x0 &gpio32_63 0x0 0x0
-					0x40 0x0 &gpio64_95 0x0 0x0
-					0x60 0x0 &gpio96_119 0x0 0x0
-				>;
+				gpio-map = <0x00 0x0 &gpio0_31 0x0 0x0
+					    0x20 0x0 &gpio32_63 0x0 0x0
+					    0x40 0x0 &gpio64_95 0x0 0x0
+					    0x60 0x0 &gpio96_119 0x0 0x0>;
 				reg = <GPIO_REG_BASE>;
 				#gpio-cells = <2>;
 				#address-cells = <1>;

@@ -10,7 +10,12 @@ include: [i2c-controller.yaml, pinctrl-device.yaml]
 properties:
   fifo-threshold:
     type: int
-    required: true
     default: 16
     description: |
         Set the FIFO threshold to the middle by default
+
+  fifo-base:
+    type: int
+    default: 32
+    description: |
+        Set the FIFO base address in LRAM (default 0x20 = 32).
