@@ -168,7 +168,8 @@ Get to Know Ambiq Components
   │   ├── hwinfo/
   │   │   └── hwinfo_ambiq.c
   │   ├── i2c/
-  │   │   └── i2c_ambiq.c
+  │   │   ├── i2c_ambiq.c
+  │   │   └── i2c_ambiq_ios.c
   │   ├── i2s/
   │   │   └── i2s_ambiq.c
   │   ├── mbox/
@@ -267,8 +268,6 @@ MSPI
 SDHC
 SPI
 UART
-
-And following drivers' PM_DEVICE is in testing:
 I2S
 PDM
 
