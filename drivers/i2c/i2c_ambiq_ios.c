@@ -24,14 +24,11 @@ LOG_MODULE_REGISTER(i2c_ambiq_ios, CONFIG_I2C_LOG_LEVEL);
 #define IOS_ADDR_INTERVAL 1
 #endif
 
-#define AMBIQ_I2C_IOS_FIFO_BASE   0x30
-#define AMBIQ_I2C_IOS_FIFO_END    0x100
-#define AMBIQ_I2C_IOS_FIFO_LENGTH (AMBIQ_I2C_IOS_FIFO_END - AMBIQ_I2C_IOS_FIFO_BASE)
-
 struct ambiq_i2c_ios_config {
 	const struct pinctrl_dev_config *pcfg;
 	uint32_t inst_idx;
 	uint8_t fifo_thr;
+	uint32_t fifo_base;
 	void (*irq_cfg)(void);
 	void (*acc_irq_cfg)(void);
 	bool has_acc_irq;
@@ -84,10 +81,12 @@ static void i2c_ambiq_ios_feed_fifo(const struct device *dev)
 	am_hal_ios_control(data->i2c_ios_handle, AM_HAL_IOS_REQ_FIFO_UPDATE_CTR, NULL);
 }
 
-static void i2c_ambiq_ios_handle_genad(struct ambiq_i2c_ios_data *data)
+static void i2c_ambiq_ios_handle_genad(const struct device *dev)
 {
+	const struct ambiq_i2c_ios_config *config = dev->config;
+	struct ambiq_i2c_ios_data *data = dev->data;
 	uint32_t gadata = 0;
-	uint32_t fifo_ptr = AMBIQ_I2C_IOS_FIFO_BASE;
+	uint32_t fifo_ptr = config->fifo_base;
 
 	if (am_hal_ios_control(data->i2c_ios_handle, AM_HAL_IOS_REQ_READ_GADATA, &gadata) ==
 	    AM_HAL_STATUS_SUCCESS) {
@@ -106,7 +105,7 @@ static void i2c_ambiq_ios_isr(const struct device *dev)
 	am_hal_ios_interrupt_status_get(data->i2c_ios_handle, true, &status);
 
 	if (status & AM_HAL_IOS_INT_GENAD) {
-		i2c_ambiq_ios_handle_genad(data);
+		i2c_ambiq_ios_handle_genad(dev);
 		am_hal_ios_interrupt_clear(data->i2c_ios_handle, AM_HAL_IOS_INT_GENAD);
 	}
 
@@ -307,10 +306,26 @@ static int i2c_ambiq_ios_target_register(const struct device *dev, struct i2c_ta
 		goto err_pm_put;
 	}
 
+	uint32_t fifo_end;
+
+	/* Determine FIFO end based on inst_idx and SOC type */
+	if (config->inst_idx == 0) {
+		/* IOSLAVE (inst_idx == 0) */
+#if defined(CONFIG_SOC_APOLLO510L)
+		/* apollo510L doesn't have IOS, use IOSFD */
+		fifo_end = AM_HAL_IOSFD_FIFO_MAX_SIZE;
+#else
+		fifo_end = AM_HAL_IOS_FIFO_MAX_SIZE;
+#endif
+	} else {
+		/* IOSLAVEFD (inst_idx > 0) */
+		fifo_end = AM_HAL_IOSFD_FIFO_MAX_SIZE;
+	}
+
 	ios.ui32InterfaceSelect = AM_HAL_IOS_USE_I2C | AM_HAL_IOS_I2C_ADDRESS(tcfg->address << 1);
-	ios.ui32ROBase = AMBIQ_I2C_IOS_FIFO_BASE;
-	ios.ui32FIFOBase = AMBIQ_I2C_IOS_FIFO_BASE;
-	ios.ui32RAMBase = AMBIQ_I2C_IOS_FIFO_END;
+	ios.ui32ROBase = config->fifo_base;
+	ios.ui32FIFOBase = config->fifo_base;
+	ios.ui32RAMBase = fifo_end;
 	/* FIFO Threshold - set to half the size */
 	ios.ui32FIFOThreshold = config->fifo_thr;
 	ios.pui8SRAMBuffer = data->sram_buf;
@@ -417,12 +432,26 @@ static int i2c_ambiq_ios_init(const struct device *dev)
 		return -ENXIO;
 	}
 
-	/* Set LRAM pointer and size based on SOC type and inst_idx */
+	/* Set LRAM pointer based on SOC type and inst_idx */
+#if defined(CONFIG_SOC_APOLLO510L)
+	/* apollo510L uses IOSLAVEFD */
+	if (config->inst_idx == 0) {
+		extern volatile uint8_t * const am_hal_iosfd0_pui8LRAM;
+
+		data->lram_ptr = am_hal_iosfd0_pui8LRAM;
+	} else {
+		extern volatile uint8_t * const am_hal_iosfd1_pui8LRAM;
+
+		data->lram_ptr = am_hal_iosfd1_pui8LRAM;
+	}
+	data->lram_size = AM_HAL_IOSFD_FIFO_MAX_SIZE;
+#else
 	/* others use IOSLAVE */
 	extern volatile uint8_t * const am_hal_ios_pui8LRAM;
 
 	data->lram_ptr = am_hal_ios_pui8LRAM;
 	data->lram_size = AM_HAL_IOS_FIFO_MAX_SIZE;
+#endif
 
 	config->irq_cfg();
 	if (config->has_acc_irq && config->acc_irq_cfg) {
@@ -473,8 +502,11 @@ static DEVICE_API(i2c, i2c_ambiq_ios_api) = {
 	AMBIQ_I2C_IOS_ACC_IRQ_CFG(n)                                                       \
 	static const struct ambiq_i2c_ios_config cfg_##n = {                               \
 		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                     \
-		.inst_idx = (DT_REG_ADDR(DT_INST_PARENT(n)) - IOSLAVE_BASE) / IOS_ADDR_INTERVAL,\
+		.inst_idx = COND_CODE_1(CONFIG_SOC_APOLLO510L,                                 \
+			((DT_REG_ADDR(DT_INST_PARENT(n)) - IOSLAVEFD0_BASE) / IOS_ADDR_INTERVAL),  \
+			((DT_REG_ADDR(DT_INST_PARENT(n)) - IOSLAVE_BASE) / IOS_ADDR_INTERVAL)),    \
 		.fifo_thr = DT_INST_PROP_OR(n, fifo_threshold, 16),                            \
+		.fifo_base = DT_INST_PROP_OR(n, fifo_base, 32),                                \
 		.irq_cfg = i2c_ambiq_ios_irq_cfg_##n,                                          \
 		.acc_irq_cfg = COND_CODE_1(DT_IRQ_HAS_IDX(DT_INST_PARENT(n), 1),               \
 		     (i2c_ambiq_ios_acc_irq_cfg_##n), (NULL)),                                 \

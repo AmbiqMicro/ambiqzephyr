@@ -184,6 +184,7 @@ static int run_partial_read(const struct device *i2c, uint8_t addr,
 	return 0;
 }
 
+#if !defined(CONFIG_SOC_APOLLO510L)
 static int run_program_read(const struct device *i2c, uint8_t addr, uint8_t addr_width,
 #if IS_ENABLED(CONFIG_I2C_AMBIQ_IOS)
 			    unsigned int offset, const struct device *ios_dev)
@@ -270,6 +271,7 @@ static int run_program_read(const struct device *i2c, uint8_t addr, uint8_t addr
 
 	return 0;
 }
+#endif /* !CONFIG_SOC_APOLLO510L */
 
 ZTEST(i2c_eeprom_target, test_deinit)
 {
@@ -415,6 +417,8 @@ ZTEST(i2c_eeprom_target, test_eeprom_target)
 		}
 	}
 
+	/* Skip program/readback loop on apollo510L due to HW erratum */
+#if !defined(CONFIG_SOC_APOLLO510L)
 	for (offset = 0; offset < TEST_DATA_SIZE - 1; ++offset) {
 #if IS_ENABLED(CONFIG_I2C_AMBIQ_IOS)
 		zassert_equal(0, run_program_read(i2c_1, addr_0,
@@ -436,6 +440,7 @@ ZTEST(i2c_eeprom_target, test_eeprom_target)
 		}
 #endif
 	}
+#endif
 
 	/* Detach EEPROM */
 	ret = i2c_target_driver_unregister(eeprom_0);
