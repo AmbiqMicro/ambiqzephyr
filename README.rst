@@ -27,7 +27,7 @@ As of now, Ambiq provides zephyr support for a set of peripherals/drivers:
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 | Driver |   PM_DEVICE    |   Stable codes at  |              Sample                       |       Board      |
 +========+================+====================+===========================================+==================+
-|   ADC  |      WIP       |    ambiq-stable    | samples\\drivers\\adc\\adc\_dt            |        All       |
+|   ADC  |       -        |    ambiq-stable    | samples\\drivers\\adc\\adc\_dt            |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 | AUDADC |      WIP       |    ambiq-stable    | samples\\drivers\\adc\\adc\_dt            |  apollo510 only  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
@@ -45,17 +45,21 @@ As of now, Ambiq provides zephyr support for a set of peripherals/drivers:
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |   I2C  |       -        |    ambiq-stable    |  samples\\drivers\\eeprom                 |  eb boards only  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|   I2S  |      WIP       |    ambiq-stable    |  samples\\drivers\\audio\\amic            |        All       |
+|   I2S  |       -        |    ambiq-stable    |  samples\\drivers\\audio\\amic            |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |   I3C  |                |     coming soon    |                                           |  apollo510L only |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |  INPUT |                |    ambiq-stable    |samples\\subsys\\input\\draw\_touch\_events|  with disp card  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
+|   JDI  |                |    ambiq-stable    |  samples\\drivers\\display                |  with disp card  |
++--------+----------------+--------------------+-------------------------------------------+------------------+
+|MIPI_DBI|                |    ambiq-stable    |  samples\\drivers\\display                |  with disp card  |
++--------+----------------+--------------------+-------------------------------------------+------------------+
 |MIPI_DSI|                |    ambiq-stable    |  samples\\drivers\\display                |  with disp card  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |  MSPI  |       -        |    ambiq-stable    |   samples\\drivers\\mspi\\mspi\_flash     |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|   PDM  |      WIP       |    ambiq-stable    |    samples\\drivers\\audio\\dmic          |        All       |
+|   PDM  |       -        |    ambiq-stable    |    samples\\drivers\\audio\\dmic          |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |   PWM  |                |    ambiq-stable    |  tests\\drivers\\pwm\\pwm\_api            |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
@@ -144,6 +148,8 @@ Get to Know Ambiq Components
   │   └── shields/
   │       ├── ap4_evb_disp_shield_rev2
   │       ├── ap510_disp
+  │       ├── ap510_jdi_disp
+  │       ├── apollo5_eb_display_8080_card
   │       └── apollo5_eb_display_card
   ├── drivers/
   │   ├── adc/
@@ -162,7 +168,8 @@ Get to Know Ambiq Components
   │   ├── counter/
   │   │   └── counter_ambiq_timer.c
   │   ├── display/
-  │   │   └── display_co5300.c
+  │   │   ├── display_co5300.c
+  │   │   └── display_ls014b7dd01.c
   │   ├── entropy/
   │   │   └── entropy_ambiq_puf_trng.c
   │   ├── flash/
@@ -172,9 +179,12 @@ Get to Know Ambiq Components
   │   ├── hwinfo/
   │   │   └── hwinfo_ambiq.c
   │   ├── i2c/
-  │   │   └── i2c_ambiq.c
+  │   │   ├── i2c_ambiq.c
+  │   │   └── i2c_ambiq_ios.c
   │   ├── i2s/
   │   │   └── i2s_ambiq.c
+  │   ├── jdi/
+  │   │   └── jdi_ambiq.c
   │   ├── mbox/
   │   │   └── mbox_ambiq.c
   │   ├── mipi_dsi/
