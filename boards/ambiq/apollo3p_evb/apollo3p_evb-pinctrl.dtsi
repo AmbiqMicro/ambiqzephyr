@@ -200,9 +200,21 @@
 		};
 	};
 
-	pwm2_default: pwm2_default {
+	pwm0_default: pwm0_default{
 		group1 {
-			pinmux = <GPIO_P30>;
+			pinmux = <CTIM2_P13>; /* channel@0 */
+		};
+	};
+
+	pwm2_default: pwm2_default{
+		group1 {
+			pinmux = <CTIM9_P29>; /* channel@0 */
+		};
+	};
+
+	pwm7_default: pwm7_default{
+		group1 {
+			pinmux = <CTIM31_P11>; /* channel@0 */
 		};
 	};
 };
