@@ -55,6 +55,8 @@ void board_early_init_hook(void)
 				   AM_HAL_CLKMGR_HFRC_FREQ_FREE_RUN_APPROX_48MHZ, NULL);
 	am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_HFRC2,
 				   AM_HAL_CLKMGR_HFRC2_FREQ_FREE_RUN_APPROX_250MHZ, NULL);
+	// am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_SYSPLL, 
+	// 			   18432000, NULL);
 }
 
 #if defined(CONFIG_BOARD_ENABLE_GPU_ASSET_RELOCATION)
