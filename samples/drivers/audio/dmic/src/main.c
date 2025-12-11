@@ -10,9 +10,13 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(dmic_sample);
 
+#if defined(CONFIG_USE_SEGGER_RTT)
+#include <SEGGER_RTT.h>
+#endif
+
 #define MAX_SAMPLE_RATE  16000
 #define SAMPLE_BIT_WIDTH CONFIG_SAMPLE_BIT_WIDTH
-#define BYTES_PER_SAMPLE SAMPLE_BIT_WIDTH / 8
+#define BYTES_PER_SAMPLE (SAMPLE_BIT_WIDTH == 24 ? (4) : (SAMPLE_BIT_WIDTH / 8))
 /* Milliseconds to wait for a block to be read. */
 #define READ_TIMEOUT     1000
 
@@ -26,7 +30,12 @@ LOG_MODULE_REGISTER(dmic_sample);
  */
 #define MAX_BLOCK_SIZE   BLOCK_SIZE(MAX_SAMPLE_RATE, 2)
 #define BLOCK_COUNT      4
-K_MEM_SLAB_DEFINE_STATIC(mem_slab, MAX_BLOCK_SIZE, BLOCK_COUNT, 4);
+K_MEM_SLAB_DEFINE_STATIC(mem_slab, MAX_BLOCK_SIZE, BLOCK_COUNT, 32);
+
+#if defined(CONFIG_USE_SEGGER_RTT)
+static int16_t temp_buffer[MAX_SAMPLE_RATE]           __attribute__ ((aligned (32))) __attribute__ ((section (".dtcm_data")));
+static int16_t rtt_recorder_buffer[MAX_SAMPLE_RATE*5] __attribute__ ((aligned (32))) __attribute__ ((section (".dtcm_data")));
+#endif
 
 static int do_pdm_transfer(const struct device *dmic_dev,
 			   struct dmic_cfg *cfg,
@@ -59,6 +68,18 @@ static int do_pdm_transfer(const struct device *dmic_dev,
 			return ret;
 		}
 
+#if defined(CONFIG_USE_SEGGER_RTT)
+		/* Dump two channels data in 16-bit format */
+		uint32_t num_ch = cfg->channel.act_num_chan;
+		uint32_t num_sample = size / (num_ch * BYTES_PER_SAMPLE);
+
+		for (uint32_t j = 0; j < num_sample; j++) {
+			temp_buffer[2 * j + 0] = (((uint32_t*)buffer)[num_ch * j + 0]  & 0x00FFFF00) >> 8;
+			temp_buffer[2 * j + 1] = (((uint32_t*)buffer)[num_ch * j + 1]  & 0x00FFFF00) >> 8;
+		}
+		SEGGER_RTT_Write(1, temp_buffer, num_sample * sizeof(int16_t) * 2);
+#endif
+
 		LOG_INF("%d - got buffer %p of %u bytes", i, buffer, size);
 
 		k_mem_slab_free(&mem_slab, buffer);
@@ -75,6 +96,19 @@ static int do_pdm_transfer(const struct device *dmic_dev,
 
 int main(void)
 {
+	#if defined(CONFIG_USE_SEGGER_RTT)
+	SEGGER_RTT_Init();
+	SEGGER_RTT_ConfigUpBuffer(1, "DataLogger", rtt_recorder_buffer,
+			sizeof(rtt_recorder_buffer), SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+	/* To dump PCM data with RTT, run the following command in the terminal:
+	   JLinkRTTLogger -Device 'AP510NFA-CBR' -If SWD -Usb xxxxxx -Speed 4000 \
+	   		-RTTAddress 0xxxxxxxxx -RTTChannel 1 dmic_2ch_dump.raw
+           where '-Usb' is followed by the J-Link serial number and 'RTTAddress'
+	   is printed in the line shown below.
+	*/
+	LOG_INF("-RTTAddress: %p", &_SEGGER_RTT);
+	#endif
+
 	const struct device *const dmic_dev = DEVICE_DT_GET(DT_NODELABEL(dmic_dev));
 	int ret;
 
@@ -106,18 +140,6 @@ int main(void)
 		},
 	};
 
-	cfg.channel.req_num_chan = 1;
-	cfg.channel.req_chan_map_lo =
-		dmic_build_channel_map(0, 0, PDM_CHAN_LEFT);
-	cfg.streams[0].pcm_rate = MAX_SAMPLE_RATE;
-	cfg.streams[0].block_size =
-		BLOCK_SIZE(cfg.streams[0].pcm_rate, cfg.channel.req_num_chan);
-
-	ret = do_pdm_transfer(dmic_dev, &cfg, 2 * BLOCK_COUNT);
-	if (ret < 0) {
-		return 0;
-	}
-
 	cfg.channel.req_num_chan = 2;
 	cfg.channel.req_chan_map_lo =
 		dmic_build_channel_map(0, 0, PDM_CHAN_LEFT) |
@@ -126,7 +148,7 @@ int main(void)
 	cfg.streams[0].block_size =
 		BLOCK_SIZE(cfg.streams[0].pcm_rate, cfg.channel.req_num_chan);
 
-	ret = do_pdm_transfer(dmic_dev, &cfg, 2 * BLOCK_COUNT);
+	ret = do_pdm_transfer(dmic_dev, &cfg, 40 * BLOCK_COUNT);
 	if (ret < 0) {
 		return 0;
 	}
