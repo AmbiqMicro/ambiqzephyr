@@ -219,26 +219,42 @@ static int i2s_ambiq_init(const struct device *dev)
 #if defined(CONFIG_SOC_APOLLO510)
 static int i2s_ambiq_clock_settings_derive(uint32_t i2s_bclk_freq, am_hal_i2s_config_t *hal_cfg)
 {
-	int ret;
 	bool valid_settings_found = false;
+	uint32_t pll_precfg_freq, desired_freq, valid_idx, ret;
+	uint32_t clk_div_pairs[][2] = {{6, 1}, {8, 1}, {6, 3}, {8, 3}};
 
-	uint32_t clock_divider_pairs[][2] = {{6, 1}, {8, 1}, {6, 3}, {8, 3}};
+	am_hal_clkmgr_clock_config_get(AM_HAL_CLKMGR_CLK_ID_SYSPLL, &pll_precfg_freq, 0);
 
-	ARRAY_FOR_EACH(clock_divider_pairs, i) {
-		uint32_t pll_freq =
-			clock_divider_pairs[i][0] * clock_divider_pairs[i][1] * i2s_bclk_freq;
-		ret = am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_SYSPLL, pll_freq, NULL);
-		if (ret == AM_HAL_STATUS_SUCCESS) {
-			hal_cfg->eClock = (clock_divider_pairs[i][0] == 6)
-						  ? eAM_HAL_I2S_CLKSEL_PLL_FOUT3
-						  : eAM_HAL_I2S_CLKSEL_PLL_FOUT4;
-			hal_cfg->eDiv3 = (clock_divider_pairs[i][1] == 3) ? 1 : 0;
-			valid_settings_found = true;
-			break;
+	ARRAY_FOR_EACH(clk_div_pairs, idx) {
+		desired_freq = clk_div_pairs[idx][0] * clk_div_pairs[idx][1] * i2s_bclk_freq;
+		if (pll_precfg_freq != 0) {
+			if (pll_precfg_freq == desired_freq) {
+				valid_idx = idx;
+				valid_settings_found = true;
+				break;
+			}
+			continue;
 		}
+
+		ret = am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_SYSPLL,
+							desired_freq, NULL);
+		if (ret != AM_HAL_STATUS_SUCCESS) {
+			continue;
+		}
+
+		valid_idx = idx;
+		valid_settings_found = true;
+		break;
 	}
 
-	return (valid_settings_found == true ? 0 : -EINVAL);
+	if (valid_settings_found) {
+		hal_cfg->eClock = (clk_div_pairs[valid_idx][0] == 6) ? eAM_HAL_I2S_CLKSEL_PLL_FOUT3
+								     : eAM_HAL_I2S_CLKSEL_PLL_FOUT4;
+		hal_cfg->eDiv3 = (clk_div_pairs[valid_idx][1] == 3) ? 1 : 0;
+		return 0;
+	} else {
+		return -EINVAL;
+	}
 }
 #else
 #error "Unsupported device."
@@ -352,6 +368,7 @@ static int i2s_ambiq_configure(const struct device *dev, enum i2s_dir dir,
 	case 24:
 		hal_cfg->eData->eChannelLenPhase1 = AM_HAL_I2S_FRAME_WDLEN_24BITS;
 		hal_cfg->eData->eSampleLenPhase1 = AM_HAL_I2S_SAMPLE_LENGTH_24BITS;
+		break;
 	case 32:
 		hal_cfg->eData->eChannelLenPhase1 = AM_HAL_I2S_FRAME_WDLEN_32BITS;
 		hal_cfg->eData->eSampleLenPhase1 = AM_HAL_I2S_SAMPLE_LENGTH_32BITS;
