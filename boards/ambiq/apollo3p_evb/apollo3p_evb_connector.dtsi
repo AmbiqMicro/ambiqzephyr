@@ -89,5 +89,4 @@
 };
 
 ambiq_spi0: &iom0 {};
-
 ambiq_i2c3: &iom3 {};
