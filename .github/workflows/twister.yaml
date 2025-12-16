@@ -11,6 +11,9 @@ on:
         required: true
         type: boolean
         default: false
+      platform_list:
+        description: 'Specify the platform list to limit run'
+        required: false
 
   push:
     branches:
@@ -155,23 +158,30 @@ jobs:
         working-directory: zephyr
         id: test-platforms
         run: |
-          export ZEPHYR_BASE=${PWD}
-          export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
-          if [ "$FULLRUN" = "true" ]; then
-            python3 ./scripts/ci/test_plan.py --no-detailed-test-id -t $TESTS_PER_BUILDER ${VENDOR_OPTIONS}
-          else
-            python3 ./scripts/ci/test_plan.py -c ${BASE_SHA}.. --no-detailed-test-id --pull-request -t $TESTS_PER_BUILDER ${VENDOR_OPTIONS}
-          fi
+          rm -f platforms.txt
+          if [ -z "${{ github.event.inputs.platform_list }}" ]; then
+            export ZEPHYR_BASE=${PWD}
+            export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
+            if [ "$FULLRUN" = "true" ]; then
+              python3 ./scripts/ci/test_plan.py --no-detailed-test-id -t $TESTS_PER_BUILDER ${VENDOR_OPTIONS}
+            else
+              python3 ./scripts/ci/test_plan.py -c ${BASE_SHA}.. --no-detailed-test-id --pull-request -t $TESTS_PER_BUILDER ${VENDOR_OPTIONS}
+            fi
 
-          if [ -s testplan.json ]; then
-            PLATFORMS=$(jq -r '.testsuites[].platform' testplan.json | sort -u)
+            if [ -s testplan.json ]; then
+              PLATFORMS=$(jq -r '.testsuites[].platform' testplan.json | sort -u)
+              echo "PLATFORMS=$PLATFORMS"
+              echo "${PLATFORMS}" > platforms.txt
+            else
+              echo "Nothing to run"
+            fi
+
+            rm -f testplan.json .testplan
+          else
+            PLATFORMS="$(printf '%s\n' ${{ github.event.inputs.platform_list }})"
             echo "PLATFORMS=$PLATFORMS"
-            echo "PLATFORMS=${PLATFORMS}" > platforms.txt
-          else
-            echo "Nothing to run"
+            echo "${PLATFORMS}" > platforms.txt
           fi
-
-          rm -f testplan.json .testplan
 
       - name: Generate Test Plan with Twister
         env:
