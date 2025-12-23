@@ -55,7 +55,7 @@ As of now, Ambiq provides zephyr support for a set of peripherals/drivers:
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |   PDM  |       -        |    apollo510L-dev  |    samples\\drivers\\audio\\dmic          |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|   PM   |       -        |    apollo510L-dev  |    samples\\subsys\\pm\\device\_pm        |        All       |
+|   PM   |       -        |    apollo510L-dev  |  tests\\subsys\\pm\\power\_wakeup\_timer  |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |   PWM  |       -        |    apollo510L-dev  |  tests\\drivers\\pwm\\pwm\_api            |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
@@ -73,7 +73,7 @@ As of now, Ambiq provides zephyr support for a set of peripherals/drivers:
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |   USB  |       -        |    apollo510L-dev  |  samples\\drivers\\subsys\\usb\\mass      |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|   WDT  |       -        |    apollo510L-dev  |    samples\\drivers\\watchdog             |        All       |
+|   WDT  |       -        |    apollo510L-dev  |    samples\\subsys\\task_wdt              |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 
 And also there are supports for some third-party libs:
@@ -83,7 +83,7 @@ And also there are supports for some third-party libs:
 +========+================+====================+===========================================+==================+
 |coremark|       -        |    apollo510L-dev  |   samples\\benchmarks\\coremark           |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|  fatfs |       -        |    apollo510L-dev  |  samples\\subsys\\fs\\fs_sample           |        All       |
+|  fatfs |       -        |    apollo510L-dev  |  samples\\subsys\\fs\\fs\_sample          |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 | mbedtls|       -        |    apollo510L-dev  |  tests\\benchmarks\\mbedtls               |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+

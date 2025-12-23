@@ -13,6 +13,40 @@ This release introduces new features, bug fixes, and performance improvements.
 Release Information
 ===================
 
+- **Version:** v0.4
+- **Release Date:** 2025-12-23
+
+New Features
+------------
+
+Drivers and Sensors
+~~~~~~~~~~~~~~~~~~~
+
+- **i2c**: Added support for i2c target driver which applies ambiq IOS.
+
+Improvements
+------------
+
+Drivers and Sensors
+~~~~~~~~~~~~~~~~~~~
+
+- **pdm**: Added support for configuring DMIC/PDM pcm_rate through runtime parameters.
+- **pwm**: Added multi channel PWM support.
+
+HAL
+~~~
+
+- **apollo510L**: Upgraded HAL to SDK5.2.alpha.3.
+
+Bug Fixes
+---------
+
+- **pdm**: Fixed incorrect OSR value, and removed redundant config items.
+
+
+Release Information
+===================
+
 - **Version:** v0.3
 - **Release Date:** 2025-11-28
 
