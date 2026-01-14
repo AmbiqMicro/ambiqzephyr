@@ -78,6 +78,12 @@
 		};
 	};
 
+	i2c0_sleep: i2c0_sleep {
+		group1 {
+			pinmux = <GPIO_P5>, <GPIO_P6>;
+		};
+	};
+
 	i2c1_default: i2c1_default {
 		group1 {
 			pinmux = <M1SCL_P8>, <M1SDAWIR3_P9>;
@@ -129,6 +135,21 @@
 			drive-open-drain;
 			drive-strength = "0.5";
 			bias-pull-up;
+		};
+	};
+
+	ios_i2c0_default: ios_i2c0_default {
+		group1 {
+			pinmux = <SLFDSCK_P0>, <SLFDWIR3_P1>;
+			drive-open-drain;
+			drive-strength = "0.5";
+			bias-pull-up;
+		};
+	};
+
+	ios_i2c0_sleep: ios_i2c0_sleep {
+		group1 {
+			pinmux = <GPIO_P0>, <GPIO_P1>;
 		};
 	};
 
