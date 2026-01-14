@@ -102,7 +102,6 @@
 		};
 	};
 
-
 	/* TCM */
 	itcm: itcm@ITCM_BASE_NAME {
 		compatible = "zephyr,memory-region";
@@ -172,6 +171,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -189,6 +189,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -206,6 +207,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -223,6 +225,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -240,6 +243,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -257,6 +261,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -274,6 +279,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -291,6 +297,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -308,6 +315,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -325,6 +333,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -342,6 +351,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -359,6 +369,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -376,6 +387,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -393,6 +405,7 @@
 				compatible = "ambiq,counter";
 				status = "disabled";
 			};
+
 			pwm {
 				compatible = "ambiq,timer-pwm";
 				status = "disabled";
@@ -438,6 +451,7 @@
 				status = "disabled";
 				zephyr,pm-device-runtime-auto;
 			};
+
 			i2c {
 				compatible = "ambiq,i2c";
 				#address-cells = <1>;
@@ -459,6 +473,7 @@
 				status = "disabled";
 				zephyr,pm-device-runtime-auto;
 			};
+
 			i2c {
 				compatible = "ambiq,i2c";
 				#address-cells = <1>;
@@ -480,6 +495,7 @@
 				status = "disabled";
 				zephyr,pm-device-runtime-auto;
 			};
+
 			i2c {
 				compatible = "ambiq,i2c";
 				#address-cells = <1>;
@@ -501,6 +517,7 @@
 				status = "disabled";
 				zephyr,pm-device-runtime-auto;
 			};
+
 			i2c {
 				compatible = "ambiq,i2c";
 				#address-cells = <1>;
@@ -522,6 +539,7 @@
 				status = "disabled";
 				zephyr,pm-device-runtime-auto;
 			};
+
 			i2c {
 				compatible = "ambiq,i2c";
 				#address-cells = <1>;
@@ -543,6 +561,7 @@
 				status = "disabled";
 				zephyr,pm-device-runtime-auto;
 			};
+
 			i2c {
 				compatible = "ambiq,i2c";
 				#address-cells = <1>;
@@ -565,6 +584,7 @@
 				status = "disabled";
 				zephyr,pm-device-runtime-auto;
 			};
+
 			i2c {
 				compatible = "ambiq,i2c";
 				#address-cells = <1>;
@@ -586,6 +606,7 @@
 				status = "disabled";
 				zephyr,pm-device-runtime-auto;
 			};
+
 			i2c {
 				compatible = "ambiq,i2c";
 				#address-cells = <1>;
@@ -779,15 +800,13 @@
 				compatible = "ambiq,gpio";
 				gpio-map-mask = <0xffffffe0 0xffffffc0>;
 				gpio-map-pass-thru = <0x1f 0x3f>;
-				gpio-map = <
-					0x00 0x0 &gpio0_31 0x0 0x0
-					0x20 0x0 &gpio32_63 0x0 0x0
-					0x40 0x0 &gpio64_95 0x0 0x0
-					0x60 0x0 &gpio96_127 0x0 0x0
-					0x80 0x0 &gpio128_159 0x0 0x0
-					0xA0 0x0 &gpio160_191 0x0 0x0
-					0xC0 0x0 &gpio192_223 0x0 0x0
-				>;
+				gpio-map = <0x00 0x0 &gpio0_31 0x0 0x0
+					    0x20 0x0 &gpio32_63 0x0 0x0
+					    0x40 0x0 &gpio64_95 0x0 0x0
+					    0x60 0x0 &gpio96_127 0x0 0x0
+					    0x80 0x0 &gpio128_159 0x0 0x0
+					    0xA0 0x0 &gpio160_191 0x0 0x0
+					    0xC0 0x0 &gpio192_223 0x0 0x0>;
 				reg = <GPIO_REG_BASE>;
 				#gpio-cells = <2>;
 				#address-cells = <1>;
@@ -857,6 +876,14 @@
 					status = "disabled";
 				};
 			};
+		};
+
+		gpu: gpu@40090000 {
+			compatible = "ambiq,nema-gpu";
+			reg = <0x40090000 0x1000>;
+			interrupts = <28 0>;
+			status = "disabled";
+			zephyr,pm-device-runtime-auto;
 		};
 	};
 };
