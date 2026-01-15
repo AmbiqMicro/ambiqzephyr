@@ -225,7 +225,7 @@
 		compatible = "ambiq,mspi-device", "mspi-aps-z8";
 		size = <DT_SIZE_M(512)>;
 		reg = <0>;
-		status = "disabled";
+		status = "okay";
 		mspi-max-frequency = <125000000>;
 		mspi-io-mode = "MSPI_IO_MODE_HEX_8_8_16";
 		mspi-data-rate = "MSPI_DATA_RATE_S_D_D";

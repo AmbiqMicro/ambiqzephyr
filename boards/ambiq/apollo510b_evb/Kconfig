@@ -11,7 +11,7 @@ config BOARD_ENABLE_GPU_ASSET_RELOCATION
 	default y if LVGL
 	select BOARD_LATE_INIT_HOOK
 	help
-	  The Apollo510 GPU has limited access to MRAM. If this option is
+	  The Apollo510B GPU has limited access to MRAM. If this option is
 	  enabled, large constant assets (like LVGL fonts and images) will
 	  be loaded into MRAM but copied to external XIP RAM at BOARD_LATE_INIT_HOOK
 	  for direct access by the GPU. This is essential for any LVGL
