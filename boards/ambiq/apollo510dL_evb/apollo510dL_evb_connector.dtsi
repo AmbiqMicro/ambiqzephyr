@@ -134,3 +134,6 @@
 			   <119 0 &gpio96_119 23 0>; /* UART0_RTS */
 	};
 };
+
+/* Nexus node for MIPI DSI display shield */
+disp_mipi_dsi: &mipi_dsi {};
