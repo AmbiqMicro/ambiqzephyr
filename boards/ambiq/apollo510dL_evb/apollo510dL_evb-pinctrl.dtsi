@@ -33,8 +33,9 @@
 
 	adc0_default: adc0_default{
 		group1 {
-			pinmux = <ADCSE5_P14>, <ADCSE6_P13>;
+			pinmux = <ADCSE2_P17>, <ADCSE3_P16>;
 			drive-strength = "0.1";
+			input-enable;
 		};
 	};
 
