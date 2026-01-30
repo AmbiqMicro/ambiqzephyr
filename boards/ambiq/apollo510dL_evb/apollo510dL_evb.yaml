@@ -1,0 +1,34 @@
+identifier: apollo510dL_evb
+name: Apollo510dL EVB
+type: mcu
+arch: arm
+ram: 1792
+flash: 2048
+toolchain:
+  - zephyr
+  - gnuarmemb
+supported:
+  - uart
+  - adc
+  - watchdog
+  - counter
+  - gpio
+  - spi
+  - i2c
+  - rtc
+  - hwinfo
+  - clock_control
+  - usbd
+  - flash
+  - nvs
+  - zms
+  - mbox
+  - bluetooth
+  - sdhc
+  - mipi_dsi
+  - pdm
+testing:
+  ignore_tags:
+    - net
+vendor: ambiq
+
