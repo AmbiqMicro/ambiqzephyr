@@ -5,6 +5,7 @@
  */
 
 #include <apollo510L/ambiq-apollo510L-pinmux.h>
+#include "apollo510dL_evb_connector.dtsi"
 
 &pinctrl {
 	/* COM UART on pins 14/15 */

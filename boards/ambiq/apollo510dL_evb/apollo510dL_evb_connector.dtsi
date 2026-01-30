@@ -135,3 +135,5 @@
 	};
 };
 
+/* Nexus node for MIPI DSI display shield */
+disp_mipi_dsi: &mipi_dsi {};
