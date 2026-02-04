@@ -91,7 +91,7 @@ static int wdt_ambiq_setup(const struct device *dev, uint8_t options)
 	}
 	am_hal_wdt_start();
 #else
-#if !defined (CONFIG_SOC_APOLLO510L)
+#if !defined(CONFIG_SOC_APOLLO510L) && !defined(CONFIG_SOC_APOLLO330P)
 	if (dev_cfg->clk_freq == 128) {
 		cfg.eClockSource = AM_HAL_WDT_128HZ;
 	} else if (dev_cfg->clk_freq == 16) {
