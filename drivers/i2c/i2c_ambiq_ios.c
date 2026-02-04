@@ -311,8 +311,8 @@ static int i2c_ambiq_ios_target_register(const struct device *dev, struct i2c_ta
 	/* Determine FIFO end based on inst_idx and SOC type */
 	if (config->inst_idx == 0) {
 		/* IOSLAVE (inst_idx == 0) */
-#if defined(CONFIG_SOC_APOLLO510L)
-		/* apollo510L doesn't have IOS, use IOSFD */
+#if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
+		/* apollo510L and apollo330P don't have IOS, use IOSFD */
 		fifo_end = AM_HAL_IOSFD_FIFO_MAX_SIZE;
 #else
 		fifo_end = AM_HAL_IOS_FIFO_MAX_SIZE;
@@ -433,8 +433,8 @@ static int i2c_ambiq_ios_init(const struct device *dev)
 	}
 
 	/* Set LRAM pointer based on SOC type and inst_idx */
-#if defined(CONFIG_SOC_APOLLO510L)
-	/* apollo510L uses IOSLAVEFD */
+#if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
+	/* apollo510L and apollo330P use IOSLAVEFD */
 	if (config->inst_idx == 0) {
 		extern volatile uint8_t * const am_hal_iosfd0_pui8LRAM;
 
@@ -502,7 +502,9 @@ static DEVICE_API(i2c, i2c_ambiq_ios_api) = {
 	AMBIQ_I2C_IOS_ACC_IRQ_CFG(n)                                                       \
 	static const struct ambiq_i2c_ios_config cfg_##n = {                               \
 		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                     \
-		.inst_idx = COND_CODE_1(CONFIG_SOC_APOLLO510L,                                 \
+		.inst_idx = COND_CODE_1(                                                       \
+			(IS_ENABLED(CONFIG_SOC_APOLLO510L) ||                                      \
+			 IS_ENABLED(CONFIG_SOC_APOLLO330P)),                                       \
 			((DT_REG_ADDR(DT_INST_PARENT(n)) - IOSLAVEFD0_BASE) / IOS_ADDR_INTERVAL),  \
 			((DT_REG_ADDR(DT_INST_PARENT(n)) - IOSLAVE_BASE) / IOS_ADDR_INTERVAL)),    \
 		.fifo_thr = DT_INST_PROP_OR(n, fifo_threshold, 16),                            \

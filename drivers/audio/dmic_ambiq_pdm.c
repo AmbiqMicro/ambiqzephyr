@@ -120,7 +120,7 @@ static void dmic_ambiq_rx_dmacpl_handler(const struct device *dev)
 
 #if defined(CONFIG_SOC_APOLLO510) || defined(CONFIG_SOC_APOLLO510B)
 	PDMn(data->inst_idx)->DMASTAT_b.DMACPL = 0;
-#elif defined(CONFIG_SOC_APOLLO510L)
+#elif defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
 	PDMn(data->inst_idx)->DMASTAT_b.DMACPL = 1;
 #endif
 
@@ -267,7 +267,7 @@ static int pdm_clock_settings_derive(const struct device *dev, struct dmic_cfg *
 		return -EINVAL;
 	}
 }
-#elif defined(CONFIG_SOC_APOLLO510L)
+#elif defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
 static int pdm_clock_settings_derive(const struct device *dev, struct dmic_cfg *dev_config)
 {
 	int ret;
@@ -390,7 +390,7 @@ static int dmic_ambiq_pdm_configure(const struct device *dev, struct dmic_cfg *d
 
 #if defined(CONFIG_SOC_APOLLO510) || defined(CONFIG_SOC_APOLLO510B)
 	if (stream->pcm_width != 24) {
-#elif defined(CONFIG_SOC_APOLLO510L)
+#elif defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
 	if ((stream->pcm_width != 16) && (stream->pcm_width != 24)) {
 #endif
 		LOG_ERR("Unsupported PCM width %d", stream->pcm_width);
@@ -455,7 +455,7 @@ static int dmic_ambiq_pdm_configure(const struct device *dev, struct dmic_cfg *d
 	data->hal_cfg.bPDMSampleDelay = AM_HAL_PDM_CLKOUT_PHSDLY_NONE;
 	data->hal_cfg.ui32GainChangeDelay = AM_HAL_PDM_CLKOUT_DELAY_NONE;
 	data->hal_cfg.bSoftMute = 0;
-#if defined(CONFIG_SOC_APOLLO510L)
+#if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
 	data->hal_cfg.eWordWidth = (stream->pcm_width == 16) ? AM_HAL_PDM_DATA_WORD_WIDTH_16BITS
 							     : AM_HAL_PDM_DATA_WORD_WIDTH_24BITS;
 	data->hal_cfg.eDataFlowDirection = AM_HAL_PDM_DATA_FLOW_TO_MEMORY;

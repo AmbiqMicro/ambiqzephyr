@@ -240,7 +240,7 @@ static int i2s_ambiq_clock_settings_derive(uint32_t i2s_bclk_freq, am_hal_i2s_co
 
 	return (valid_settings_found == true ? 0 : -EINVAL);
 }
-#elif defined(CONFIG_SOC_APOLLO510L)
+#elif defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
 static int i2s_ambiq_clock_settings_derive(uint32_t i2s_bclk_freq, am_hal_i2s_config_t *hal_cfg)
 {
 	int ret;
@@ -379,7 +379,7 @@ static int i2s_ambiq_configure(const struct device *dev, enum i2s_dir dir,
 	hal_cfg->eData->eChannelLenPhase2 = AM_HAL_I2S_FRAME_WDLEN_8BITS;
 	hal_cfg->eData->eSampleLenPhase2 = AM_HAL_I2S_SAMPLE_LENGTH_8BITS;
 	hal_cfg->eASRC = 0;
-#if defined(CONFIG_SOC_APOLLO510L)
+#if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
 	hal_cfg->ui32ClockDivideRatio = 1;
 	hal_cfg->ui32MclkoutDiv = 1;
 	hal_cfg->eMclkout = AM_HAL_I2S_MCLKOUT_SEL_OFF;

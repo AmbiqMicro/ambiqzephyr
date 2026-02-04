@@ -1819,7 +1819,7 @@ static int mspi_ambiq_init(const struct device *controller)
 		.config = cfg->mspicfg,
 	};
 
-#if defined(CONFIG_SOC_APOLLO510L)
+#if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
 	struct mspi_ambiq_data         *data = controller->data;
 
 	data->hal_dev_cfg.eCeLatency = AM_HAL_MSPI_CE_LATENCY_ADD1;
