@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-&timer0 {
-	counter0: counter {
-		status = "okay";
-	};
+dmic_dev: &pdm0 {
+	status = "okay";
 };
