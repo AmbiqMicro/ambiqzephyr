@@ -16,7 +16,7 @@ if(CONFIG_SOC_APOLLO510 OR CONFIG_SOC_APOLLO510B)
   zephyr_linker_sources(ITCM_SECTION hal_internal.ld)
 endif()
 
-if(CONFIG_SOC_APOLLO510L)
+if(CONFIG_SOC_APOLLO510L OR CONFIG_SOC_APOLLO330P)
   if(CONFIG_COREMARK)
     zephyr_linker_sources(RAMFUNC_SECTION hal_internal.ld)
   else()

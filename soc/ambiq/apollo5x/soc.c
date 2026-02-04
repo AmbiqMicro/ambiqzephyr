@@ -28,7 +28,7 @@ LOG_MODULE_REGISTER(soc, CONFIG_SOC_LOG_LEVEL);
 
 static am_hal_pwrctrl_mcu_mode_e ambiq_perf_mode_to_hal(uint32_t mode)
 {
-#if defined(CONFIG_SOC_APOLLO510L)
+#if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
 	switch (mode) {
 	case AMBIQ_POWER_MODE_LOW_POWER:
 		return AM_HAL_PWRCTRL_MCU_MODE_LOW_POWER;
@@ -145,7 +145,7 @@ void soc_early_init_hook(void)
 	am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_CRYPTO);
 	am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_OTP);
 
-#if defined(CONFIG_SOC_APOLLO510L)
+#if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
 	/* Using LFRC instead of XT for RTC Clock Source */
 	CLKGEN->OCTRL_b.SECURERTCOSEL = 1;
 	CLKGEN->OCTRL_b.RTCOSEL = 1;
@@ -163,13 +163,13 @@ void soc_early_init_hook(void)
 
 	am_hal_pwrctrl_mcu_memory_config_t McuMemCfg = {
 		.eROMMode = AM_HAL_PWRCTRL_ROM_AUTO,
-#if defined(CONFIG_SOC_APOLLO510L)
+#if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
 		.eDTCMCfg       = AM_HAL_PWRCTRL_DTCM128K,
 #else
 		.eDTCMCfg       = AM_HAL_PWRCTRL_ITCM32K_DTCM128K,
 #endif
 		.eRetainDTCM = AM_HAL_PWRCTRL_MEMRETCFG_TCMPWDSLP_RETAIN,
-#if defined(CONFIG_SOC_APOLLO510L)
+#if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
 		.eNVMCfg        = AM_HAL_PWRCTRL_NVM,
 #else
 		.eNVMCfg        = AM_HAL_PWRCTRL_NVM0_ONLY,
