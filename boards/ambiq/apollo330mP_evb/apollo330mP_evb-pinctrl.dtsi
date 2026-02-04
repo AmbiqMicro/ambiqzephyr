@@ -174,7 +174,7 @@
 
 	pwm2_default: pwm2_default {
 		group1 {
-			pinmux = <CT109_P109>;
+			pinmux = <CT23_P23>;
 			drive-open-drain;
 			drive-strength = "0.5";
 		};

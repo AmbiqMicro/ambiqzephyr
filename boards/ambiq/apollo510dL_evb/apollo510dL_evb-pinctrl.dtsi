@@ -174,7 +174,7 @@
 
 	pwm2_default: pwm2_default {
 		group1 {
-			pinmux = <CT109_P109>;
+			pinmux = <CT23_P23>;
 			drive-open-drain;
 			drive-strength = "0.5";
 		};
@@ -271,6 +271,75 @@
 		group0 {
 			pinmux = <PDM0_CLK_P107>,
 				 <PDM0_DATA_P108>;
+		};
+	};
+
+	mspi0_default: mspi0_default {
+		group0 {
+			pinmux = <MSPI0_0_P36>,
+				 <MSPI0_1_P37>,
+				 <MSPI0_8_P35>,
+				 <MNCE0_0_P78>;
+			drive-strength = "0.5";
+		};
+	};
+
+	mspi0_sleep: mspi0_sleep {
+		group0 {
+			pinmux = <GPIO_P36>,
+				 <GPIO_P37>,
+				 <GPIO_P38>,
+				 <GPIO_P39>,
+				 <GPIO_P65>,
+				 <GPIO_P66>,
+				 <GPIO_P67>,
+				 <GPIO_P68>,
+				 <GPIO_P35>,
+				 <GPIO_P81>,
+				 <GPIO_P69>,
+				 <GPIO_P70>,
+				 <GPIO_P71>,
+				 <GPIO_P72>,
+				 <GPIO_P73>,
+				 <GPIO_P74>,
+				 <GPIO_P75>,
+				 <GPIO_P76>,
+				 <GPIO_P77>,
+				 <GPIO_P78>;
+		};
+	};
+
+	mspi0_psram: mspi0_psram {
+		group0 {
+			pinmux = <MSPI0_0_P36>,   /* D0 */
+				 <MSPI0_1_P37>,   /* D1 */
+				 <MSPI0_2_P38>,   /* D2 */
+				 <MSPI0_3_P39>,   /* D3 */
+				 <MSPI0_4_P65>,   /* D4 */
+				 <MSPI0_5_P66>,   /* D5 */
+				 <MSPI0_6_P67>,   /* D6 */
+				 <MSPI0_7_P68>,   /* D7 */
+				 <MSPI0_10_P69>,  /* D8 */
+				 <MSPI0_11_P70>,  /* D9 */
+				 <MSPI0_12_P71>,  /* D10 */
+				 <MSPI0_13_P72>,  /* D11 */
+				 <MSPI0_14_P73>,  /* D12 */
+				 <MSPI0_15_P74>,  /* D13 */
+				 <MSPI0_16_P75>,  /* D14 */
+				 <MSPI0_17_P76>;  /* D15 */
+			drive-strength-hs = "0.88";
+		};
+
+		group1 {
+			pinmux = <MSPI0_8_P35>,   /* SCK */
+				 <MSPI0_9_P81>,   /* DQS0 */
+				 <MSPI0_18_P77>;  /* DQS1 */
+			drive-strength-hs = "1.0";
+		};
+
+		group2 {
+			pinmux = <MNCE0_0_P78>;   /* CE */
+			drive-strength-hs = "0.5";
 		};
 	};
 };
