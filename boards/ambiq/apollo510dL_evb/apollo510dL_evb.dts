@@ -366,6 +366,12 @@ zephyr_udc0: &usb {
 	status = "disabled";
 };
 
+&i2s0 {
+	pinctrl-0 = <&i2s0_default>;
+	pinctrl-names = "default";
+	status = "disabled";
+};
+
 &mspi0 {
 	pinctrl-0 = <&mspi0_default>;
 	pinctrl-1 = <&mspi0_sleep>;

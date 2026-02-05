@@ -342,4 +342,14 @@
 			drive-strength-hs = "0.5";
 		};
 	};
+
+	/* I2S0: SDIN (29), CLK (109), SDOUT (30), WS (31) */
+	i2s0_default: i2s0_default {
+		group0 {
+			pinmux = <I2S0_SDIN_P29>,
+				 <I2S0_CLK_P109>,
+				 <I2S0_SDOUT_P30>,
+				 <I2S0_WS_P31>;
+		};
+	};
 };
