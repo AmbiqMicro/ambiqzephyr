@@ -30,20 +30,6 @@
 		};
 	};
 
-	/* IOS I2C target pins: SCL=P0, SDA=P1 */
-	ios_i2c0_default: ios_i2c0_default {
-		group0 {
-			pinmux = <SLFDSCL_P0>, <SLFDSDAWIR3_P1>;
-			drive-strength = "0.5";
-		};
-	};
-
-	ios_i2c0_sleep: ios_i2c0_sleep {
-		group0 {
-			pinmux = <GPIO_P0>, <GPIO_P1>;
-		};
-	};
-
 	adc0_default: adc0_default {
 		group0 {
 			pinmux = <ADCSE5_P14>, <ADCSE6_P13>;
