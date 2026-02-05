@@ -124,7 +124,7 @@ struct net_buf *am_rss_mgr_opmode_config(am_rss_opmode_e opmode)
 	}
 
 	net_buf_add_mem(buf, &req, sizeof(req));
-	k_busy_wait(100);
+	k_busy_wait(200);
 
 	return buf;
 }
