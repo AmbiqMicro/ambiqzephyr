@@ -20,6 +20,8 @@ tests:
       - apollo510_evb
       - apollo510b_evb
       - apollo510L_eb
+      - apollo510dL_evb
+      - apollo330mP_evb
     integration_platforms:
       - qemu_cortex_m3
     tags:

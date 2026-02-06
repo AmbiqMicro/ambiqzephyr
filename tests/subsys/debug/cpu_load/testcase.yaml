@@ -19,6 +19,8 @@ tests:
       - apollo510_evb
       - apollo510b_evb
       - apollo510L_eb
+      - apollo510dL_evb
+      - apollo330mP_evb
     integration_platforms:
       - nrf52840dk/nrf52840
       - qemu_cortex_m3
@@ -26,6 +28,8 @@ tests:
       - apollo510_evb
       - apollo510b_evb
       - apollo510L_eb
+      - apollo510dL_evb
+      - apollo330mP_evb
     extra_configs:
       - CONFIG_CPU_LOAD_USE_COUNTER=y
   debug.cpu_load.periodic_report:
