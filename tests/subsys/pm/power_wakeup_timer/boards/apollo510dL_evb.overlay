@@ -13,6 +13,10 @@
 	/delete-node/ sram_no_cache;
 };
 
+&rtc0 {
+	status = "okay";
+};
+
 &stimer0 {
 	clk-source = <6>;
 };

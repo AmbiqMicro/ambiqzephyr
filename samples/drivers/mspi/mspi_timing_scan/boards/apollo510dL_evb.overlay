@@ -1,0 +1,21 @@
+/*
+ * Copyright (c) 2026, Ambiq Micro Inc. <www.ambiq.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+	aliases {
+		psram0 = &aps25616ba;
+	};
+};
+
+&mspi0 {
+	/delete-property/ zephyr,pm-device-runtime-auto;
+	status = "okay";
+};
+
+&aps25616ba {
+	/delete-property/ zephyr,pm-device-runtime-auto;
+	status = "okay";
+};

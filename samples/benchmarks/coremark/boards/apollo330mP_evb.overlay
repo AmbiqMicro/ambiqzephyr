@@ -5,14 +5,22 @@
  */
 
 / {
+	/delete-node/ xo48m_xtal;
+
 	chosen {
 		zephyr,sram = &dtcm;
 	};
 
-	/delete-node/ sram0;
-	/delete-node/ sram_no_cache;
+	aliases {
+		button = &button0;
+		led = &led0;
+	};
 };
 
 &stimer0 {
 	clk-source = <6>;
+};
+
+&trng {
+	status = "disabled";
 };
