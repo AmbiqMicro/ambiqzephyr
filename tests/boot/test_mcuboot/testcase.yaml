@@ -61,6 +61,8 @@ tests:
       - apollo510_evb
       - apollo510_eb
       - apollo510L_eb
+      - apollo510dL_evb
+      - apollo330mP_evb
     integration_platforms:
       - frdm_k64f
       - nrf52840dk/nrf52840
@@ -73,6 +75,8 @@ tests:
       - apollo510_evb
       - apollo510_eb
       - apollo510L_eb
+      - apollo510dL_evb
+      - apollo330mP_evb
     extra_configs:
       - CONFIG_ASSERT=y
   bootloader.mcuboot.swap_using_move:
@@ -87,6 +91,8 @@ tests:
       - apollo510_evb
       - apollo510_eb
       - apollo510L_eb
+      - apollo510dL_evb
+      - apollo330mP_evb
     integration_platforms:
       - frdm_k64f
       - nrf5340dk/nrf5340/cpuapp

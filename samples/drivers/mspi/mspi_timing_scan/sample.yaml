@@ -45,12 +45,16 @@ tests:
       - apollo510_evb
       - apollo510b_evb
       - apollo510L_eb
+      - apollo510dL_evb
+      - apollo330mP_evb
     integration_platforms:
       - apollo4p_evb
       - apollo510_eb
       - apollo510_evb
       - apollo510b_evb
       - apollo510L_eb
+      - apollo510dL_evb
+      - apollo330mP_evb
     depends_on: mspi
     extra_configs:
       - CONFIG_MEMC=y
@@ -58,6 +62,8 @@ tests:
       - platform:apollo510b_evb/apollo510b:CONFIG_MEMC_MSPI_APS51216BA=y
       - platform:apollo510_eb/apollo510:CONFIG_MEMC_MSPI_APS25616N=y
       - platform:apollo510L_eb/apollo510L:CONFIG_MEMC_MSPI_APS25616N=y
+      - platform:apollo510dL_evb/apollo510L:CONFIG_MEMC_MSPI_APS25616BA=y
+      - platform:apollo330mP_evb/apollo330P:CONFIG_MEMC_MSPI_APS25616BA=y
       - CONFIG_MEMC_INIT_PRIORITY=50
     extra_args:
       - platform:apollo4p_evb/apollo4p:SHIELD=ap4_evb_disp_shield_rev2

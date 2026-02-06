@@ -24,12 +24,16 @@ tests:
   pm.power_residency_time:
     platform_allow:
       - stm32l562e_dk
+      - apollo510dL_evb
+      - apollo330mP_evb
     tags:
       - pm
 
   pm.power_residency_time.pm_device:
     platform_allow:
       - stm32l562e_dk
+      - apollo510dL_evb
+      - apollo330mP_evb
     tags:
       - pm
     extra_args:
@@ -38,6 +42,8 @@ tests:
   pm.power_residency_time.pm_device_runtime:
     platform_allow:
       - stm32l562e_dk
+      - apollo510dL_evb
+      - apollo330mP_evb
     tags:
       - pm
     extra_args:
@@ -47,6 +53,8 @@ tests:
   pm.power_residency_time.pm_device_system_managed:
     platform_allow:
       - stm32l562e_dk
+      - apollo510dL_evb
+      - apollo330mP_evb
     tags:
       - pm
     extra_args:

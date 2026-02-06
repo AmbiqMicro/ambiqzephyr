@@ -37,6 +37,8 @@ tests:
       - apollo510b_evb
       - apollo510_eb
       - apollo510L_eb
+      - apollo510dL_evb
+      - apollo330mP_evb
     timeout: 240
     extra_configs:
       - CONFIG_TASK_WDT_HW_FALLBACK=y

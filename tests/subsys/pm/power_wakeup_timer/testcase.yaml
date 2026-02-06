@@ -26,6 +26,8 @@ tests:
       - stm32l562e_dk
       - apollo510_evb
       - apollo510L_eb
+      - apollo510dL_evb
+      - apollo330mP_evb
     tags:
       - pm
 
@@ -34,6 +36,8 @@ tests:
       - stm32l562e_dk
       - apollo510_evb
       - apollo510L_eb
+      - apollo510dL_evb
+      - apollo330mP_evb
     tags:
       - pm
     extra_args:
