@@ -41,6 +41,8 @@
 		sw0 = &button0;
 		sw1 = &button1;
 		pwm-led0 = &pwm_led0;
+		ambiq-psram = &aps25616ba;
+		ambiq-external-ram-region = &xip0;
 	};
 
 	leds {
@@ -283,7 +285,7 @@
 
 	dqs-support;
 
-	aps25616n: aps_z8@0 {
+	aps25616ba: aps_z8@0 {
 		compatible = "ambiq,mspi-device", "mspi-aps-z8";
 		size = <DT_SIZE_M(256)>;
 		reg = <0>;

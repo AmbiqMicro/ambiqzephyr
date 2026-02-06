@@ -26,6 +26,7 @@ supported:
   - bluetooth
   - sdhc
   - pdm
+  - mspi
 testing:
   ignore_tags:
     - net
