@@ -165,11 +165,11 @@ static struct wdt_timeout_cfg m_cfg_wdt1;
 #define DATATYPE uint32_t
 #endif
 
-#if DT_NODE_HAS_STATUS_OKAY(DT_CHOSEN(zephyr_dtcm))
-#define NOINIT_SECTION ".dtcm_noinit.test_wdt"
-#else
-#define NOINIT_SECTION ".noinit.test_wdt"
-#endif
+/* Set NOINIT_SECTION based on Kconfig settings.
+ * Defaults are '.noinit.test_wdt' and '.dtcm_noinit.test_wdt', based on
+ * configuration.
+ */
+#define NOINIT_SECTION CONFIG_TEST_WDT_NOINIT_SECTION
 
 /* m_state indicates state of particular test. Used to check whether testcase
  * should go to reset state or check other values after reset.
