@@ -203,17 +203,17 @@
 		};
 
 		group2 {
-			pinmux = <GPIO_P14>;
+			pinmux = <GPIO_P92>;
 			ambiq,sdif-cdwp = <1>;
 		};
 
 		group3 {
-			pinmux = <GPIO_P18>;
+			pinmux = <GPIO_P93>;
 			ambiq,sdif-cdwp = <2>;
 		};
 
 		group4 {
-			pinmux = <GPIO_P19>;
+			pinmux = <GPIO_P110>;
 			ambiq,sdif-cdwp = <3>;
 		};
 
@@ -246,17 +246,17 @@
 		};
 
 		group2 {
-			pinmux = <GPIO_P14>;
+			pinmux = <GPIO_P92>;
 			ambiq,sdif-cdwp = <1>;
 		};
 
 		group3 {
-			pinmux = <GPIO_P18>;
+			pinmux = <GPIO_P93>;
 			ambiq,sdif-cdwp = <2>;
 		};
 
 		group4 {
-			pinmux = <GPIO_P19>;
+			pinmux = <GPIO_P110>;
 			ambiq,sdif-cdwp = <3>;
 		};
 
