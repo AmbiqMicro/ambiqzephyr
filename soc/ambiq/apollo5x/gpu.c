@@ -11,12 +11,20 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/kernel.h>
 #include <zephyr/irq.h>
+#include <zephyr/sys/atomic.h>
 
 #include "nema_regs.h"
 
 #include "gpu.h"
+#include <zephyr/sys/util.h>
+#include <zephyr/cache.h>
 
 LOG_MODULE_REGISTER(gpu_ambiq, CONFIG_GPU_AMBIQ_LOG_LEVEL);
+
+/* Cache maintenance for GPU command lists was removed. The driver keeps
+ * placeholder variables for submitted/listed command list addresses/sizes
+ * but does not perform explicit cache flush/invalidate operations here.
+ */
 
 /** @brief Ambiq GPU driver private data structure. */
 struct gpu_ambiq_data {
@@ -24,6 +32,16 @@ struct gpu_ambiq_data {
 	volatile int last_cl_id;
 	/** @brief Semaphore signaled by the ISR upon command list completion. */
 	struct k_sem gpu_isr_sem;
+	/** @brief In-flight submission limiter (0 = idle, 1 = busy). */
+	atomic_t inflight;
+	/** @brief Count of consecutive semaphore timeouts. */
+	int consecutive_timeouts;
+	/** @brief Lower/upper address of pending command list (NEMA_CMDADDR write). */
+	uint64_t pending_cmdaddr;
+	/** @brief Address of the last submitted command list. */
+	uint64_t last_cmdaddr;
+	/** @brief Size of the last submitted command list. */
+	size_t last_cmdsize;
 };
 
 /** @brief Ambiq GPU driver configuration data. */
@@ -174,11 +192,44 @@ uint32_t gpu_ambiq_reg_read(const struct device *dev, uint32_t reg)
 void gpu_ambiq_reg_write(const struct device *dev, uint32_t reg, uint32_t value)
 {
 	const struct gpu_ambiq_config *config = dev->config;
+	struct gpu_ambiq_data *data = dev->data;
 
 	__ASSERT(reg < config->size, "Register offset out of bounds");
 
 	volatile uint32_t *ptr = (volatile uint32_t *)(config->base + reg);
 	*ptr = value;
+
+	/* Heuristic: if the nemagfx glue writes the command list address and size
+	 * via the NEMA_CMDADDR / NEMA_CMDSIZE registers, flush the corresponding
+	 * CPU cache range so the GPU/DMA sees up-to-date data.
+	 */
+	switch (reg) {
+	case NEMA_CMDADDR:
+		/* lower 32 bits of command list address */
+		data->pending_cmdaddr =
+			(data->pending_cmdaddr & 0xffffffff00000000ULL) | (uint32_t)value;
+		break;
+	case NEMA_CMDADDR_H:
+		/* high 32 bits of command list address */
+		data->pending_cmdaddr =
+			(data->pending_cmdaddr & 0x00000000ffffffffULL) | ((uint64_t)value << 32);
+		break;
+	case NEMA_CMDSIZE:
+		if (data->pending_cmdaddr != 0ULL && value != 0) {
+			void *addr = (void *)(uintptr_t)data->pending_cmdaddr;
+			size_t size = (size_t)value;
+			/* Remember the submitted CL for post-completion invalidate. */
+			data->last_cmdaddr = data->pending_cmdaddr;
+			data->last_cmdsize = size;
+			LOG_DBG("Flushing GPU command list at %p size %zu", addr, size);
+			gpu_ambiq_cache_flush_range(addr, size);
+		}
+		/* clear pending address after use to avoid accidental reuse */
+		data->pending_cmdaddr = 0ULL;
+		break;
+	default:
+		break;
+	}
 }
 
 /**
@@ -263,14 +314,85 @@ static int gpu_ambiq_init(const struct device *dev)
 int gpu_ambiq_wait_interrupt(const struct device *dev, uint32_t timeout_ms)
 {
 	struct gpu_ambiq_data *data = dev->data;
+	int ret = 0;
+
+	/* Acquire the single in-flight slot atomically to avoid races between
+	 * concurrent callers.
+	 */
+	while (!atomic_cas(&data->inflight, 0, 1)) {
+		k_msleep(1);
+	}
 
 	/* Pend on the semaphore, waiting for the ISR to signal completion. */
 	if (k_sem_take(&data->gpu_isr_sem, K_MSEC(timeout_ms)) != 0) {
 		LOG_ERR("Timed out waiting for GPU interrupt.");
-		return -ETIMEDOUT;
+		/* Update timeout counter and return after cleanup. */
+		data->consecutive_timeouts++;
+		ret = -ETIMEDOUT;
+		goto out;
 	}
 
-	return 0;
+	/* Successful completion: small yield to let GPU/AXI settle. */
+	data->consecutive_timeouts = 0;
+
+	/* If we have a last-submitted command list region recorded, invalidate
+	 * it so the CPU sees any GPU/DMA results written back to memory.
+	 */
+	if (data->last_cmdaddr != 0ULL && data->last_cmdsize != 0) {
+		void *addr = (void *)(uintptr_t)data->last_cmdaddr;
+		size_t size = data->last_cmdsize;
+
+		LOG_DBG("Invalidating GPU command list at %p size %zu", addr, size);
+		gpu_ambiq_cache_invalidate_range(addr, size);
+		data->last_cmdaddr = 0ULL;
+		data->last_cmdsize = 0;
+	}
+
+	/* Only add backoff delay when there have been recent timeouts; otherwise
+	 * a plain yield is sufficient to let the scheduler run without adding
+	 * fixed latency to every command-list submission.
+	 */
+	if (data->consecutive_timeouts > 0) {
+		k_msleep(2);
+	} else {
+		k_yield();
+	}
+
+out:
+	/* Ensure the in-flight slot is released on all exit paths. */
+	atomic_set(&data->inflight, 0);
+
+	return ret;
+}
+
+/**
+ * @brief Flush (clean) a data cache range so GPU (DMA) sees CPU-written data.
+ *
+ * This helper uses the Zephyr cache API and is intentionally lightweight; callers
+ * (e.g., nemagfx glue) should flush command lists and buffer ranges right
+ * before submitting them to the GPU.
+ */
+void gpu_ambiq_cache_flush_range(void *addr, size_t size)
+{
+	if (addr == NULL || size == 0) {
+		return;
+	}
+
+	(void)sys_cache_data_flush_range(addr, size);
+}
+
+/**
+ * @brief Invalidate a data cache range so CPU reads reflect GPU-written data.
+ *
+ * Call this after the GPU has completed a DMA write to a buffer.
+ */
+void gpu_ambiq_cache_invalidate_range(void *addr, size_t size)
+{
+	if (addr == NULL || size == 0) {
+		return;
+	}
+
+	(void)sys_cache_data_invd_range(addr, size);
 }
 
 /**
