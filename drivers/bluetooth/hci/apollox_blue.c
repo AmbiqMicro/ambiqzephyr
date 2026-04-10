@@ -667,7 +667,19 @@ int bt_apollo_controller_deinit(void)
 {
 	int ret = 0;
 
-#if (CONFIG_SOC_SERIES_APOLLO4X)
+#if (CONFIG_SOC_SERIES_APOLLO5X)
+	/* Hold the controller in reset so it stays quiescent after bt_disable(). */
+	gpio_pin_set_dt(&rst_gpio, 1);
+
+	/* Stop receiving controller IRQs before removing the callback. */
+	gpio_pin_interrupt_configure_dt(&irq_gpio, GPIO_INT_DISABLE);
+	gpio_remove_callback(irq_gpio.port, &irq_gpio_cb);
+	gpio_pin_configure_dt(&irq_gpio, GPIO_DISCONNECTED);
+
+	/* Reset Apollo5-specific transport state for the next bt_enable(). */
+	Em9305status_ok = false;
+	spiTxInProgress = false;
+#elif (CONFIG_SOC_SERIES_APOLLO4X)
 	/* Keep the Controller in resetting state */
 	gpio_pin_set_dt(&rst_gpio, 1);
 
@@ -693,7 +705,7 @@ int bt_apollo_controller_deinit(void)
 	}
 #else
 	ret = -ENOTSUP;
-#endif /* CONFIG_SOC_SERIES_APOLLO4X */
+#endif /* CONFIG_SOC_SERIES_APOLLO5X */
 
 	return ret;
 }
