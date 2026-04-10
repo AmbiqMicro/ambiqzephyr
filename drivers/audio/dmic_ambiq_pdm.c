@@ -455,6 +455,10 @@ static int dmic_ambiq_pdm_configure(const struct device *dev, struct dmic_cfg *d
 	data->hal_cfg.bPDMSampleDelay = AM_HAL_PDM_CLKOUT_PHSDLY_NONE;
 	data->hal_cfg.ui32GainChangeDelay = AM_HAL_PDM_CLKOUT_DELAY_NONE;
 	data->hal_cfg.bSoftMute = 0;
+	/* Request packed 32-bit words (24-bit samples left-justified) so
+	 * application can interpret DMA buffers as uint32_t words consistently.
+	 */
+	data->hal_cfg.bDataPacking = 1;
 #if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
 	data->hal_cfg.eWordWidth = (stream->pcm_width == 16) ? AM_HAL_PDM_DATA_WORD_WIDTH_16BITS
 							     : AM_HAL_PDM_DATA_WORD_WIDTH_24BITS;
