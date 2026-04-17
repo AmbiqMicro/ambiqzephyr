@@ -1,0 +1,23 @@
+/*
+ * Copyright (c) 2025 Ambiq Micro Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+#include <apollo510L/ambiq-apollo510L-pinmux.h>
+#include <zephyr/dt-bindings/mipi_dsi/mipi_dsi.h>
+#include <zephyr/dt-bindings/display/panel.h>
+#include <zephyr/dt-bindings/i2c/i2c.h>
+
+&chsc5x {
+	int-gpios = <&gpio32_63 25 GPIO_ACTIVE_LOW>;
+	reset-gpios = <&gpio32_63 21 GPIO_ACTIVE_LOW>;
+};
+
+&mipi_dsi {
+	vdd18-gpios = <&gpio96_119 17 GPIO_PULL_DOWN>;
+
+	/* Optional: override co5300 properties if needed */
+	co5300: co5300@0 {
+		reset-gpios = <&gpio32_63 9 GPIO_PULL_UP>;
+	};
+};
