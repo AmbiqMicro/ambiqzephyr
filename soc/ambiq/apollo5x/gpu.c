@@ -272,6 +272,7 @@ static int gpu_ambiq_init(const struct device *dev)
 	struct gpu_ambiq_data *data = dev->data;
 	const struct gpu_ambiq_config *config = dev->config;
 
+#ifndef CONFIG_SOC_APOLLO510L
 	/* Set performance mode based on devicetree property. */
 	if (config->high_performance) {
 		am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_GFX);
@@ -286,6 +287,7 @@ static int gpu_ambiq_init(const struct device *dev)
 			return -EIO;
 		}
 	}
+#endif
 
 	/* Ensure GPU peripheral is powered on. */
 	am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_GFX);
