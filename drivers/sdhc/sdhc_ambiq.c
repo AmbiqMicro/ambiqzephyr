@@ -636,12 +636,12 @@ static int ambiq_sdio_card_interrupt_enable(const struct device *dev, sdhc_inter
 	if (sources & SDHC_INT_SDIO) {
 		/* Enable SDIO Card Interrupt */
 		ui32Status = am_hal_sdhc_intr_signal_enable(data->host->pHandle,
-							    SDIO_INTSIG_CARDINTEN_Msk);
+							    SDIO0_INTSIG_CARDINTEN_Msk);
 		if (ui32Status != AM_HAL_STATUS_SUCCESS) {
 			return -EIO;
 		}
 		ui32Status = am_hal_sdhc_intr_status_enable(
-			data->host->pHandle, SDIO_INTENABLE_CARDINTERRUPTSTATUSENABLE_Msk);
+			data->host->pHandle, SDIO0_INTENABLE_CARDINTERRUPTSTATUSENABLE_Msk);
 		if (ui32Status != AM_HAL_STATUS_SUCCESS) {
 			return -EIO;
 		}
@@ -650,12 +650,12 @@ static int ambiq_sdio_card_interrupt_enable(const struct device *dev, sdhc_inter
 	if (sources & SDHC_INT_INSERTED) {
 		/* Enable Card Insert Interrupt */
 		ui32Status = am_hal_sdhc_intr_signal_enable(data->host->pHandle,
-							    SDIO_INTSIG_CARDINSERTEN_Msk);
+							    SDIO0_INTSIG_CARDINSERTEN_Msk);
 		if (ui32Status != AM_HAL_STATUS_SUCCESS) {
 			return -EIO;
 		}
 		ui32Status = am_hal_sdhc_intr_status_enable(
-			data->host->pHandle, SDIO_INTENABLE_CARDINSERTIONSTATUSENABLE_Msk);
+			data->host->pHandle, SDIO0_INTENABLE_CARDINSERTIONSTATUSENABLE_Msk);
 		if (ui32Status != AM_HAL_STATUS_SUCCESS) {
 			return -EIO;
 		}
@@ -664,12 +664,12 @@ static int ambiq_sdio_card_interrupt_enable(const struct device *dev, sdhc_inter
 	if (sources & SDHC_INT_REMOVED) {
 		/* Enable Card Removal Interrupt */
 		ui32Status = am_hal_sdhc_intr_signal_enable(data->host->pHandle,
-							    SDIO_INTSIG_CARDREMOVALEN_Msk);
+							    SDIO0_INTSIG_CARDREMOVALEN_Msk);
 		if (ui32Status != AM_HAL_STATUS_SUCCESS) {
 			return -EIO;
 		}
 		ui32Status = am_hal_sdhc_intr_status_enable(
-			data->host->pHandle, SDIO_INTENABLE_CARDREMOVALSTATUSENABLE_Msk);
+			data->host->pHandle, SDIO0_INTENABLE_CARDREMOVALSTATUSENABLE_Msk);
 		if (ui32Status != AM_HAL_STATUS_SUCCESS) {
 			return -EIO;
 		}
@@ -692,12 +692,12 @@ static int ambiq_sdio_card_interrupt_disable(const struct device *dev, int sourc
 	if (sources & SDHC_INT_SDIO) {
 		/* Disable SDIO Card Interrupt */
 		ui32Status = am_hal_sdhc_intr_signal_disable(data->host->pHandle,
-							     SDIO_INTSIG_CARDINTEN_Msk);
+							     SDIO0_INTSIG_CARDINTEN_Msk);
 		if (ui32Status != AM_HAL_STATUS_SUCCESS) {
 			return -EIO;
 		}
 		ui32Status = am_hal_sdhc_intr_status_disable(
-			data->host->pHandle, SDIO_INTENABLE_CARDINTERRUPTSTATUSENABLE_Msk);
+			data->host->pHandle, SDIO0_INTENABLE_CARDINTERRUPTSTATUSENABLE_Msk);
 		if (ui32Status != AM_HAL_STATUS_SUCCESS) {
 			return -EIO;
 		}
@@ -706,12 +706,12 @@ static int ambiq_sdio_card_interrupt_disable(const struct device *dev, int sourc
 	if (sources & SDHC_INT_INSERTED) {
 		/* Disable Card Insert Interrupt */
 		ui32Status = am_hal_sdhc_intr_signal_disable(data->host->pHandle,
-							     SDIO_INTSIG_CARDINSERTEN_Msk);
+							     SDIO0_INTSIG_CARDINSERTEN_Msk);
 		if (ui32Status != AM_HAL_STATUS_SUCCESS) {
 			return -EIO;
 		}
 		ui32Status = am_hal_sdhc_intr_status_disable(
-			data->host->pHandle, SDIO_INTENABLE_CARDINSERTIONSTATUSENABLE_Msk);
+			data->host->pHandle, SDIO0_INTENABLE_CARDINSERTIONSTATUSENABLE_Msk);
 		if (ui32Status != AM_HAL_STATUS_SUCCESS) {
 			return -EIO;
 		}
@@ -720,12 +720,12 @@ static int ambiq_sdio_card_interrupt_disable(const struct device *dev, int sourc
 	if (sources & SDHC_INT_REMOVED) {
 		/* Disable Card Removal Interrupt */
 		ui32Status = am_hal_sdhc_intr_signal_disable(data->host->pHandle,
-							     SDIO_INTSIG_CARDREMOVALEN_Msk);
+							     SDIO0_INTSIG_CARDREMOVALEN_Msk);
 		if (ui32Status != AM_HAL_STATUS_SUCCESS) {
 			return -EIO;
 		}
 		ui32Status = am_hal_sdhc_intr_status_disable(
-			data->host->pHandle, SDIO_INTENABLE_CARDREMOVALSTATUSENABLE_Msk);
+			data->host->pHandle, SDIO0_INTENABLE_CARDREMOVALSTATUSENABLE_Msk);
 		if (ui32Status != AM_HAL_STATUS_SUCCESS) {
 			return -EIO;
 		}
