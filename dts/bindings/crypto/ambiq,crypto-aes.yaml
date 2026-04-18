@@ -1,0 +1,15 @@
+# Copyright (c) 2026, Ambiq Micro, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: Ambiq Micro Cryptocell312 AES Accelerator
+
+compatible: "ambiq,crypto-aes"
+
+include: base.yaml
+
+properties:
+  reg:
+    required: true
+
+  interrupts:
+    required: true

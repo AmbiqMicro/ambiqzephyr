@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2026 Ambiq Micro Inc. <www.ambiq.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /dts-v1/;
 #include <ambiq/ambiq_apollo510.dtsi>
 #include "apollo510_evb-pinctrl.dtsi"
@@ -98,6 +104,10 @@
 	};
 };
 
+&cc312_aes {
+	status = "okay";
+};
+
 &trng {
 	status = "okay";
 };
@@ -151,7 +161,6 @@
 &wdt0 {
 	status = "okay";
 };
-
 
 &mspi0 {
 	pinctrl-0 = <&mspi0_default>;
