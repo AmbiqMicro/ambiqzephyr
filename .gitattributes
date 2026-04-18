@@ -1,4 +1,7 @@
 # used to remove files from deployment using `git archive`
+# Keep attributes LF-only to avoid CRLF churn on Windows.
+.gitattributes text eol=lf
+
 # git files
 .gitattributes export-ignore
 .gitignore export-ignore
