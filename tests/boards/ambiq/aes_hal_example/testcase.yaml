@@ -8,3 +8,5 @@ tests:
       - crypto
       - aes
     filter: dt_compat_enabled("ambiq,crypto-aes")
+    platform_allow:
+      - apollo510_evb
