@@ -326,7 +326,7 @@ manifest:
     - name: lvgl
       remote: github_ambiqmicro
       repo-path: LVGL
-      revision: f31f1d90541f89eb04415dc8e6e55d0dfb7dc2a8
+      revision: 6f788f382f9458cb41032ba954241163be291483
       path: modules/lib/gui/lvgl
     - name: mbedtls
       revision: c5b06d89c9c498d8fc8659ce31f7e53137b6270f
