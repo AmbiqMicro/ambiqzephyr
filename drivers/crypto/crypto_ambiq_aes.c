@@ -134,7 +134,7 @@ static int ambiq_aes_periph_acquire(void)
 static void ambiq_aes_periph_release(void)
 {
 	if (atomic_dec(&ambiq_aes_crypto_refcnt) == 1) {
-		(void)am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_CRYPTO);
+		(void)am_hal_pwrctrl_control(AM_HAL_PWRCTRL_CONTROL_CRYPTO_POWERDOWN, NULL);
 	}
 	if (atomic_dec(&ambiq_aes_otp_refcnt) == 1) {
 		(void)am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_OTP);
