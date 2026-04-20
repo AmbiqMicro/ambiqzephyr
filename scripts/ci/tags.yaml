@@ -41,12 +41,6 @@
 # 2. Keep tag entries sorted alphabetically
 
 # zephyr-keep-sorted-start
-bluetooth:
-  files:
-    - drivers/bluetooth/
-    - subsys/bluetooth/
-    - subsys/net/l2/bluetooth/
-
 cmsis_dsp:
   files:
     - modules/Kconfig.cmsis_dsp
