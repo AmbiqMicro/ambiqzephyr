@@ -31,6 +31,8 @@ LOG_MODULE_REGISTER(bt_apollox_driver);
 #include "am_devices_cooper.h"
 #elif (CONFIG_SOC_SERIES_APOLLO3X)
 #include "am_apollo3_bt_support.h"
+#elif (CONFIG_SOC_SERIES_APOLLO5X)
+#include "am_devices_em9305.h"
 #endif /* CONFIG_SOC_SERIES_APOLLO4X */
 
 #define HCI_SPI_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(ambiq_bt_hci_spi)
@@ -55,46 +57,31 @@ LOG_MODULE_REGISTER(bt_apollox_driver);
 #define SPI_MAX_RX_MSG_LEN 258
 
 #if (CONFIG_SOC_SERIES_APOLLO5X)
-#define EM9305_STS_CHK_CNT_MAX         10       /* check EM9305 status cnt */
-#define WAIT_EM9305_RDY_TIMEOUT        12000    /* EM9305 timeout value.
-						 * Assume worst case cold start counter (1.2 sec)
-						 */
-#define EM9305_BUFFER_SIZE             259      /* Length of RX buffer */
-#define EM9305_SPI_HEADER_TX           0x42     /* SPI TX header byte */
-#define EM9305_SPI_HEADER_RX           0x81     /* SPI RX header byte */
-#define EM9305_STS1_READY_VALUE        0xC0     /* SPI Ready byte */
-
-uint8_t active_state_entered_evt[] = {0x04, 0xFF, 0x01, 0x01};
 static const struct gpio_dt_spec irq_gpio = GPIO_DT_SPEC_GET(HCI_SPI_NODE, irq_gpios);
 static const struct gpio_dt_spec rst_gpio = GPIO_DT_SPEC_GET(HCI_SPI_NODE, reset_gpios);
 static const struct gpio_dt_spec cs_gpio = GPIO_DT_SPEC_GET(SPI_DEV_NODE, cs_gpios);
 static const struct gpio_dt_spec cm_gpio = GPIO_DT_SPEC_GET(HCI_SPI_NODE, cm_gpios);
 
 static struct gpio_callback irq_gpio_cb;
-static bool spiTxInProgress;                    /* SPI lock when a transmission is in progress */
-static volatile bool Em9305status_ok;
-am_devices_em9305_callback_t g_Em9305cb;
-
-void am_devices_em9305_set_reset_state(bool data)
-{
-	gpio_pin_set_dt(&rst_gpio, data);
-}
-
-bool am_devices_em9305_get_reset_state(void)
-{
-	return gpio_pin_get_dt(&rst_gpio);
-}
 
 extern void bt_packet_irq_isr(const struct device *unused1, struct gpio_callback *unused2,
 			      uint32_t unused3);
 
+/* GPIO wrapper functions for EM9305 device driver */
 static bool irq_pin_state(void)
 {
-	int pin_state;
-
-	pin_state = gpio_pin_get_dt(&irq_gpio);
-
+	int pin_state = gpio_pin_get_dt(&irq_gpio);
 	return pin_state > 0;
+}
+
+static void bt_em9305_set_reset(bool state)
+{
+	gpio_pin_set_dt(&rst_gpio, state);
+}
+
+static bool bt_em9305_get_reset(void)
+{
+	return gpio_pin_get_dt(&rst_gpio);
 }
 
 static void bt_em9305_cs_set(void)
@@ -107,144 +94,9 @@ static void bt_em9305_cs_release(void)
 	gpio_pin_set_dt(&cs_gpio, 0);
 }
 
-static void bt_em9305_wait_ready(void)
-{
-	uint16_t i;
-
-	for (i = 0; i < WAIT_EM9305_RDY_TIMEOUT; i++) {
-		if (irq_pin_state()) {
-			break;
-		}
-		k_busy_wait(100);
-	}
-
-	if (i >= WAIT_EM9305_RDY_TIMEOUT) {
-		LOG_WRN("EM9305 ready timeout after %d ms", WAIT_EM9305_RDY_TIMEOUT * 100 / 1000);
-	}
-}
-
-static uint8_t am_devices_em9305_tx_starts(bt_spi_transceive_fun transceive)
-{
-	uint8_t sCommand[2] = {EM9305_SPI_HEADER_TX, 0x00};
-	uint8_t sStas[2] = {0, 0};
-	uint8_t ret = 0;
-
-	/* Indicates that a SPI transfer is in progress */
-	spiTxInProgress = true;
-	/* Select the EM9305 */
-	bt_em9305_cs_set();
-	/* wait em9305 ready */
-	bt_em9305_wait_ready();
-	/* check ready again */
-
-	if (!irq_pin_state()) {
-		bt_em9305_cs_release();
-		spiTxInProgress = false;
-		LOG_ERR("wait em9305 ready timeout");
-		return ret;
-	}
-
-	for (uint32_t i = 0; i < EM9305_STS_CHK_CNT_MAX; i++) {
-		/* Select the EM9305 */
-		bt_em9305_cs_set();
-		ret = transceive(sCommand, 2, sStas, 2);
-		if (ret) {
-			LOG_ERR("%s: spi write error %d", __func__, ret);
-			return ret;
-		}
-
-		if (ret != AM_HAL_STATUS_SUCCESS) {
-			LOG_ERR("%s: ret =%d ", __func__, ret);
-			return 0;
-		}
-		/* Check if the EM9305 is ready and the rx buffer size is not zero. */
-		if ((sStas[0] == EM9305_STS1_READY_VALUE) && (sStas[1] != 0x00)) {
-			break;
-		}
-		bt_em9305_cs_release();
-	}
-
-	return sStas[1];
-}
-
-static void am_devices_em9305_tx_ends(void)
-{
-	/* Deselect the EM9305 */
-	bt_em9305_cs_release();
-	/* Indicates that the SPI transfer is finished */
-	spiTxInProgress = false;
-}
-
 int bt_apollo_spi_send(uint8_t *pui8Values, uint16_t ui32NumBytes, bt_spi_transceive_fun transceive)
 {
-	uint32_t ui32ErrorStatus = AM_DEVICES_EM9305_STATUS_SUCCESS;
-	int ret = -ENOTSUP;
-	uint8_t data[EM9305_BUFFER_SIZE];
-	uint8_t em9305BufSize = 0;
-
-	if (ui32NumBytes <= EM9305_BUFFER_SIZE) {
-		for (uint32_t i = 0; i < ui32NumBytes;) {
-			em9305BufSize = am_devices_em9305_tx_starts(transceive);
-
-			if (em9305BufSize == 0x00) {
-				ui32ErrorStatus = AM_DEVICES_EM9305_RX_FULL;
-				printf("EM9305_RX_FULL\r\n");
-				am_devices_em9305_tx_ends();
-				break;
-			}
-			uint32_t len = (em9305BufSize < (ui32NumBytes - i)) ? em9305BufSize
-									    : (ui32NumBytes - i);
-
-			/* check again if there is room to send more data */
-			if ((len > 0) && (em9305BufSize)) {
-				memcpy(data, pui8Values + i, len);
-				i += len;
-
-				/* Write to the IOM. */
-				/* Transmit the message */
-				ret = transceive(data, len, NULL, 0);
-
-				if (ret != AM_HAL_STATUS_SUCCESS) {
-					ui32ErrorStatus = AM_DEVICES_EM9305_DATA_TRANSFER_ERROR;
-					LOG_ERR("%s: ret= %d", __func__, ret);
-				}
-			}
-			am_devices_em9305_tx_ends();
-		}
-	} else {
-		ui32ErrorStatus = AM_DEVICES_EM9305_DATA_LENGTH_ERROR;
-		LOG_ERR("%s: error (STATUS ERROR) Packet Too Large", __func__);
-	}
-
-	return ui32ErrorStatus;
-}
-
-static void bt_em9305_controller_reset(void)
-{
-	/* Reset the controller*/
-	gpio_pin_set_dt(&rst_gpio, 0);
-	/* Take controller out of reset */
-	k_sleep(K_MSEC(2));
-	gpio_pin_set_dt(&rst_gpio, 1);
-	k_sleep(K_MSEC(2));
-	gpio_pin_set_dt(&rst_gpio, 0);
-}
-
-uint32_t am_devices_em9305_init(am_devices_em9305_callback_t *cb)
-{
-	if ((!cb) || (!cb->write) || (!cb->reset)) {
-		return AM_DEVICES_EM9305_STATUS_ERROR;
-	}
-	/* Register the callback functions */
-	g_Em9305cb.write = cb->write;
-	g_Em9305cb.reset = cb->reset;
-	g_Em9305cb.reset();
-	/* wait for 9305 activated status ok */
-	while (!Em9305status_ok) {
-		;
-	}
-
-	return AM_DEVICES_EM9305_STATUS_SUCCESS;
+	return am_devices_em9305_blocking_write(pui8Values, ui32NumBytes, transceive);
 }
 #endif /* CONFIG_SOC_SERIES_APOLLO5X */
 
@@ -372,14 +224,14 @@ int bt_apollo_spi_rcv(uint8_t *data, uint16_t *len, bt_spi_transceive_fun transc
 {
 #if (CONFIG_SOC_SERIES_APOLLO5X)
 	{
-		uint8_t sCommand[2] = {EM9305_SPI_HEADER_RX, 0x0};
+		uint8_t sCommand[2] = {0x81, 0x0}; /* EM9305_SPI_HEADER_RX */
 		uint8_t sStas[2];
 		uint8_t ui8RxBytes = 0;
 		uint8_t ret = 0;
 
 		*len = 0;
 		/* Check if the SPI is free */
-		if (spiTxInProgress) {
+		if (am_devices_em9305_get_spi_tx_status()) {
 			/* TX in progress -> Ignore RDY interrupt */
 			LOG_ERR("EM9305 SPI TX in progress");
 			return AM_DEVICES_EM9305_TX_BUSY;
@@ -392,7 +244,7 @@ int bt_apollo_spi_rcv(uint8_t *data, uint16_t *len, bt_spi_transceive_fun transc
 		}
 
 		do {
-			for (uint32_t i = 0; i < EM9305_STS_CHK_CNT_MAX; i++) {
+			for (uint32_t i = 0; i < 10; i++) { /* EM9305_STS_CHK_CNT_MAX */
 				/* Select the EM9305 */
 				bt_em9305_cs_set();
 				ret = transceive(sCommand, 2, sStas, 2);
@@ -402,14 +254,16 @@ int bt_apollo_spi_rcv(uint8_t *data, uint16_t *len, bt_spi_transceive_fun transc
 				}
 
 				/* Check if the EM9305 is ready and the tx data size. */
-				if ((sStas[0] == EM9305_STS1_READY_VALUE) && (sStas[1] != 0x00)) {
+				if ((sStas[0] == 0xC0) &&
+				    (sStas[1] != 0x00)) { /* EM9305_STS1_READY_VALUE */
 					break;
 				}
 				bt_em9305_cs_release();
 			}
 
 			/* Check that the EM9305 is ready or the receive FIFO is not full. */
-			if ((sStas[0] != EM9305_STS1_READY_VALUE) || (sStas[1] == 0x00)) {
+			if ((sStas[0] != 0xC0) ||
+			    (sStas[1] == 0x00)) { /* EM9305_STS1_READY_VALUE */
 				bt_em9305_cs_release();
 				LOG_ERR("EM9305 Not Ready sStas.byte0 = 0x%02x, sStas.byte1 = "
 					"0x%02x\n",
@@ -421,7 +275,7 @@ int bt_apollo_spi_rcv(uint8_t *data, uint16_t *len, bt_spi_transceive_fun transc
 			ui8RxBytes = sStas[1];
 
 			if (irq_pin_state() && (ui8RxBytes != 0)) {
-				if ((*len + ui8RxBytes) > EM9305_BUFFER_SIZE) {
+				if ((*len + ui8RxBytes) > 259) { /* EM9305_BUFFER_SIZE */
 					/* Error. Packet too large. */
 					LOG_ERR("HCI RX Error (STATUS ERROR) Packet Too Large %d, "
 						"%d\n",
@@ -516,15 +370,7 @@ bool bt_apollo_vnd_rcv_ongoing(uint8_t *data, uint16_t len)
 		return false;
 	}
 #elif (CONFIG_SOC_SERIES_APOLLO5X)
-	bool ret = false;
-
-	if (memcmp(data, active_state_entered_evt, sizeof(active_state_entered_evt)) == 0) {
-		printf("em9305 enter active state \r\n");
-		Em9305status_ok = true;
-		ret = true;
-	}
-
-	return ret;
+	return am_devices_em9305_check_active_state_event(data, len);
 #else
 	return false;
 #endif /* CONFIG_SOC_SERIES_APOLLO4X */
@@ -536,6 +382,10 @@ int bt_hci_transport_setup(const struct device *dev)
 	int ret = 0;
 
 #if (CONFIG_SOC_SERIES_APOLLO5X)
+	/* Register GPIO operations for EM9305 device driver */
+	am_devices_em9305_register_gpio_ops(bt_em9305_set_reset, bt_em9305_get_reset, irq_pin_state,
+					    bt_em9305_cs_set, bt_em9305_cs_release);
+
 	/* Configure RST pin and hold BLE in Reset */
 	ret = gpio_pin_configure_dt(&rst_gpio, GPIO_OUTPUT_ACTIVE);
 	if (ret) {
@@ -623,7 +473,7 @@ int bt_apollo_controller_init(spi_transmit_fun transmit)
 #if (CONFIG_SOC_SERIES_APOLLO5X)
 	am_devices_em9305_callback_t cb = {
 		.write = transmit,
-		.reset = bt_em9305_controller_reset,
+		.reset = am_devices_em9305_controller_reset,
 	};
 
 	/* Initialize the BLE controller */
@@ -668,17 +518,18 @@ int bt_apollo_controller_deinit(void)
 	int ret = 0;
 
 #if (CONFIG_SOC_SERIES_APOLLO5X)
-	/* Hold the controller in reset so it stays quiescent after bt_disable(). */
-	gpio_pin_set_dt(&rst_gpio, 1);
-
-	/* Stop receiving controller IRQs before removing the callback. */
-	gpio_pin_interrupt_configure_dt(&irq_gpio, GPIO_INT_DISABLE);
-	gpio_remove_callback(irq_gpio.port, &irq_gpio_cb);
-	gpio_pin_configure_dt(&irq_gpio, GPIO_DISCONNECTED);
-
-	/* Reset Apollo5-specific transport state for the next bt_enable(). */
-	Em9305status_ok = false;
-	spiTxInProgress = false;
+	/* Deinitialize the BLE controller driver */
+	ret = am_devices_em9305_deinit();
+	if (ret == AM_DEVICES_EM9305_STATUS_SUCCESS) {
+		/* Disable GPIOs */
+		gpio_pin_configure_dt(&irq_gpio, GPIO_DISCONNECTED);
+		gpio_pin_configure_dt(&rst_gpio, GPIO_DISCONNECTED);
+		gpio_remove_callback(irq_gpio.port, &irq_gpio_cb);
+		LOG_INF("BT controller deinitialized");
+	} else {
+		ret = -EPERM;
+		LOG_ERR("BT controller deinitialization fails");
+	}
 #elif (CONFIG_SOC_SERIES_APOLLO4X)
 	/* Keep the Controller in resetting state */
 	gpio_pin_set_dt(&rst_gpio, 1);
