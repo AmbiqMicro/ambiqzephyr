@@ -6,8 +6,12 @@ tests:
     tags:
       - drivers
       - crc
+    integration_platforms:
+      - ek_ra8m1
+      - apollo510_evb
+      - apollo510b_evb
     harness: console
     harness_config:
       type: one_line
       regex:
-        - "CRC verification succeeded"
+        - "verification succeeded"

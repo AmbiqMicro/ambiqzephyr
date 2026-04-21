@@ -32,6 +32,7 @@
 		zephyr,bt-hci = &bt_hci;
 		ambiq,psram = &aps51216ba;
 		ambiq,external-ram-region = &xip0;
+		zephyr,crc = &crc32;
 	};
 
 	aliases {
@@ -43,6 +44,7 @@
 		sw1 = &button1;
 		pwm-led0 = &pwm_led0;
 		sdhc0 = &sdio0;
+		crc0 = &crc32;
 	};
 
 	sram0: memory@SSRAM_BASE_NAME {
@@ -335,5 +337,9 @@ zephyr_udc0: &usb {
 };
 
 &gpio192_223 {
+	status = "okay";
+};
+
+&crc32 {
 	status = "okay";
 };
