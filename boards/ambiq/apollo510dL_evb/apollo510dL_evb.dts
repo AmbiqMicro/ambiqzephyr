@@ -421,20 +421,3 @@ zephyr_udc0: &usb {
 		zephyr,pm-device-runtime-auto;
 	};
 };
-
-/*
- * NEMA GPU: present on Apollo510 class devices and described in ambiq_apollo510.dtsi,
- * but not yet in ambiq_apollo510L.dtsi. The ap510_disp shield sets chosen ambiq,gpu
- * and enables &gpu; define the node here so shield overlays resolve the label.
- */
-/ {
-	soc {
-		gpu: gpu@40090000 {
-			compatible = "ambiq,nema-gpu";
-			reg = <0x40090000 0x1000>;
-			interrupts = <28 0>;
-			status = "disabled";
-			zephyr,pm-device-runtime-auto;
-		};
-	};
-};

@@ -833,6 +833,14 @@
 			#mbox-cells = <1>;
 			status = "disabled";
 		};
+
+		gpu: gpu@40090000 {
+			compatible = "ambiq,nema-gpu";
+			reg = <0x40090000 0x1000>;
+			interrupts = <28 0>;
+			status = "disabled";
+			zephyr,pm-device-runtime-auto;
+		};
 	};
 
 	ipc {
