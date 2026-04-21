@@ -33,6 +33,17 @@ config FLASH_INIT_PRIORITY
 
 endif # FLASH
 
+# NemaGFX places the command-list ring buffer and (by default) the render heap in
+# SRAM_NO_CACHE. This board exposes 256 KiB at 0x20200000; the last 12 KiB are
+# reserved for IPC at 0x2023d000, so the render heap must stay small enough that
+# static allocations do not grow into that window (see apollo510dL_evb.dts).
+if AMBIQ_COMPONENT_USE_NEMAGFX
+
+config NEMAGFX_HEAP_SIZE_RENDER
+	default 236
+
+endif # AMBIQ_COMPONENT_USE_NEMAGFX
+
 config ROM_START_OFFSET
 	default 0x400 if BOOTLOADER_MCUBOOT
 
