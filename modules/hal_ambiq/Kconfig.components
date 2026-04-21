@@ -44,10 +44,6 @@ config NEMAGFX_HEAP_SIZE_RENDER
 
 config NEMAGFX_RENDER_HEAP_IN_NONCACHE_SRAM
 	bool "Locate NemaGFX render heap in non-cache SSRAM"
-	# Apollo510 maps ~1.5 MiB at 0x20200000 as SRAM_NO_CACHE; Apollo510L only has
-	# 256 KiB there (SSRAM ends at 0x2023FFFF). Keep the smaller 510L render heap
-	# in cacheable SSRAM and use flush/invalidate.
-	default n if SOC_APOLLO510L
 	default y
 
 config NEMAGFX_HEAP_SIZE_CPU_ONLY
