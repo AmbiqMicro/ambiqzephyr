@@ -18,6 +18,7 @@ supported:
   - i2c_target
   - rtc
   - hwinfo
+  - crc
   - clock_control
   - usbd
   - dmic

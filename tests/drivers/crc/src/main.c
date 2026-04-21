@@ -56,6 +56,10 @@ static void wait_thread_entry(void *a, void *b, void *c)
  */
 ZTEST(crc, test_crc_8)
 {
+	if (!IS_ENABLED(CONFIG_CRC_DRIVER_HAS_CRC8)) {
+		ztest_test_skip();
+	}
+
 	static const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_crc));
 
 	uint8_t data[8] = {0x0A, 0x2B, 0x4C, 0x6D, 0x8E, 0x49, 0x00, 0xC4};
@@ -84,6 +88,10 @@ ZTEST(crc, test_crc_8)
  */
 ZTEST(crc, test_crc_16)
 {
+	if (!IS_ENABLED(CONFIG_CRC_DRIVER_HAS_CRC16)) {
+		ztest_test_skip();
+	}
+
 	static const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_crc));
 
 	uint8_t data[8] = {0x0A, 0x2B, 0x4C, 0x6D, 0x8E, 0x49, 0x00, 0xC4};
@@ -110,6 +118,10 @@ ZTEST(crc, test_crc_16)
  */
 ZTEST(crc, test_crc_16_ccitt)
 {
+	if (!IS_ENABLED(CONFIG_CRC_DRIVER_HAS_CRC16_CCITT)) {
+		ztest_test_skip();
+	}
+
 	static const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_crc));
 
 	uint8_t data[8] = {0x0A, 0x2B, 0x4C, 0x6D, 0x8E, 0x49, 0x00, 0xC4};
@@ -136,6 +148,10 @@ ZTEST(crc, test_crc_16_ccitt)
  */
 ZTEST(crc, test_crc_32_c)
 {
+	if (!IS_ENABLED(CONFIG_CRC_DRIVER_HAS_CRC32_C)) {
+		ztest_test_skip();
+	}
+
 	static const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_crc));
 
 	uint8_t data[8] = {0x0A, 0x2B, 0x4C, 0x6D, 0x8E, 0x49, 0x00, 0xC4};
@@ -162,6 +178,10 @@ ZTEST(crc, test_crc_32_c)
  */
 ZTEST(crc, test_crc_32_ieee)
 {
+	if (!IS_ENABLED(CONFIG_CRC_DRIVER_HAS_CRC32_IEEE)) {
+		ztest_test_skip();
+	}
+
 	static const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_crc));
 
 	uint8_t data[8] = {0x0A, 0x2B, 0x4C, 0x6D, 0x8E, 0x49, 0x00, 0xC4};
@@ -186,6 +206,10 @@ ZTEST(crc, test_crc_32_ieee)
  */
 ZTEST(crc, test_crc_8_remain_3)
 {
+	if (!IS_ENABLED(CONFIG_CRC_DRIVER_HAS_CRC8)) {
+		ztest_test_skip();
+	}
+
 	static const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_crc));
 
 	uint8_t data[11] = {0x0A, 0x2B, 0x4C, 0x6D, 0x8E, 0x49, 0x00, 0xC4, 0x3D, 0x4D, 0x51};
@@ -211,6 +235,10 @@ ZTEST(crc, test_crc_8_remain_3)
  */
 ZTEST(crc, test_crc_16_remain_1)
 {
+	if (!IS_ENABLED(CONFIG_CRC_DRIVER_HAS_CRC16)) {
+		ztest_test_skip();
+	}
+
 	static const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_crc));
 
 	uint8_t data[9] = {0x0A, 0x2B, 0x4C, 0x6D, 0x8E, 0x49, 0x00, 0xC4, 0x3D};
@@ -237,6 +265,10 @@ ZTEST(crc, test_crc_16_remain_1)
  */
 ZTEST(crc, test_crc_16_ccitt_remain_2)
 {
+	if (!IS_ENABLED(CONFIG_CRC_DRIVER_HAS_CRC16_CCITT)) {
+		ztest_test_skip();
+	}
+
 	static const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_crc));
 
 	uint8_t data[10] = {0x0A, 0x2B, 0x4C, 0x6D, 0x8E, 0x49, 0x00, 0xC4, 0xFF, 0xA0};
@@ -259,10 +291,14 @@ ZTEST(crc, test_crc_16_ccitt_remain_2)
 #define RESULT_DISCONTINUOUS_BUFFER 0x75
 
 /**
- * @brief Test CRC calculation with discontinuous buffers.
+ * @brief Test CRC calculation with discontinuous buffers (CRC8).
  */
 ZTEST(crc, test_discontinuous_buf)
 {
+	if (!IS_ENABLED(CONFIG_CRC_DRIVER_HAS_CRC8)) {
+		ztest_test_skip();
+	}
+
 	static const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_crc));
 
 	uint8_t data1[5] = {0x0A, 0x2B, 0x4C, 0x6D, 0x8E};
@@ -282,17 +318,62 @@ ZTEST(crc, test_discontinuous_buf)
 	zassert_equal(crc_verify(&ctx, RESULT_DISCONTINUOUS_BUFFER), 0);
 }
 
+/**
+ * @brief Test CRC calculation with discontinuous buffers (CRC32 IEEE).
+ *
+ * Verifies that two sequential crc_update() calls produce the same result
+ * as a single crc_update() over the combined data.
+ */
+ZTEST(crc, test_discontinuous_buf_crc32)
+{
+	if (!IS_ENABLED(CONFIG_CRC_DRIVER_HAS_CRC32_IEEE)) {
+		ztest_test_skip();
+	}
+
+	static const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_crc));
+
+	static const uint8_t data_full[8] __aligned(32) = {
+		0x0A, 0x2B, 0x4C, 0x6D, 0x8E, 0x49, 0x00, 0xC4
+	};
+	static const uint8_t data_half1[4] __aligned(32) = {0x0A, 0x2B, 0x4C, 0x6D};
+	static const uint8_t data_half2[4] __aligned(32) = {0x8E, 0x49, 0x00, 0xC4};
+
+	struct crc_ctx ctx_single = {
+		.type = CRC32_IEEE,
+		.polynomial = CRC32_IEEE_POLY,
+		.seed = CRC32_IEEE_INIT_VAL,
+		.reversed = CRC_FLAG_REVERSE_INPUT | CRC_FLAG_REVERSE_OUTPUT,
+	};
+	struct crc_ctx ctx_split = ctx_single;
+
+	/* Single-shot */
+	zassert_equal(crc_begin(dev, &ctx_single), 0);
+	zassert_equal(crc_update(dev, &ctx_single, data_full, sizeof(data_full)), 0);
+	zassert_equal(crc_finish(dev, &ctx_single), 0);
+
+	/* Split into two updates */
+	zassert_equal(crc_begin(dev, &ctx_split), 0);
+	zassert_equal(crc_update(dev, &ctx_split, data_half1, sizeof(data_half1)), 0);
+	zassert_equal(crc_update(dev, &ctx_split, data_half2, sizeof(data_half2)), 0);
+	zassert_equal(crc_finish(dev, &ctx_split), 0);
+
+	zassert_equal(ctx_single.result, ctx_split.result,
+		      "Discontinuous CRC32 mismatch: 0x%08x vs 0x%08x",
+		      ctx_single.result, ctx_split.result);
+}
+
 /* Define result of CRC computation */
 #define RESULT_CRC_8_REMAIN_3_THREADSAFE 0xBB
 
 /**
- * @brief Test CRC function semaphore wait for thread safety
- *
- * Verifies that CRC operations are blocked until a semaphore is released. A new thread
- * acquires the semaphore, and the main thread's CRC operations wait until it is released.
+ * @brief Test CRC function thread safety (CRC8).
  */
 ZTEST(crc, test_crc_threadsafe)
 {
+	if (!IS_ENABLED(CONFIG_CRC_DRIVER_HAS_CRC8)) {
+		ztest_test_skip();
+	}
+
 	static const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_crc));
 
 	uint8_t data[11] = {0x0A, 0x2B, 0x4C, 0x6D, 0x8E, 0x49, 0x00, 0xC4, 0x3D, 0x4D, 0x51};
@@ -304,26 +385,79 @@ ZTEST(crc, test_crc_threadsafe)
 		.reversed = CRC_FLAG_REVERSE_OUTPUT | CRC_FLAG_REVERSE_INPUT,
 	};
 
-	/**
-	 * Create new thread that will immediately take the semaphore
-	 */
 	k_thread_create(&wait_thread_data, wait_thread_stack_area,
 			K_THREAD_STACK_SIZEOF(wait_thread_stack_area), wait_thread_entry, NULL,
 			NULL, NULL, WAIT_THREAD_PRIO, 0, K_NO_WAIT);
 
-	/**
-	 * Sleep for 10 ms to ensure that new thread has taken lock
-	 */
 	k_sleep(K_MSEC(10));
 
-	/**
-	 * Attempt to take semaphore, this should wait for the new thread to give the semaphore
-	 * before executing
-	 */
 	crc_begin(dev, &ctx);
 	crc_update(dev, &ctx, data, sizeof(data));
 	crc_finish(dev, &ctx);
 	zassert_equal(crc_verify(&ctx, RESULT_CRC_8_REMAIN_3_THREADSAFE), 0);
+}
+
+/**
+ * @brief Test CRC function thread safety (CRC32 IEEE).
+ *
+ * A second thread holds the CRC mutex for 50 ms.  The main thread's
+ * crc_begin() blocks until the mutex is released, then computes its
+ * own CRC and verifies the result.
+ */
+static void wait_thread_entry_crc32(void *a, void *b, void *c)
+{
+	static const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_crc));
+
+	static const uint8_t data[8] __aligned(32) = {
+		0x0A, 0x2B, 0x4C, 0x6D, 0x8E, 0x49, 0x00, 0xC4
+	};
+
+	struct crc_ctx ctx = {
+		.type = CRC32_IEEE,
+		.polynomial = CRC32_IEEE_POLY,
+		.seed = CRC32_IEEE_INIT_VAL,
+		.reversed = CRC_FLAG_REVERSE_OUTPUT | CRC_FLAG_REVERSE_INPUT,
+	};
+
+	crc_begin(dev, &ctx);
+
+	k_sleep(K_MSEC(50));
+
+	crc_update(dev, &ctx, data, sizeof(data));
+	crc_finish(dev, &ctx);
+	zassert_equal(crc_verify(&ctx, RESULT_CRC_32_IEEE), 0);
+}
+
+ZTEST(crc, test_crc_threadsafe_crc32)
+{
+	if (!IS_ENABLED(CONFIG_CRC_DRIVER_HAS_CRC32_IEEE)) {
+		ztest_test_skip();
+	}
+
+	static const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_crc));
+
+	static const uint8_t data[8] __aligned(32) = {
+		0x0A, 0x2B, 0x4C, 0x6D, 0x8E, 0x49, 0x00, 0xC4
+	};
+
+	struct crc_ctx ctx = {
+		.type = CRC32_IEEE,
+		.polynomial = CRC32_IEEE_POLY,
+		.seed = CRC32_IEEE_INIT_VAL,
+		.reversed = CRC_FLAG_REVERSE_OUTPUT | CRC_FLAG_REVERSE_INPUT,
+	};
+
+	k_thread_create(&wait_thread_data, wait_thread_stack_area,
+			K_THREAD_STACK_SIZEOF(wait_thread_stack_area),
+			wait_thread_entry_crc32, NULL, NULL, NULL,
+			WAIT_THREAD_PRIO, 0, K_NO_WAIT);
+
+	k_sleep(K_MSEC(10));
+
+	crc_begin(dev, &ctx);
+	crc_update(dev, &ctx, data, sizeof(data));
+	crc_finish(dev, &ctx);
+	zassert_equal(crc_verify(&ctx, RESULT_CRC_32_IEEE), 0);
 }
 
 ZTEST_SUITE(crc, NULL, NULL, NULL, NULL, NULL);
