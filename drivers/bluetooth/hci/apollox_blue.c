@@ -17,6 +17,9 @@
 #include <zephyr/drivers/bluetooth.h>
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/hci_raw.h>
+#if defined(CONFIG_REBOOT)
+#include <zephyr/sys/reboot.h>
+#endif
 
 #define LOG_LEVEL CONFIG_BT_HCI_DRIVER_LOG_LEVEL
 #include <zephyr/logging/log.h>
@@ -194,6 +197,7 @@ int bt_apollo_spi_send(uint8_t *data, uint16_t len, bt_spi_transceive_fun transc
 	uint8_t command[1] = {SPI_WRITE};
 	uint8_t response[2] = {0, 0};
 	uint16_t fail_count = 0;
+	bool sent = false;
 
 	do {
 		/* Check if the controller is ready to receive the HCI packets. */
@@ -206,9 +210,15 @@ int bt_apollo_spi_send(uint8_t *data, uint16_t len, bt_spi_transceive_fun transc
 			if (ret) {
 				LOG_ERR("SPI write error %d", ret);
 			}
+			sent = (ret == 0);
 			break;
 		}
 	} while (fail_count++ < SPI_WRITE_TIMEOUT);
+
+	if (!sent && (ret == 0)) {
+		LOG_ERR("SPI write timeout waiting for controller ready");
+		ret = -ETIMEDOUT;
+	}
 #elif (CONFIG_SOC_SERIES_APOLLO3X)
 	ret = transceive(data, len, NULL, 0);
 	if ((ret) && (ret != AM_HAL_BLE_STATUS_SPI_NOT_READY)) {
@@ -493,6 +503,15 @@ int bt_apollo_controller_init(spi_transmit_fun transmit)
 	/* Initialize the BLE controller */
 	ret = am_devices_cooper_init(&cb);
 	if (ret == AM_DEVICES_COOPER_STATUS_SUCCESS) {
+		if (am_devices_cooper_upgrade_performed()) {
+#if defined(CONFIG_REBOOT)
+			LOG_INF("BLE controller update applied, rebooting host for clean restart");
+			sys_reboot(SYS_REBOOT_COLD);
+#else
+			LOG_INF("BLE controller update applied, continue to main application");
+#endif
+		}
+
 		am_devices_cooper_set_initialize_state(AM_DEVICES_COOPER_STATE_INITIALIZED);
 		LOG_INF("BT controller initialized");
 	} else {
