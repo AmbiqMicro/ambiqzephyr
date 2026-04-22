@@ -192,6 +192,13 @@ int bt_amota_notify(void);
  */
 int bt_amota_conn_init(struct bt_conn *conn);
 
+/** @brief Reset AMOTA transfer state when the link drops (call from disconnected callback).
+ *
+ * Clears the stored connection pointer and partial packet / flash buffer state so a
+ * later session does not inherit a broken OTA context.
+ */
+void bt_amota_conn_deinit(void);
+
 #ifdef __cplusplus
 }
 #endif

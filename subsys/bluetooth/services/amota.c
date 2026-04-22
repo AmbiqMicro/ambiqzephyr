@@ -29,11 +29,29 @@ LOG_MODULE_REGISTER(amota);
 #include "am_util_multi_boot.h"
 #include "am_hal_security.h"
 
+/*
+ * Clean the page buffer before programming. For read-back verify,
+ * invalidate D-cache so memcpy from MRAM sees programmed data.
+ */
+#if defined(CONFIG_SOC_APOLLO510) || defined(CONFIG_SOC_APOLLO510B) ||                         \
+	defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
+static void amotas_dcache_clean_mram_src(const void *buf, uint32_t len)
+{
+	am_hal_cachectrl_range_t r = {
+		.ui32StartAddr = (uint32_t)buf,
+		.ui32Size = len,
+	};
+
+	(void)am_hal_cachectrl_dcache_clean(&r);
+}
+#endif
+
 /* If AM_HAL_FLASH_PAGE_SIZE is not defined (e.g., not set as compile definition),
  * define it based on the chip type
  */
 #ifndef AM_HAL_FLASH_PAGE_SIZE
-#if defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO330P_510L) || defined(AM_PART_APOLLO4P)
+#if defined(AM_PART_APOLLO4P) || \
+	IS_ENABLED(CONFIG_SOC_APOLLO510) || IS_ENABLED(CONFIG_SOC_APOLLO510B)
 #define AM_HAL_FLASH_PAGE_SIZE 1024 /* MRAM uses 1KB pages */
 #else
 #define AM_HAL_FLASH_PAGE_SIZE 8192 /* Default flash page size */
@@ -62,7 +80,7 @@ LOG_MODULE_REGISTER(amota);
 #endif
 #define OTA_POINTER_LOCATION        (0x00018000 + OTA_MAX_IMAGE_SIZE)
 #define AMOTA_INT_FLASH_OTA_ADDRESS (OTA_POINTER_LOCATION + OTA_DESCRIPTOR_SIZE)
-#elif defined(AM_PART_APOLLO510) || defined(AM_PART_APOLLO330P_510L)
+#elif IS_ENABLED(CONFIG_SOC_APOLLO510) || IS_ENABLED(CONFIG_SOC_APOLLO510B)
 #if defined(AM_HAL_MRAM_TOTAL_SIZE) && (OTA_MAX_IMAGE_SIZE > (AM_HAL_MRAM_TOTAL_SIZE - 0x10000) / 2)
 #error "OTA_MAX_IMAGE_SIZE is too large!"
 #endif
@@ -248,9 +266,10 @@ static int verify_flash_content(uint32_t flashAddr, uint32_t *pSram, uint32_t le
 	uint32_t offset = 0;
 	uint32_t remaining = len;
 	int ret = 0;
-#if defined(AM_PART_APOLLO510)
-	/* Clean the cache after writing and invalidate before reading */
-	am_hal_cachectrl_dcache_invalidate(NULL, true);
+#if defined(CONFIG_SOC_APOLLO510) || defined(CONFIG_SOC_APOLLO510B) ||                         \
+	defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
+	/* Invalidate (and clean) D$ before reading MRAM for verify */
+	(void)am_hal_cachectrl_dcache_invalidate(NULL, true);
 #endif
 	while (remaining) {
 		uint32_t tmpSize = (remaining > AMOTA_PACKET_SIZE) ? AMOTA_PACKET_SIZE : remaining;
@@ -311,6 +330,11 @@ static bool amotas_write2flash(uint16_t len, uint8_t *buf, uint32_t addr, bool l
 		 */
 		if (lastPktFlag || (amotasFlash.bufferIndex == g_pFlash->flashPageSize)) {
 			ui32TargetAddress = (addr + ui8PageCount * g_pFlash->flashPageSize);
+#if defined(CONFIG_SOC_APOLLO510) || defined(CONFIG_SOC_APOLLO510B) ||                         \
+	defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
+			amotas_dcache_clean_mram_src(amotasFlash.writeBuffer,
+						     g_pFlash->flashPageSize);
+#endif
 			/* Always write whole pages */
 			if ((g_pFlash->flash_write_page(ui32TargetAddress,
 							(uint32_t *)amotasFlash.writeBuffer,
@@ -319,6 +343,10 @@ static bool amotas_write2flash(uint16_t len, uint8_t *buf, uint32_t addr, bool l
 						  (uint32_t *)amotasFlash.writeBuffer,
 						  amotasFlash.bufferIndex, g_pFlash) != 0)) {
 				bResult = false;
+				/* Discard buffered page so the next FW_DATA uses a consistent
+				 * addr/index.
+				 */
+				amotasFlash.bufferIndex = 0;
 				break;
 			}
 			LOG_DBG("Flash write succeeded to address 0x%x. length %d",
@@ -680,8 +708,21 @@ int bt_amota_conn_init(struct bt_conn *conn)
 	LOG_INF("AMOTA: Connection initialized");
 	amota.data.state = AMOTA_STATE_INIT;
 	amota.conn = conn;
+	amotasFlash.bufferIndex = 0;
+	amota.data.pkt.offset = 0;
+	amota.data.pkt.len = 0;
+	amota.data.pkt.type = AMOTA_CMD_UNKNOWN;
 
 	return 0;
+}
+
+void bt_amota_conn_deinit(void)
+{
+	amota.conn = NULL;
+	amotasFlash.bufferIndex = 0;
+	amota.data.pkt.offset = 0;
+	amota.data.pkt.len = 0;
+	amota.data.pkt.type = AMOTA_CMD_UNKNOWN;
 }
 
 SYS_INIT(bt_amota_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
