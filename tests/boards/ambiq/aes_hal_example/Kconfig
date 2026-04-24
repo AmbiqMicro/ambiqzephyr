@@ -1,0 +1,31 @@
+# Copyright (c) 2026 Ambiq Micro, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "Ambiq AES HAL example"
+
+source "Kconfig.zephyr"
+
+menu "Ambiq AES HAL example options"
+
+config AES_HAL_EXAMPLE_TEST_ECB
+	bool "Run AES-ECB tests"
+
+config AES_HAL_EXAMPLE_TEST_CTR
+	bool "Run AES-CTR test"
+
+config AES_HAL_EXAMPLE_TEST_OFB
+	bool "Run AES-OFB tests"
+
+config AES_HAL_EXAMPLE_TEST_CCM
+	bool "Run AES-CCM test"
+
+config AES_HAL_EXAMPLE_TEST_GCM
+	bool "Run AES-GCM tests"
+
+config AES_HAL_EXAMPLE_TEST_XTS
+	bool "Run AES-XTS test"
+
+config AES_HAL_EXAMPLE_USE_INPLACE_BUFFERS
+	bool "Use in-place buffers for AES sample tests"
+
+endmenu

@@ -1,0 +1,15 @@
+# Copyright (c) 2026 Ambiq Micro, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+tests:
+  boards.ambiq.aes_hal_example:
+    tags:
+      - ambiq
+      - crypto
+      - aes
+    filter: dt_compat_enabled("ambiq,crypto-aes")
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "All driver checks passed"

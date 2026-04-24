@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright 2025 Ambiq Micro Inc.
+ * Copyright (c) 2026 Ambiq Micro Inc. <www.ambiq.com>
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -104,6 +104,10 @@
 			label = "PWM_LED";
 		};
 	};
+};
+
+&cc312_aes {
+	status = "okay";
 };
 
 &trng {
