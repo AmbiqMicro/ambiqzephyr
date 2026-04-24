@@ -173,7 +173,7 @@ static void dmic_ambiq_pdm_isr(const struct device *dev)
 static bool div_derive(uint32_t pdm_op_freq, uint32_t io_clk,
 		       uint32_t *mclk_div, uint32_t *pdma_div)
 {
-	uint32_t total_div, div1, div2;
+	uint32_t div_total, div1, div2;
 
 	if ((pdm_op_freq == 0) || (io_clk == 0)) {
 		return false;
@@ -183,13 +183,13 @@ static bool div_derive(uint32_t pdm_op_freq, uint32_t io_clk,
 		return false;
 	}
 
-	total_div = pdm_op_freq / io_clk;
+	div_total = pdm_op_freq / io_clk;
 
 	for (div1 = 2; div1 <= 4; div1++) {
-		if ((total_div % div1) != 0) {
+		if ((div_total % div1) != 0) {
 			continue;
 		}
-		div2 = total_div / div1;
+		div2 = div_total / div1;
 		if (IN_RANGE(div2, 2, 16)) {
 			*mclk_div = div1;
 			*pdma_div = div2;
@@ -364,6 +364,10 @@ static int dmic_ambiq_pdm_configure(const struct device *dev, struct dmic_cfg *d
 	data->hal_cfg.bPDMSampleDelay = AM_HAL_PDM_CLKOUT_PHSDLY_NONE;
 	data->hal_cfg.ui32GainChangeDelay = AM_HAL_PDM_CLKOUT_DELAY_NONE;
 	data->hal_cfg.bSoftMute = 0;
+	/* Request packed 32-bit words (24-bit samples left-justified) so
+	 * application can interpret DMA buffers as uint32_t words consistently.
+	 */
+	data->hal_cfg.bDataPacking = 1;
 
 	am_hal_pdm_configure(data->pdm_handler, &data->hal_cfg);
 	config->irq_config_func();

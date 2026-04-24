@@ -59,6 +59,15 @@ void gpu_ambiq_reset_last_cl_id(const struct device *dev);
  */
 int gpu_ambiq_wait_interrupt(const struct device *dev, uint32_t timeout_ms);
 
+/**
+ * @brief Cache maintenance helpers for GPU DMA buffers.
+ *
+ * These functions are intended to be called by higher-level GPU/Nema glue
+ * code to ensure proper data/CPU cache coherency around DMA operations.
+ */
+void gpu_ambiq_cache_flush_range(void *addr, size_t size);
+void gpu_ambiq_cache_invalidate_range(void *addr, size_t size);
+
 #ifdef __cplusplus
 }
 #endif

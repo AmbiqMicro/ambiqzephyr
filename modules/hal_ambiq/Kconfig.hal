@@ -53,14 +53,14 @@ config AMBIQ_HAL_USE_I2C
 			Use the I2C driver from Ambiq HAL
 
 config AMBIQ_HAL_USE_IOS_I2C
-	bool
-	help
-	  Use the I2C Target driver from Ambiq HAL
+		bool
+		help
+			Use the I2C Target driver from Ambiq HAL
 
 config AMBIQ_HAL_USE_I2S
-	bool
-	help
-	  Use the I2S Target driver from Ambiq HAL
+		bool
+		help
+			Use the I2S driver from Ambiq HAL
 
 config AMBIQ_HAL_USE_ITM
 		bool
@@ -101,6 +101,11 @@ config AMBIQ_HAL_USE_STIMER
 		bool
 		help
 			Use the STIMER driver from Ambiq HAL
+
+config AMBIQ_HAL_USE_TPIU
+		bool
+		help
+			Use the TPIU HAL from Ambiq
 
 config AMBIQ_HAL_USE_TIMER
 		bool
