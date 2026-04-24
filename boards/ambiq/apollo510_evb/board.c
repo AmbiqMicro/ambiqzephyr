@@ -9,7 +9,9 @@
 #include <zephyr/cache.h>
 #include <zephyr/pm/device_runtime.h>
 #include <am_mcu_apollo.h>
+#if defined(CONFIG_AMBIQ_HAL_USE_USB)
 #include <am_hal_usb.h>
+#endif
 
 #if DT_HAS_CHOSEN(ambiq_xo32m)
 #define XTAL_HS_FREQ DT_PROP(DT_CHOSEN(ambiq_xo32m), clock_frequency)
@@ -57,6 +59,7 @@ void board_early_init_hook(void)
 	am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_HFRC2,
 				   AM_HAL_CLKMGR_HFRC2_FREQ_FREE_RUN_APPROX_250MHZ, NULL);
 
+#if defined(CONFIG_AMBIQ_HAL_USE_USB)
 	/* USB PHY electrical tuning. Mirrors what the AmbiqSuite BSP does in
 	 * am_bsp_low_power_init() — sets the on-die termination resistance so
 	 * the high/full-speed signaling matches the board trace impedance.
@@ -67,6 +70,7 @@ void board_early_init_hook(void)
 	};
 	(void)am_hal_usb_phy_electrical_tuning_set(0,
 		AM_HAL_USB_PHY_ELEC_TUNING_PARAM_R_ODT, &usb_rodt);
+#endif /* CONFIG_AMBIQ_HAL_USE_USB */
 }
 
 #if defined(CONFIG_BOARD_ENABLE_GPU_ASSET_RELOCATION)
