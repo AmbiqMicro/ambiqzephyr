@@ -171,6 +171,13 @@
 			status = "disabled";
 		};
 
+		cc312_aes: crypto@400c0000 {
+			compatible = "ambiq,crypto-aes";
+			reg = <0x400c0000 0x1f30>;
+			interrupts = <24 0>;
+			status = "disabled";
+		};
+
 		crc32: crc32@40030030 {
 			compatible = "ambiq,hw-crc32";
 			reg = <0x40030030 0x4>;

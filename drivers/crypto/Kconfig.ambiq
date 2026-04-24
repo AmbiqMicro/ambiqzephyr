@@ -1,0 +1,18 @@
+# Copyright (c) 2026 Ambiq Micro, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config CRYPTO_AMBIQ_AES
+	bool "Ambiq CryptoCell AES driver"
+	default y
+	depends on DT_HAS_AMBIQ_CRYPTO_AES_ENABLED
+	select AMBIQ_HAL
+	help
+		Enable the Ambiq CryptoCell-312 AES cipher driver.
+
+		Supported cipher modes:
+		- ECB
+		- CTR
+		- OFB
+		- CCM
+		- GCM
+		- XTS

@@ -40,7 +40,7 @@ manifest:
     - name: ambiqhal_ambiq
       remote: github_ambiqmicro
       path: modules/hal/ambiq
-      revision: 34487b6c2961bc9d59add9854a5e9bea780c44e3
+      revision: ee0fbf2efb08d5e724e11a81acdb6c7956e47428
       groups:
         - hal
     - name: babblesim_base

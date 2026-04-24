@@ -24,7 +24,6 @@
  * @{
  */
 
-
 /** Cipher Algorithm */
 enum cipher_algo {
 	CRYPTO_CIPHER_ALGO_AES = 1,
@@ -47,6 +46,8 @@ enum cipher_mode {
 	CRYPTO_CIPHER_MODE_CTR = 3,
 	CRYPTO_CIPHER_MODE_CCM = 4,
 	CRYPTO_CIPHER_MODE_GCM = 5,
+	CRYPTO_CIPHER_MODE_XTS = 6,
+	CRYPTO_CIPHER_MODE_OFB = 7,
 };
 
 /* Forward declarations */
@@ -59,28 +60,30 @@ typedef int (*block_op_t)(struct cipher_ctx *ctx, struct cipher_pkt *pkt);
 /* Function signatures for encryption/ decryption using standard cipher modes
  * like  CBC, CTR, CCM.
  */
-typedef int (*cbc_op_t)(struct cipher_ctx *ctx, struct cipher_pkt *pkt,
-			uint8_t *iv);
+typedef int (*cbc_op_t)(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint8_t *iv);
 
-typedef int (*ctr_op_t)(struct cipher_ctx *ctx, struct cipher_pkt *pkt,
-			uint8_t *ctr);
+typedef int (*ctr_op_t)(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint8_t *ctr);
 
-typedef int (*ccm_op_t)(struct cipher_ctx *ctx, struct cipher_aead_pkt *pkt,
-			 uint8_t *nonce);
+typedef int (*ccm_op_t)(struct cipher_ctx *ctx, struct cipher_aead_pkt *pkt, uint8_t *nonce);
 
-typedef int (*gcm_op_t)(struct cipher_ctx *ctx, struct cipher_aead_pkt *pkt,
-			 uint8_t *nonce);
+typedef int (*gcm_op_t)(struct cipher_ctx *ctx, struct cipher_aead_pkt *pkt, uint8_t *nonce);
+
+typedef int (*xts_op_t)(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint8_t *data_unit);
+
+typedef int (*ofb_op_t)(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint8_t *iv);
 
 struct cipher_ops {
 
 	enum cipher_mode cipher_mode;
 
 	union {
-		block_op_t	block_crypt_hndlr;
-		cbc_op_t	cbc_crypt_hndlr;
-		ctr_op_t	ctr_crypt_hndlr;
-		ccm_op_t	ccm_crypt_hndlr;
-		gcm_op_t	gcm_crypt_hndlr;
+		block_op_t block_crypt_hndlr;
+		cbc_op_t cbc_crypt_hndlr;
+		ctr_op_t ctr_crypt_hndlr;
+		ccm_op_t ccm_crypt_hndlr;
+		gcm_op_t gcm_crypt_hndlr;
+		xts_op_t xts_crypt_hndlr;
+		ofb_op_t ofb_crypt_hndlr;
 	};
 };
 
@@ -158,7 +161,7 @@ struct cipher_ctx {
 	/** Cryptographic keylength in bytes. To be populated by the app
 	 * before calling begin_session()
 	 */
-	uint16_t  keylen;
+	uint16_t keylen;
 
 	/** How certain fields are to be interpreted for this session.
 	 * (A bitmask of CAP_* below.)
@@ -183,7 +186,7 @@ struct cipher_pkt {
 	uint8_t *in_buf;
 
 	/** Bytes to be operated upon */
-	int  in_len;
+	int in_len;
 
 	/** Start of the output buffer, to be allocated by
 	 * the application. Can be NULL for in-place ops. To be populated
