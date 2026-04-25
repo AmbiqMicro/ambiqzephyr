@@ -5,6 +5,7 @@
 #include <mem.h>
 #include <freq.h>
 #include <apollo510/am_apollo510.h>
+#include <zephyr/dt-bindings/power/ambiq_power.h>
 #include <zephyr/dt-bindings/memory-attr/memory-attr-arm.h>
 #include <zephyr/dt-bindings/adc/adc.h>
 #include <zephyr/dt-bindings/i2c/i2c.h>
@@ -41,6 +42,22 @@
 			compatible = "fixed-clock";
 			clock-frequency = <0>;
 			#clock-cells = <0>;
+		};
+	};
+
+	performance-states {
+		compatible = "zephyr,pstates";
+
+		pstate_hp: pstate_hp {
+			compatible = "ambiq,pstate";
+			load-threshold = <80>;
+			ambiq,perf-mode = <AMBIQ_POWER_MODE_HIGH_PERFORMANCE>;
+		};
+
+		pstate_lp: pstate_lp {
+			compatible = "ambiq,pstate";
+			load-threshold = <0>;
+			ambiq,perf-mode = <AMBIQ_POWER_MODE_LOW_POWER>;
 		};
 	};
 
@@ -151,6 +168,19 @@
 		trng: trng@40014aa0 {
 			compatible = "ambiq,puf-trng";
 			reg = <0x40014aa0 0x4>;
+			status = "disabled";
+		};
+
+		cc312_aes: crypto@400c0000 {
+			compatible = "ambiq,crypto-aes";
+			reg = <0x400c0000 0x1f30>;
+			interrupts = <24 0>;
+			status = "disabled";
+		};
+
+		crc32: crc32@40030030 {
+			compatible = "ambiq,hw-crc32";
+			reg = <0x40030030 0x4>;
 			status = "disabled";
 		};
 
@@ -429,14 +459,24 @@
 			status = "disabled";
 		};
 
-		spid0: spi@IOSLAVE_BASE_NAME {
-			compatible = "ambiq,spid";
+		ios0: ios@IOSLAVE_BASE_NAME {
+			compatible = "ambiq,ios";
 			reg = <IOSLAVE_REG_BASE IOSLAVE_REG_SIZE>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-			interrupts = <4 0>;
-			status = "disabled";
-			zephyr,pm-device-runtime-auto;
+			interrupts = <4 0>, <5 0>;
+
+			spi {
+				compatible = "ambiq,spid";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				status = "disabled";
+			};
+
+			i2c {
+				compatible = "ambiq,ios-i2c";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				status = "disabled";
+			};
 		};
 
 		iom0: iom@IOM0_BASE_NAME {

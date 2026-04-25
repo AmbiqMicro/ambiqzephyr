@@ -4,4 +4,7 @@ tests:
     tags:
       - drivers
       - crc
+    integration_platforms:
+      - apollo510_evb
+      - apollo510b_evb
     harness: ztest

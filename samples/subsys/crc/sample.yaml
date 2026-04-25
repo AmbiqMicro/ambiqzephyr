@@ -6,6 +6,9 @@ tests:
     tags:
       - subsys
       - crc
+    integration_platforms:
+      - apollo510_evb
+      - apollo510b_evb
     harness: console
     harness_config:
       type: one_line

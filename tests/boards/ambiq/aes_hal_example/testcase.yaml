@@ -8,3 +8,8 @@ tests:
       - crypto
       - aes
     filter: dt_compat_enabled("ambiq,crypto-aes")
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "All driver checks passed"

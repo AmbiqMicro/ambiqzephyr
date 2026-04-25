@@ -621,6 +621,7 @@ static int ambiq_aes_ecb_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, int3
 	int op_ctx_init = 0;
 	uint8_t *out_buf;
 	int ret;
+	uint8_t periph_acquired = 0;
 
 	if (ctx == NULL || pkt == NULL) {
 		return -EINVAL;
@@ -646,6 +647,7 @@ static int ambiq_aes_ecb_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, int3
 	if (ret != 0) {
 		goto cleanup;
 	}
+	periph_acquired = 1;
 
 	status = ambiq_aes_prepare_op_ctx(&dma->op_ctx, ctx, hal_mode);
 	if (status != AM_HAL_STATUS_SUCCESS) {
@@ -679,7 +681,9 @@ cleanup:
 	/* Clear DMA scratch buffers */
 	ambiq_aes_clear_dma_scratch(dma);
 
-	ambiq_aes_periph_release();
+	if (periph_acquired) {
+		ambiq_aes_periph_release();
+	}
 	k_mutex_unlock(&data->lock);
 	return ret;
 }
@@ -707,6 +711,7 @@ static int ambiq_aes_ctr_ofb_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, 
 	uint8_t iv_local[AMBIQ_AES_BLOCK_SIZE] __aligned(AMBIQ_AES_DMA_ALIGNMENT);
 	uint8_t *out_buf;
 	int ret;
+	uint8_t periph_acquired = 0;
 
 	if (ctx == NULL || pkt == NULL) {
 		return -EINVAL;
@@ -750,6 +755,7 @@ static int ambiq_aes_ctr_ofb_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, 
 	if (ret != 0) {
 		goto cleanup;
 	}
+	periph_acquired = 1;
 
 	status = ambiq_aes_prepare_op_ctx(&dma->op_ctx, ctx, AM_HAL_AES_ENCRYPT);
 	if (status != AM_HAL_STATUS_SUCCESS) {
@@ -792,7 +798,9 @@ cleanup:
 	/* Clear DMA scratch buffers */
 	ambiq_aes_clear_dma_scratch(dma);
 
-	ambiq_aes_periph_release();
+	if (periph_acquired) {
+		ambiq_aes_periph_release();
+	}
 	k_mutex_unlock(&data->lock);
 	return ret;
 }
@@ -819,6 +827,7 @@ static int ambiq_aes_xts_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint
 	int crypt_ctx_init = 0;
 	uint8_t *out_buf;
 	int ret;
+	uint8_t periph_acquired = 0;
 
 	if (ctx == NULL || pkt == NULL) {
 		return -EINVAL;
@@ -847,6 +856,7 @@ static int ambiq_aes_xts_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint
 	if (ret != 0) {
 		goto cleanup;
 	}
+	periph_acquired = 1;
 
 	key1 = ctx->key.bit_stream;
 	key2 = ctx->key.bit_stream + (ctx->keylen / 2U);
@@ -1047,7 +1057,9 @@ cleanup:
 	/* Clear DMA scratch buffers */
 	ambiq_aes_clear_dma_scratch(dma);
 
-	ambiq_aes_periph_release();
+	if (periph_acquired) {
+		ambiq_aes_periph_release();
+	}
 	k_mutex_unlock(&data->lock);
 	return ret;
 }
@@ -1389,6 +1401,7 @@ static uint32_t ambiq_cc312_ccm_auth_crypt(struct ambiq_aes_data *data,
 					   uint32_t tag_len, uint8_t dir, uint32_t ccm_mode)
 {
 	uint32_t status;
+	uint8_t periph_acquired = 0;
 
 	if (ctx == NULL || key == NULL || iv == NULL || input == NULL || output == NULL ||
 	    tag == NULL) {
@@ -1401,6 +1414,7 @@ static uint32_t ambiq_cc312_ccm_auth_crypt(struct ambiq_aes_data *data,
 		status = AM_HAL_STATUS_FAIL;
 		goto cleanup_unlock;
 	}
+	periph_acquired = 1;
 	status = ambiq_aes_prepare_ccm_ctx(ctx, key, key_bits);
 	if (status != AM_HAL_STATUS_SUCCESS) {
 		goto cleanup_unlock;
@@ -1434,7 +1448,9 @@ static uint32_t ambiq_cc312_ccm_auth_crypt(struct ambiq_aes_data *data,
 cleanup:
 	am_hal_aes_ccm_free(ctx);
 cleanup_unlock:
-	ambiq_aes_periph_release();
+	if (periph_acquired) {
+		ambiq_aes_periph_release();
+	}
 	k_mutex_unlock(&data->lock);
 	return status;
 }
@@ -1817,6 +1833,7 @@ static uint32_t ambiq_aes_gcm_crypt_and_tag(struct ambiq_aes_data *data, int mod
 {
 	am_hal_cc312_aes_gcm_context_t *ctx;
 	uint32_t status;
+	int periph_acquired = 0;
 
 	if (data == NULL) {
 		return AM_HAL_STATUS_INVALID_ARG;
@@ -1828,6 +1845,7 @@ static uint32_t ambiq_aes_gcm_crypt_and_tag(struct ambiq_aes_data *data, int mod
 		status = AM_HAL_STATUS_FAIL;
 		goto cleanup_unlock;
 	}
+	periph_acquired = 1;
 	ctx = &data->dma->gcm_ctx;
 	status = ambiq_aes_prepare_gcm_ctx(ctx, key, key_bits);
 	if (status != AM_HAL_STATUS_SUCCESS) {
@@ -1881,7 +1899,9 @@ cleanup:
 	am_hal_cc312_clock_disable(AM_HAL_CC312_CLK_HASH);
 	am_hal_cc312_aes_disable_clocks();
 cleanup_unlock:
-	ambiq_aes_periph_release();
+	if (periph_acquired) {
+		ambiq_aes_periph_release();
+	}
 	k_mutex_unlock(&data->lock);
 
 	return status;
