@@ -165,6 +165,12 @@
 	soc {
 		compatible = "ambiq,apollo510", "ambiq,apollo5x", "simple-bus";
 
+		trng: trng@40014aa0 {
+			compatible = "ambiq,puf-trng";
+			reg = <0x40014aa0 0x4>;
+			status = "disabled";
+		};
+
 		cc312_aes: crypto@400c0000 {
 			compatible = "ambiq,crypto-aes";
 			reg = <0x400c0000 0x1f30>;
@@ -172,9 +178,9 @@
 			status = "disabled";
 		};
 
-		trng: trng@40014aa0 {
-			compatible = "ambiq,puf-trng";
-			reg = <0x40014aa0 0x4>;
+		crc32: crc32@40030030 {
+			compatible = "ambiq,hw-crc32";
+			reg = <0x40030030 0x4>;
 			status = "disabled";
 		};
 

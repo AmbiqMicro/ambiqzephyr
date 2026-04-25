@@ -177,7 +177,7 @@ static void dmic_ambiq_pdm_isr(const struct device *dev)
 static bool div_derive(uint32_t pdm_op_freq, uint32_t io_clk,
 		       uint32_t *mclk_div, uint32_t *pdma_div)
 {
-	uint32_t div, div1, div2;
+	uint32_t div_total, div1, div2;
 
 	if ((pdm_op_freq == 0) || (io_clk == 0)) {
 		return false;
@@ -187,13 +187,13 @@ static bool div_derive(uint32_t pdm_op_freq, uint32_t io_clk,
 		return false;
 	}
 
-	div = pdm_op_freq / io_clk;
+	div_total = pdm_op_freq / io_clk;
 
 	for (div1 = 2; div1 <= 4; div1++) {
-		if ((div % div1) != 0) {
+		if ((div_total % div1) != 0) {
 			continue;
 		}
-		div2 = div / div1;
+		div2 = div_total / div1;
 		if (IN_RANGE(div2, 2, 16)) {
 			*mclk_div = div1;
 			*pdma_div = div2;

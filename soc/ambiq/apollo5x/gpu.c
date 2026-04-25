@@ -21,9 +21,10 @@
 
 LOG_MODULE_REGISTER(gpu_ambiq, CONFIG_GPU_AMBIQ_LOG_LEVEL);
 
-/* Cache maintenance for GPU command lists was removed. The driver keeps
- * placeholder variables for submitted/listed command list addresses/sizes
- * but does not perform explicit cache flush/invalidate operations here.
+/* The driver tracks submitted command list addresses/sizes and performs
+ * explicit cache maintenance for GPU command lists: it flushes the command
+ * list on submission (when programming NEMA_CMDSIZE) and invalidates cached
+ * data when command list completion is observed.
  */
 
 /** @brief Ambiq GPU driver private data structure. */
@@ -317,22 +318,59 @@ int gpu_ambiq_wait_interrupt(const struct device *dev, uint32_t timeout_ms)
 	int ret = 0;
 
 	/* Acquire the single in-flight slot atomically to avoid races between
-	 * concurrent callers.
+	 * concurrent callers. Honor the caller-provided timeout while waiting
+	 * for the slot so callers with a finite timeout can't be blocked
+	 * indefinitely by another thread that holds the slot.
 	 */
-	while (!atomic_cas(&data->inflight, 0, 1)) {
-		k_msleep(1);
+	uint32_t start_ms = k_uptime_get_32();
+	uint32_t elapsed_ms = 0;
+	bool have_inflight = false;
+
+	if (timeout_ms == 0) {
+		/* No waiting allowed: attempt once and fail immediately on contention. */
+		if (!atomic_cas(&data->inflight, 0, 1)) {
+			ret = -ETIMEDOUT;
+			goto out;
+		}
+		have_inflight = true;
+	} else {
+		while (true) {
+			if (atomic_cas(&data->inflight, 0, 1)) {
+				have_inflight = true;
+				break;
+			}
+			elapsed_ms = k_uptime_get_32() - start_ms;
+			if (elapsed_ms >= timeout_ms) {
+				ret = -ETIMEDOUT;
+				goto out;
+			}
+			k_msleep(1);
+		}
 	}
 
+	/* Compute remaining time for the semaphore wait after acquiring slot. */
+	elapsed_ms = k_uptime_get_32() - start_ms;
+	uint32_t rem_ms = (elapsed_ms >= timeout_ms) ? 0U : (timeout_ms - elapsed_ms);
+
 	/* Pend on the semaphore, waiting for the ISR to signal completion. */
-	if (k_sem_take(&data->gpu_isr_sem, K_MSEC(timeout_ms)) != 0) {
+	if (k_sem_take(&data->gpu_isr_sem, K_MSEC(rem_ms)) != 0) {
 		LOG_ERR("Timed out waiting for GPU interrupt.");
-		/* Update timeout counter and return after cleanup. */
+		/* Update timeout counter and clear tracked command-list state so a
+		 * later successful call cannot invalidate a stale/reused region.
+		 */
 		data->consecutive_timeouts++;
+		data->last_cmdaddr = 0ULL;
+		data->last_cmdsize = 0;
+		data->pending_cmdaddr = 0ULL;
 		ret = -ETIMEDOUT;
 		goto out;
 	}
 
-	/* Successful completion: small yield to let GPU/AXI settle. */
+	/* Capture recent timeout count before clearing it so the backoff
+	 * decision below reflects the history of this submission sequence.
+	 */
+	unsigned int recent_timeouts = data->consecutive_timeouts;
+
 	data->consecutive_timeouts = 0;
 
 	/* If we have a last-submitted command list region recorded, invalidate
@@ -352,15 +390,17 @@ int gpu_ambiq_wait_interrupt(const struct device *dev, uint32_t timeout_ms)
 	 * a plain yield is sufficient to let the scheduler run without adding
 	 * fixed latency to every command-list submission.
 	 */
-	if (data->consecutive_timeouts > 0) {
+	if (recent_timeouts > 0) {
 		k_msleep(2);
 	} else {
 		k_yield();
 	}
 
 out:
-	/* Ensure the in-flight slot is released on all exit paths. */
-	atomic_set(&data->inflight, 0);
+	/* Ensure the in-flight slot is released only if this caller acquired it. */
+	if (have_inflight) {
+		atomic_set(&data->inflight, 0);
+	}
 
 	return ret;
 }

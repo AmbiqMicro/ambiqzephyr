@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Ambiq Micro Inc. <www.ambiq.com>
+ * SPDX-FileCopyrightText: Copyright 2025 Ambiq Micro Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -30,6 +30,7 @@
 		ambiq,extrefclk = &extrefclk;
 		ambiq,psram = &aps51216ba;
 		ambiq,external-ram-region = &xip0;
+		zephyr,crc = &crc32;
 	};
 
 	aliases {
@@ -41,6 +42,7 @@
 		sw1 = &button1;
 		pwm-led0 = &pwm_led0;
 		sdhc0 = &sdio0;
+		crc0 = &crc32;
 	};
 
 	sram0: memory@SSRAM_BASE_NAME {
@@ -102,10 +104,6 @@
 			label = "PWM_LED";
 		};
 	};
-};
-
-&cc312_aes {
-	status = "okay";
 };
 
 &trng {
@@ -354,4 +352,8 @@ zephyr_udc0: &usb {
 			reg = <0x248000 DT_SIZE_K(32)>;
 		};
 	};
+};
+
+&crc32 {
+	status = "okay";
 };

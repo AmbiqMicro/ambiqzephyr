@@ -31,6 +31,7 @@ supported:
   - zms
   - pm
   - pwm
+  - crc
 testing:
   ignore_tags:
     - net
