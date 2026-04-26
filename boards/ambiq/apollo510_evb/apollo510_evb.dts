@@ -106,6 +106,10 @@
 	};
 };
 
+&cc312_aes {
+	status = "okay";
+};
+
 &trng {
 	status = "okay";
 };
@@ -188,7 +192,7 @@
 		mspi-hardware-ce-num = <0>;
 		mspi-dqs-enable;
 		read-command = <0x20>;
-		write-command = <0xA0>;
+		write-command = <0xa0>;
 		command-length = "INSTR_1_BYTE";
 		address-length = "ADDR_4_BYTE";
 		rx-dummy = <7>;
@@ -226,8 +230,8 @@
 		mspi-data-rate = "MSPI_DATA_RATE_SINGLE";
 		mspi-dqs-enable;
 		mspi-hardware-ce-num = <0>;
-		read-command = <0xCC>;
-		write-command = <0x8E>;
+		read-command = <0xcc>;
+		write-command = <0x8e>;
 		command-length = "INSTR_1_BYTE";
 		address-length = "ADDR_4_BYTE"; /* Avoid use of 3 byte address if Ambiq MSPI */
 		rx-dummy = <16>;

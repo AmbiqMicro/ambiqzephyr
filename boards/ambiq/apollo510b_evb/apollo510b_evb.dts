@@ -136,7 +136,15 @@
 	status = "disabled";
 };
 
+&cc312_aes {
+	status = "okay";
+};
+
 &trng {
+	status = "okay";
+};
+
+&crc32 {
 	status = "okay";
 };
 
@@ -233,7 +241,7 @@
 		mspi-hardware-ce-num = <0>;
 		mspi-dqs-enable;
 		read-command = <0x20>;
-		write-command = <0xA0>;
+		write-command = <0xa0>;
 		command-length = "INSTR_1_BYTE";
 		address-length = "ADDR_4_BYTE";
 		rx-dummy = <7>;
@@ -337,9 +345,5 @@ zephyr_udc0: &usb {
 };
 
 &gpio192_223 {
-	status = "okay";
-};
-
-&crc32 {
 	status = "okay";
 };
