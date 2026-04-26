@@ -30,6 +30,7 @@
 		ambiq,xo48m = &xo48m_xtal;
 		ambiq,xo32k = &xo32k_xtal;
 		ambiq,extrefclk = &extrefclk;
+		zephyr,crc = &crc32;
 	};
 
 	aliases {
@@ -43,6 +44,7 @@
 		pwm-led0 = &pwm_led0;
 		ambiq-psram = &aps25616ba;
 		ambiq-external-ram-region = &xip0;
+		crc0 = &crc32;
 	};
 
 	leds {
@@ -113,6 +115,10 @@
 };
 
 &trng {
+	status = "okay";
+};
+
+&crc32 {
 	status = "okay";
 };
 
@@ -296,7 +302,7 @@
 		mspi-hardware-ce-num = <0>;
 		mspi-dqs-enable;
 		read-command = <0x20>;
-		write-command = <0xA0>;
+		write-command = <0xa0>;
 		command-length = "INSTR_1_BYTE";
 		address-length = "ADDR_4_BYTE";
 		rx-dummy = <5>;
@@ -365,9 +371,9 @@ zephyr_udc0: &usb {
 			reg = <0x40000 DT_SIZE_K(512)>;
 		};
 
-		slot1_partition: partition@C0000 {
+		slot1_partition: partition@c0000 {
 			label = "image-1";
-			reg = <0xC0000 DT_SIZE_K(512)>;
+			reg = <0xc0000 DT_SIZE_K(512)>;
 		};
 
 		scratch_partition: partition@140000 {

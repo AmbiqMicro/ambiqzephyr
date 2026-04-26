@@ -97,6 +97,18 @@
 	};
 };
 
+&cc312_aes {
+	status = "okay";
+};
+
+&trng {
+	status = "okay";
+};
+
+&crc32 {
+	status = "okay";
+};
+
 &uart0 {
 	current-speed = <115200>;
 	pinctrl-0 = <&uart0_default>;
@@ -186,7 +198,7 @@ zephyr_udc0: &usb {
 		mspi-hardware-ce-num = <0>;
 		mspi-dqs-enable;
 		read-command = <0x20>;
-		write-command = <0xA0>;
+		write-command = <0xa0>;
 		command-length = "INSTR_1_BYTE";
 		address-length = "ADDR_4_BYTE";
 		rx-dummy = <5>;
@@ -225,7 +237,7 @@ zephyr_udc0: &usb {
 		mspi-io-mode = "MSPI_IO_MODE_QUAD";
 		mspi-data-rate = "MSPI_DATA_RATE_SINGLE";
 		mspi-hardware-ce-num = <0>;
-		read-command = <0xEB>;
+		read-command = <0xeb>;
 		write-command = <0x38>;
 		command-length = "INSTR_1_BYTE";
 		address-length = "ADDR_3_BYTE";
@@ -247,8 +259,8 @@ zephyr_udc0: &usb {
 		mspi-data-rate = "MSPI_DATA_RATE_SINGLE";
 		mspi-dqs-enable;
 		mspi-hardware-ce-num = <0>;
-		read-command = <0xCC>;
-		write-command = <0x8E>;
+		read-command = <0xcc>;
+		write-command = <0x8e>;
 		command-length = "INSTR_1_BYTE";
 		address-length = "ADDR_4_BYTE"; /* Avoid use of 3 byte address if Ambiq MSPI */
 		rx-dummy = <16>;
@@ -291,7 +303,7 @@ zephyr_udc0: &usb {
 		mspi-hardware-ce-num = <0>;
 		mspi-dqs-enable;
 		read-command = <0x20>;
-		write-command = <0xA0>;
+		write-command = <0xa0>;
 		command-length = "INSTR_1_BYTE";
 		address-length = "ADDR_4_BYTE";
 		rx-dummy = <5>;
@@ -363,8 +375,4 @@ zephyr_udc0: &usb {
 			reg = <0x248000 DT_SIZE_K(32)>;
 		};
 	};
-};
-
-&crc32 {
-	status = "okay";
 };

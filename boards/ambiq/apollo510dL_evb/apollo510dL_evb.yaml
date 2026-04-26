@@ -28,6 +28,8 @@ supported:
   - pdm
   - pm
   - mspi
+  - trng
+  - crc
 testing:
   ignore_tags:
     - net

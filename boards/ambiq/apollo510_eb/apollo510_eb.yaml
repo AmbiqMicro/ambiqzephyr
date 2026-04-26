@@ -10,28 +10,29 @@ toolchain:
 supported:
   - uart
   - adc
-  - watchdog
+  - audadc
+  - clock_control
   - counter
+  - crc
+  - crypto
+  - dmic
+  - flash
   - gpio
-  - spi
+  - hwinfo
   - i2c
   - i2c_target
-  - rtc
-  - hwinfo
-  - clock_control
-  - usbd
-  - dmic
-  - audadc
   - i2s
-  - mspi
-  - sdhc
   - mipi_dsi
-  - flash
+  - mspi
   - nvs
-  - zms
   - pm
   - pwm
-  - crc
+  - rtc
+  - sdhc
+  - spi
+  - usbd
+  - watchdog
+  - zms
 testing:
   ignore_tags:
     - net
