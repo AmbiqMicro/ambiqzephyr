@@ -19,77 +19,93 @@ Whether it's the Real Time Clock (RTC) IC, or a System-on-a-Chip (SoC), Ambiq® 
 lowest power consumption with the highest computing performance possible for our customers to make the most
 innovative battery-power endpoint devices for their end-users. `Ambiq Products`_
 
+Command References
+******************
+
+For command-first build references derived from the Apollo510x and
+Apollo330mP board DTS files, see:
+
+- `samples/README.rst <samples/README.rst>`_
+- `tests/README.rst <tests/README.rst>`_
+- `doc/ambiq/How_to_Run_Zephyr_USB_Samples.rst <doc/ambiq/How_to_Run_Zephyr_USB_Samples.rst>`_
+- `doc/ambiq/How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst <doc/ambiq/How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst>`_
+- `doc/ambiq/How_to_Run_MCUBoot_Samples_and_Tests.rst <doc/ambiq/How_to_Run_MCUBoot_Samples_and_Tests.rst>`_
+- `doc/ambiq/RELEASE_NOTES.rst <doc/ambiq/RELEASE_NOTES.rst>`_
+
+
 Status
 ******
 
 As of now, Ambiq provides zephyr support for a set of peripherals/drivers:
 
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-| Driver |   PM_DEVICE    |   Stable codes at  |              Sample                       |       Board      |
-+========+================+====================+===========================================+==================+
-|   ADC  |       -        |    ambiq-stable    | samples\\drivers\\adc\\adc\_dt            |        All       |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-| AUDADC |      WIP       |    ambiq-stable    | samples\\drivers\\adc\\adc\_dt            |  apollo510 only  |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-|   BLE  |                |    ambiq-stable    | samples\\bluetooth                        | blue boards only |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-| COUNTER|                |    ambiq-stable    | samples\\drivers\\counter\\alarm          |        All       |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-| CRYPTO |                |     coming soon    |                                           |        All       |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-| DISPLAY|                |    ambiq-stable    |  samples\\drivers\\display                |  with disp card  |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-| FLASH  |                |    ambiq-stable    |  samples\\subsys\\mgmt\\mcumgr\\smp_svr   |        All       |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-| HWINFO |                |    ambiq-stable    |  tests\\drivers\\hwinfo\\api              |        All       |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-|   I2C  |       -        |    ambiq-stable    |  samples\\drivers\\eeprom                 |  eb boards only  |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-|   I2S  |       -        |    ambiq-stable    |  samples\\drivers\\audio\\amic            |        All       |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-|   I3C  |                |     coming soon    |                                           |  apollo510L only |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-|  INPUT |                |    ambiq-stable    |samples\\subsys\\input\\draw\_touch\_events|  with disp card  |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-|   JDI  |                |    ambiq-stable    |  samples\\drivers\\display                |  with disp card  |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-|MIPI_DBI|                |    ambiq-stable    |  samples\\drivers\\display                |  with disp card  |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-|MIPI_DSI|                |    ambiq-stable    |  samples\\drivers\\display                |  with disp card  |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-|  MSPI  |       -        |    ambiq-stable    |   samples\\drivers\\mspi\\mspi\_flash     |        All       |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-|   PDM  |       -        |    ambiq-stable    |    samples\\drivers\\audio\\dmic          |        All       |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-|   PWM  |                |    ambiq-stable    |  tests\\drivers\\pwm\\pwm\_api            |        All       |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-|   RTC  |                |    ambiq-stable    |    samples\\drivers\\rtc                  |        All       |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-|  SDHC  |       -        |    ambiq-stable    |  tests\\subsys\\sd\\sdio                  |        All       |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-|   SPI  |       -        |    ambiq-stable    | samples\\boards\\ambiq\\spi\_serial\_flash|  eb boards only  |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-|  TIMER |                |    ambiq-stable    |    samples\\philosophers                  |        All       |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-|  TRNG  |                |    ambiq-stable    |  tests\\drivers\\entropy\\api             |        All       |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-|  UART  |       -        |    ambiq-stable    |   samples\\drivers\\uart\\echo\_bot       |        All       |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-|   USB  |                |    ambiq-stable    |  samples\\drivers\\subsys\\usb\\mass      |        All       |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
-|   WDT  |                |    ambiq-stable    |    samples\\drivers\\watchdog             |        All       |
-+--------+----------------+--------------------+-------------------------------------------+------------------+
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| Driver | PM_DEVICE      | Stable code at     | Sample/Test                                   | Board            |
++========+================+====================+===============================================+==================+
+| ADC    | -              | ambiq-stable       | samples\\drivers\\adc\\adc\_dt                | All              |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| AUDADC | WIP            | ambiq-stable       | samples\\drivers\\adc\\adc\_dt                | apollo510 only   |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| BLE    |                | ambiq-stable       | samples\\bluetooth                            | blue boards only |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| COUNTER|                | ambiq-stable       | samples\\drivers\\counter\\alarm              | All              |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| CRC    | -              | ambiq-stable       | samples\\drivers\\crc\\crc\_api               | All              |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| CRYPTO | -              | ambiq-stable       | tests\\boards\\ambiq\\aes_hal_example         | All              |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| DISPLAY|                | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| FLASH  |                | ambiq-stable       | samples\\subsys\\mgmt\\mcumgr\\smp_svr        | All              |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| HWINFO |                | ambiq-stable       | tests\\drivers\\hwinfo\\api                   | All              |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| I2C    | -              | ambiq-stable       | samples\\drivers\\eeprom                      | eb boards only   |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| I2S    | -              | ambiq-stable       | samples\\drivers\\audio\\amic                 | All              |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| I3C    |                | coming soon        |                                               | apollo510L only  |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| INPUT  |                | ambiq-stable       | samples\\subsys\\input\\draw\_touch\_events   | with disp card   |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| JDI    |                | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+|MIPI_DBI|                | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+|MIPI_DSI|                | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| MSPI   | -              | ambiq-stable       | samples\\drivers\\mspi\\mspi\_flash           | All              |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| PDM    | -              | ambiq-stable       | samples\\drivers\\audio\\dmic                 | All              |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| PWM    |                | ambiq-stable       | tests\\drivers\\pwm\\pwm\_api                 | All              |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| RTC    |                | ambiq-stable       | samples\\drivers\\rtc                         | All              |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| SDHC   | -              | ambiq-stable       | tests\\subsys\\sd\\sdio                       | All              |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| SPI    | -              | ambiq-stable       | samples\\boards\\ambiq\\spi\_serial\_flash    | eb boards only   |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| TIMER  |                | ambiq-stable       | samples\\philosophers                         | All              |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| TRNG   | -              | ambiq-stable       | tests\\drivers\\entropy\\api                  | All              |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| UART   | -              | ambiq-stable       | samples\\drivers\\uart\\echo\_bot             | All              |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| USB    |                | ambiq-stable       | samples\\drivers\\subsys\\usb\\mass           | All              |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
+| WDT    |                | ambiq-stable       | samples\\drivers\\watchdog                    | All              |
++--------+----------------+--------------------+-----------------------------------------------+------------------+
 
 And also there are supports for some third-party libs:
 
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-|   Lib  |     Status     |   Stable codes at  |              Sample                       |       Board      |
+|   Lib  |     Status     |   Stable code at   |              Sample                       |       Board      |
 +========+================+====================+===========================================+==================+
 |coremark|       -        |    ambiq-stable    |   samples\\benchmarks\\coremark           |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |  fatfs |       -        |    ambiq-stable    |  samples\\subsys\\fs\\fs_sample           |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
-| mbedtls|       -        |    ambiq-stable    |  tests\\benchmarks\\mbedtls               |        All       |
+| mbedtls|    SW only     |    ambiq-stable    |  tests\\benchmarks\\mbedtls               |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |  lvgl  |       -        |    ambiq-stable    |  samples\\modules\\lvgl\\demos            |  with disp card  |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
@@ -144,13 +160,10 @@ Get to Know Ambiq Components
   zephyr/
   │
   ├── boards/
-  │   ├── ambiq/
-  │   └── shields/
-  │       ├── ap4_evb_disp_shield_rev2
-  │       ├── ap510_disp
-  │       ├── ap510_jdi_disp
-  │       ├── apollo5_eb_display_8080_card
-  │       └── apollo5_eb_display_card
+  │   ├── ap4_evb_disp_shield_rev2
+  │   ├── ap510_jdi_disp
+  │   ├── apollo5_eb_display_8080_card
+  │   └── apollo5_eb_display_card
   ├── drivers/
   │   ├── adc/
   │   │   ├── adc_ambiq.c
@@ -163,6 +176,10 @@ Get to Know Ambiq Components
   │   │       ├── apollox_ipc_support.c
   │   │       ├── hci_ambiq.c
   │   │       └── ipc.c
+  │   ├── crc/
+  │   │   └── crc_ambiq.c
+  │   ├── crypto/
+  │   │   └── crypto_ambiq_aes.c
   │   ├── clock_control/
   │   │   └── clock_control_ambiq.c
   │   ├── counter/
@@ -187,6 +204,8 @@ Get to Know Ambiq Components
   │   │   └── jdi_ambiq.c
   │   ├── mbox/
   │   │   └── mbox_ambiq.c
+  │   ├── mipi_dbi/
+  │   │   └── mipi_dbi_ambiq.c
   │   ├── mipi_dsi/
   │   │   └── dsi_ambiq.c
   │   ├── mspi/
