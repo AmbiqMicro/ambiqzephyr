@@ -10,6 +10,8 @@
 #include "soc.h"
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/entropy.h>
+#include <zephyr/pm/device.h>
+#include <zephyr/pm/device_runtime.h>
 
 LOG_MODULE_REGISTER(ambiq_puf_trng_entropy, CONFIG_ENTROPY_LOG_LEVEL);
 
@@ -30,13 +32,39 @@ static inline uint32_t get_trng_u32(void)
 	return AM_REGVAL(TRNG_BASE);
 }
 
+static int entropy_ambiq_otp_power_on(void)
+{
+	uint32_t status;
+	bool peripheral_enabled = false;
+
+	status = am_hal_pwrctrl_periph_enabled(AM_HAL_PWRCTRL_PERIPH_OTP, &peripheral_enabled);
+	if (status != AM_HAL_STATUS_SUCCESS) {
+		LOG_ERR("Failed to check OTP peripheral status, error: 0x%x", status);
+		return -EBUSY;
+	}
+
+	if (!peripheral_enabled) {
+		status = am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_OTP);
+		if (status != AM_HAL_STATUS_SUCCESS) {
+			LOG_ERR("Failed to enable OTP peripheral, error: 0x%x", status);
+			return -EBUSY;
+		}
+	}
+
+	return 0;
+}
+
 static int entropy_ambiq_get_trng(const struct device *dev, uint8_t *buffer, uint16_t length)
 {
-	ARG_UNUSED(dev);
-
 	/* Validate input parameters */
 	if (length == 0 || buffer == NULL) {
 		return -EINVAL;
+	}
+
+	int ret = pm_device_runtime_get(dev);
+
+	if (ret < 0) {
+		return ret;
 	}
 
 	uint8_t *byte_buffer = buffer;
@@ -65,6 +93,8 @@ static int entropy_ambiq_get_trng(const struct device *dev, uint8_t *buffer, uin
 		length -= copy_length;
 	}
 
+	(void)pm_device_runtime_put(dev);
+
 	if (fail_cnt >= MAX_FAIL_COUNT) {
 		return -EIO;
 	}
@@ -74,30 +104,37 @@ static int entropy_ambiq_get_trng(const struct device *dev, uint8_t *buffer, uin
 
 static int entropy_ambiq_trng_init(const struct device *dev)
 {
-	uint32_t status;
-	bool peripheral_enabled = false;
+	int ret = entropy_ambiq_otp_power_on();
 
-	/* Check and Power on OTP if it is not already on. */
-	status = am_hal_pwrctrl_periph_enabled(AM_HAL_PWRCTRL_PERIPH_OTP, &peripheral_enabled);
-	if (status != AM_HAL_STATUS_SUCCESS) {
-		LOG_ERR("Failed to check OTP peripheral status, error: 0x%x", status);
-		return -EBUSY;
+	if (ret) {
+		return ret;
 	}
 
-	if (!peripheral_enabled) {
-		status = am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_OTP);
-		if (status != AM_HAL_STATUS_SUCCESS) {
-			LOG_ERR("Failed to enable OTP peripheral, error: 0x%x", status);
-			return -EBUSY;
-		}
-	}
-
-	return 0;
+	return pm_device_runtime_enable(dev);
 }
+
+#ifdef CONFIG_PM_DEVICE
+static int entropy_ambiq_trng_pm_action(const struct device *dev,
+					enum pm_device_action action)
+{
+	switch (action) {
+	case PM_DEVICE_ACTION_RESUME:
+		/* OTP power domain may have been gated during deep sleep; restore it. */
+		return entropy_ambiq_otp_power_on();
+	case PM_DEVICE_ACTION_SUSPEND:
+		/* Nothing to do — the OTP power domain is managed by the SoC HAL. */
+		return 0;
+	default:
+		return -ENOTSUP;
+	}
+}
+#endif /* CONFIG_PM_DEVICE */
 
 static DEVICE_API(entropy, entropy_ambiq_api_funcs) = {
 	.get_entropy = entropy_ambiq_get_trng,
 };
 
-DEVICE_DT_INST_DEFINE(0, entropy_ambiq_trng_init, NULL, NULL, NULL, PRE_KERNEL_1,
-			  CONFIG_ENTROPY_INIT_PRIORITY, &entropy_ambiq_api_funcs);
+PM_DEVICE_DT_INST_DEFINE(0, entropy_ambiq_trng_pm_action);
+
+DEVICE_DT_INST_DEFINE(0, entropy_ambiq_trng_init, PM_DEVICE_DT_INST_GET(0), NULL, NULL,
+		      PRE_KERNEL_1, CONFIG_ENTROPY_INIT_PRIORITY, &entropy_ambiq_api_funcs);
