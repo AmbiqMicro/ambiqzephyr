@@ -7,6 +7,7 @@
 #define DT_DRV_COMPAT ambiq_i2c
 
 #include <errno.h>
+#include <stdio.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/kernel.h>
 #include <zephyr/pm/device.h>
@@ -55,7 +56,7 @@ typedef void (*i2c_ambiq_callback_t)(const struct device *dev, int result, void 
 struct i2c_ambiq_data {
 	am_hal_iom_config_t iom_cfg;
 	void *iom_handler;
-	struct k_sem bus_sem;
+	struct k_mutex dev_lock;
 	struct k_sem transfer_sem;
 	i2c_ambiq_callback_t callback;
 	void *callback_data;
@@ -64,6 +65,29 @@ struct i2c_ambiq_data {
 	bool dma_mode;
 	bool need_pm_lock;
 };
+
+/* Map Ambiq HAL status codes to negative errno codes */
+static int i2c_ambiq_hal_status_to_errno(uint32_t hal_status)
+{
+	switch (hal_status) {
+	case AM_HAL_STATUS_SUCCESS:
+		return 0;
+	case AM_HAL_STATUS_FAIL:
+		return -EIO;
+	case AM_HAL_STATUS_INVALID_ARG:
+		return -EINVAL;
+	case AM_HAL_STATUS_INVALID_OPERATION:
+		return -EPERM;
+	case AM_HAL_STATUS_OUT_OF_RANGE:
+		return -ERANGE;
+	case AM_HAL_STATUS_TIMEOUT:
+		return -ETIMEDOUT;
+	default:
+		/* Unknown HAL error - report to help debugging */
+		LOG_ERR("Unknown Ambiq HAL error code: 0x%x", hal_status);
+		return -EIO;
+	}
+}
 
 static void i2c_ambiq_pm_policy_state_lock_get(const struct device *dev, struct i2c_msg *msgs,
 					       uint8_t num_msgs)
@@ -169,10 +193,11 @@ static int i2c_ambiq_read(const struct device *dev, struct i2c_msg *hdr_msg,
 #endif /* CONFIG_I2C_AMBIQ_HANDLE_CACHE */
 		ret = data->transfer_status;
 	} else {
-		ret = am_hal_iom_blocking_transfer(data->iom_handler, &trans);
+		ret = i2c_ambiq_hal_status_to_errno(
+			am_hal_iom_blocking_transfer(data->iom_handler, &trans));
 	}
 
-	return (ret != AM_HAL_STATUS_SUCCESS) ? -EIO : 0;
+	return ret;
 }
 
 static int i2c_ambiq_write(const struct device *dev, struct i2c_msg *hdr_msg,
@@ -223,18 +248,28 @@ static int i2c_ambiq_write(const struct device *dev, struct i2c_msg *hdr_msg,
 		}
 		ret = data->transfer_status;
 	} else {
-		ret = am_hal_iom_blocking_transfer(data->iom_handler, &trans);
+		ret = i2c_ambiq_hal_status_to_errno(
+			am_hal_iom_blocking_transfer(data->iom_handler, &trans));
 	}
 
-	return (ret != AM_HAL_STATUS_SUCCESS) ? -EIO : 0;
+	return ret;
 }
 
 static int i2c_ambiq_configure(const struct device *dev, uint32_t dev_config)
 {
 	struct i2c_ambiq_data *data = dev->data;
+	int ret = 0;
 
 	if (!(I2C_MODE_CONTROLLER & dev_config)) {
 		return -EINVAL;
+	}
+
+	/* Lock device for configuration - use mutex for priority inheritance */
+	if (k_mutex_lock(&data->dev_lock, K_MSEC(100)) == 0) {
+		/* mutex successfully locked */
+	} else {
+		printf("Cannot lock I2C device\n");
+		return -EBUSY;
 	}
 
 	switch (I2C_SPEED_GET(dev_config)) {
@@ -248,12 +283,16 @@ static int i2c_ambiq_configure(const struct device *dev, uint32_t dev_config)
 		data->iom_cfg.ui32ClockFreq = AM_HAL_IOM_1MHZ;
 		break;
 	default:
-		return -EINVAL;
+		ret = -EINVAL;
+		goto config_end;
 	}
 
-	am_hal_iom_configure(data->iom_handler, &data->iom_cfg);
+	ret = i2c_ambiq_hal_status_to_errno(
+		am_hal_iom_configure(data->iom_handler, &data->iom_cfg));
 
-	return 0;
+config_end:
+	k_mutex_unlock(&data->dev_lock);
+	return ret;
 }
 
 static int i2c_ambiq_transfer(const struct device *dev, struct i2c_msg *msgs, uint8_t num_msgs,
@@ -271,8 +310,17 @@ static int i2c_ambiq_transfer(const struct device *dev, struct i2c_msg *msgs, ui
 
 	i2c_ambiq_pm_policy_state_lock_get(dev, msgs, num_msgs);
 
-	/* Send out messages */
-	k_sem_take(&data->bus_sem, K_FOREVER);
+	/* Lock device for transfer operations - use mutex for priority inheritance */
+	bool lock_acquired = false;
+
+	if (k_mutex_lock(&data->dev_lock, K_MSEC(100)) == 0) {
+		/* mutex successfully locked */
+		lock_acquired = true;
+	} else {
+		printf("Cannot lock I2C device\n");
+		ret = -EBUSY;
+		goto transfer_end;
+	}
 
 	for (int i = 0; i < num_msgs; i++) {
 		if (msgs[i].flags & I2C_MSG_READ) {
@@ -294,8 +342,11 @@ static int i2c_ambiq_transfer(const struct device *dev, struct i2c_msg *msgs, ui
 		}
 	}
 
-	k_sem_give(&data->bus_sem);
+	if (lock_acquired) {
+		k_mutex_unlock(&data->dev_lock);
+	}
 
+transfer_end:
 	i2c_ambiq_pm_policy_state_lock_put(dev);
 
 	(void)pm_device_runtime_put(dev);
@@ -350,7 +401,13 @@ static int i2c_ambiq_recover_bus(const struct device *dev)
 		return -EIO;
 	}
 
-	k_sem_take(&data->bus_sem, K_FOREVER);
+	/* Lock device for bus recovery - use mutex for priority inheritance */
+	if (k_mutex_lock(&data->dev_lock, K_MSEC(100)) == 0) {
+		/* mutex successfully locked */
+	} else {
+		printf("Cannot lock I2C device\n");
+		return -EBUSY;
+	}
 
 	error = gpio_pin_configure_dt(&config->scl, GPIO_OUTPUT_HIGH);
 	if (error != 0) {
@@ -381,7 +438,7 @@ static int i2c_ambiq_recover_bus(const struct device *dev)
 restore:
 	(void)pinctrl_apply_state(config->pcfg, PINCTRL_STATE_DEFAULT);
 
-	k_sem_give(&data->bus_sem);
+	k_mutex_unlock(&data->dev_lock);
 
 	return error;
 }
@@ -405,9 +462,14 @@ static int i2c_ambiq_init(const struct device *dev)
 		atomic_set_bit(data->pm_policy_flag, I2C_AMBIQ_PM_POLICY_CMDQ_FLAG);
 	}
 
-	ret = am_hal_iom_power_ctrl(data->iom_handler, AM_HAL_SYSCTRL_WAKE, false);
+	ret = i2c_ambiq_hal_status_to_errno(
+		am_hal_iom_power_ctrl(data->iom_handler, AM_HAL_SYSCTRL_WAKE, false));
+	if (ret < 0) {
+		LOG_ERR("Fail to power on I2C\n");
+		goto end;
+	}
 
-	ret |= i2c_ambiq_configure(dev, I2C_MODE_CONTROLLER | bitrate_cfg);
+	ret = i2c_ambiq_configure(dev, I2C_MODE_CONTROLLER | bitrate_cfg);
 	if (ret < 0) {
 		LOG_ERR("Fail to config I2C\n");
 		goto end;
@@ -457,6 +519,11 @@ static int i2c_ambiq_pm_action(const struct device *dev, enum pm_device_action a
 	int ret;
 	am_hal_sysctrl_power_state_e status;
 
+	/* Check if transfer is in progress - don't lock mutex to keep PM fast */
+	if (k_sem_count_get(&data->transfer_sem) == 0) {
+		return -EBUSY;
+	}
+
 	switch (action) {
 	case PM_DEVICE_ACTION_RESUME:
 		/* Move pins to active/default state */
@@ -482,13 +549,10 @@ static int i2c_ambiq_pm_action(const struct device *dev, enum pm_device_action a
 		return -ENOTSUP;
 	}
 
-	ret = am_hal_iom_power_ctrl(data->iom_handler, status, true);
+	ret = i2c_ambiq_hal_status_to_errno(
+		am_hal_iom_power_ctrl(data->iom_handler, status, true));
 
-	if (ret != AM_HAL_STATUS_SUCCESS) {
-		return -EPERM;
-	} else {
-		return 0;
-	}
+	return ret;
 }
 #endif /* CONFIG_PM_DEVICE */
 
@@ -522,7 +586,7 @@ static int i2c_ambiq_pm_action(const struct device *dev, enum pm_device_action a
 				COND_CODE_1(DT_PROP(DT_INST_PARENT(n), dma_mode),              \
 					(DT_INST_PROP_OR(n, cmdq_buffer_size, 1024)), (0))),  \
 		.dma_mode = DT_PROP(DT_INST_PARENT(n), dma_mode),     \
-		.bus_sem = Z_SEM_INITIALIZER(i2c_ambiq_data##n.bus_sem, 1, 1),                     \
+		.dev_lock = Z_MUTEX_INITIALIZER(i2c_ambiq_data##n.dev_lock),                       \
 		.transfer_sem = Z_SEM_INITIALIZER(i2c_ambiq_data##n.transfer_sem, 0, 1),           \
 	};                                                                                         \
 	static const struct i2c_ambiq_config i2c_ambiq_config##n = {                               \
