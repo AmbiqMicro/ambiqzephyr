@@ -298,10 +298,10 @@ static int flash_ambiq_erase(const struct device *dev, off_t offset, size_t len)
 
 	for (size_t page = 0; page < num_pages; page++) {
 		bool erase_verified = false;
-		uint32_t page_inst = AM_HAL_FLASH_ADDR2INST((uint32_t)SOC_NV_FLASH_ADDR +
-							    current_offset);
-		uint32_t page_num = AM_HAL_FLASH_ADDR2PAGE((uint32_t)SOC_NV_FLASH_ADDR +
-							   current_offset);
+		uint32_t page_inst = AM_HAL_FLASH_ADDR2INST(((uint32_t)SOC_NV_FLASH_ADDR +
+					current_offset));
+		uint32_t page_num = AM_HAL_FLASH_ADDR2PAGE(((uint32_t)SOC_NV_FLASH_ADDR +
+				       current_offset));
 
 		/* Retry logic: attempt erase up to MAX_RETRIES times */
 		for (retry_count = 0; retry_count < FLASH_OPERATION_MAX_RETRIES; retry_count++) {

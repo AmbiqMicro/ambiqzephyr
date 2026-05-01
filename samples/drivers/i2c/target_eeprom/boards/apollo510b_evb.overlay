@@ -1,0 +1,41 @@
+/*
+ * Copyright 2026 Ambiq Micro Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * apollo510b_evb does not define an ios_i2c0 pinctrl group in its board
+ * pinctrl file, so declare it inline here. Pinmux choices mirror the
+ * apollo510_evb overlay (SCL on P11, SDA on P52).
+ */
+
+#include <apollo510/ambiq-apollo510-pinmux.h>
+
+&pinctrl {
+	ios_i2c0_default: ios_i2c0_default {
+		group1 {
+			pinmux = <SLSCL_P11>, <SLSDAWIR3_P52>;
+			drive-open-drain;
+			drive-strength = "0.5";
+			bias-pull-up;
+		};
+	};
+};
+
+&ios0 {
+	i2c_ios0: i2c {
+		compatible = "ambiq,ios-i2c";
+		status = "okay";
+		fifo-threshold = <16>;
+		pinctrl-0 = <&ios_i2c0_default>;
+		pinctrl-names = "default";
+
+		eeprom0: eeprom@10 {
+			compatible = "zephyr,i2c-target-eeprom";
+			reg = <0x10>;
+			size = <256>;
+			status = "okay";
+		};
+	};
+};
+
+target_eeprom: &eeprom0 {};
