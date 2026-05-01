@@ -12,6 +12,7 @@
 #include <zephyr/drivers/jdi.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/misc/ambiq_pwrctrl/ambiq_pwrctrl.h>
 #include <zephyr/logging/log.h>
 
 #include <am_mcu_apollo.h>
@@ -239,11 +240,14 @@ static int jdi_ambiq_init(const struct device *dev)
 		return ret;
 	}
 
-	/* Enable display peripheral power */
-	ret = am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_DISP);
-	if (ret != AM_HAL_STATUS_SUCCESS) {
-		LOG_ERR("Failed to enable display peripheral power: %d", ret);
-		return -EIO;
+	/* Enable display peripheral power via the shared refcount so other
+	 * display drivers (DSI, MIPI-DBI, SPI display controller) sharing the
+	 * DISP rail aren't torn down when one of us suspends.
+	 */
+	ret = ambiq_pwrctrl_acquire(AMBIQ_PWRCTRL_DISP);
+	if (ret) {
+		LOG_ERR("Failed to acquire display peripheral power: %d", ret);
+		return ret;
 	}
 
 	/* Configure clock to 48MHz, the frequency is up to 192MHz */
@@ -251,19 +255,22 @@ static int jdi_ambiq_init(const struct device *dev)
 	ret = nemadc_clock_control(DISP_CLOCK_ENABLE, DISPCLKSRC_HFRC_192MHz, 4);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("Failed to configure display clock: %d", ret);
-		return -EIO;
+		ret = -EIO;
+		goto release_disp;
 	}
 #else
 	ret = am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_DISPCLKSEL_HFRC48, NULL);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("Failed to configure display clock: %d", ret);
-		return -EIO;
+		ret = -EIO;
+		goto release_disp;
 	}
 
 	ret = am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_DCCLK_ENABLE, NULL);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("Failed to enable DC clock: %d", ret);
-		return -EIO;
+		ret = -EIO;
+		goto release_disp;
 	}
 #endif
 
@@ -271,7 +278,8 @@ static int jdi_ambiq_init(const struct device *dev)
 	ret = nemadc_init();
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("NemaDC initialization failed");
-		return -EFAULT;
+		ret = -EFAULT;
+		goto release_disp;
 	}
 
 	/* Enable global interrupts */
@@ -280,6 +288,10 @@ static int jdi_ambiq_init(const struct device *dev)
 	/* Configure interrupts */
 	config->irq_config_func(dev);
 	return 0;
+
+release_disp:
+	(void)ambiq_pwrctrl_release(AMBIQ_PWRCTRL_DISP);
+	return ret;
 }
 
 /*

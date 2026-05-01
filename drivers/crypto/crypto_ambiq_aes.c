@@ -6,6 +6,7 @@
 
 #include <zephyr/device.h>
 #include <zephyr/crypto/crypto.h>
+#include <zephyr/drivers/misc/ambiq_pwrctrl/ambiq_pwrctrl.h>
 #include <zephyr/irq.h>
 #include <zephyr/kernel.h>
 #include <zephyr/linker/section_tags.h>
@@ -80,65 +81,32 @@ static void ambiq_aes_finish_irq_wait(struct ambiq_aes_data *data)
 	(void)atomic_set(&data->irq_wait_mask, 0U);
 }
 
-/*
- * Module-level reference counts for OTP and CRYPTO peripherals.
- *
- * am_hal_pwrctrl_periph_enable() is idempotent but
- * am_hal_pwrctrl_periph_disable() always powers the peripheral off regardless
- * of how many callers have it open.  These counters wrap both HAL calls so
- * that any number of concurrent users (e.g. multiple driver instances, or the
- * PM resume path holding a baseline reference while an operation is in flight)
- * can independently acquire and release the peripherals: the hardware is only
- * enabled on the 0→1 transition and only disabled on the 1→0 transition.
- */
-static atomic_t ambiq_aes_otp_refcnt = ATOMIC_INIT(0);
-static atomic_t ambiq_aes_crypto_refcnt = ATOMIC_INIT(0);
-
-/* Increment the peripheral reference counts and power the hardware on if this
- * is the first user (count transitions from 0 to 1).  Must be called with the
- * per-device lock held or from a context where concurrent access is otherwise
- * excluded, so that acquire/release pairs are always balanced.
+/* OTP and CRYPTO power rails are managed through the shared ambiq_pwrctrl
+ * helper. OTP is also used by the entropy/TRNG driver; without the shared
+ * refcount, this driver's PM-suspend path would tear OTP down out from under
+ * the TRNG. The helper guarantees the rail is only physically toggled on the
+ * 0->1 / 1->0 edges, so multiple users coexist safely.
  */
 static int ambiq_aes_periph_acquire(void)
 {
-	uint32_t status;
+	int ret;
 
-	if (atomic_inc(&ambiq_aes_otp_refcnt) == 0) {
-		status = am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_OTP);
-		if (status != AM_HAL_STATUS_SUCCESS) {
-			atomic_dec(&ambiq_aes_otp_refcnt);
-			LOG_ERR("Failed to enable OTP peripheral, error: 0x%x", status);
-			return -EBUSY;
-		}
+	ret = ambiq_pwrctrl_acquire(AMBIQ_PWRCTRL_OTP);
+	if (ret) {
+		return ret;
 	}
-
-	if (atomic_inc(&ambiq_aes_crypto_refcnt) == 0) {
-		status = am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_CRYPTO);
-		if (status != AM_HAL_STATUS_SUCCESS) {
-			atomic_dec(&ambiq_aes_crypto_refcnt);
-			/* Roll back the OTP reference we just incremented. */
-			if (atomic_dec(&ambiq_aes_otp_refcnt) == 1) {
-				(void)am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_OTP);
-			}
-			LOG_ERR("Failed to enable CRYPTO peripheral, error: 0x%x", status);
-			return -EBUSY;
-		}
+	ret = ambiq_pwrctrl_acquire(AMBIQ_PWRCTRL_CRYPTO);
+	if (ret) {
+		(void)ambiq_pwrctrl_release(AMBIQ_PWRCTRL_OTP);
+		return ret;
 	}
-
 	return 0;
 }
 
-/* Decrement the peripheral reference counts and power the hardware off when
- * the last user releases (count transitions from 1 to 0).
- */
 static void ambiq_aes_periph_release(void)
 {
-	if (atomic_dec(&ambiq_aes_crypto_refcnt) == 1) {
-		(void)am_hal_pwrctrl_control(AM_HAL_PWRCTRL_CONTROL_CRYPTO_POWERDOWN, NULL);
-	}
-	if (atomic_dec(&ambiq_aes_otp_refcnt) == 1) {
-		(void)am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_OTP);
-	}
+	(void)ambiq_pwrctrl_release(AMBIQ_PWRCTRL_CRYPTO);
+	(void)ambiq_pwrctrl_release(AMBIQ_PWRCTRL_OTP);
 }
 
 static void ambiq_cc312_isr(const void *arg)

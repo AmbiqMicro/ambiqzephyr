@@ -8,6 +8,7 @@ config MIPI_DBI_AMBIQ
 	depends on DT_HAS_AMBIQ_MIPI_DBI_ENABLED
 	depends on MIPI_DBI
 	depends on GPIO
+	select AMBIQ_PWRCTRL
 	select AMBIQ_COMPONENT_USE_NEMADC
 	help
 	  Enable MIPI DBI Type-B (Intel 8080) parallel interface driver

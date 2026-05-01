@@ -9,6 +9,7 @@
 #include <zephyr/drivers/mipi_dbi.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/misc/ambiq_pwrctrl/ambiq_pwrctrl.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/byteorder.h>
@@ -211,11 +212,13 @@ static int mipi_dbi_ambiq_init(const struct device *dev)
 		return ret;
 	}
 
-	/* Enable display peripheral power */
-	ret = am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_DISP);
-	if (ret != AM_HAL_STATUS_SUCCESS) {
-		LOG_ERR("Failed to enable display peripheral power: %d", ret);
-		return -EIO;
+	/* Enable display peripheral power via the shared refcount so other
+	 * display drivers sharing the DISP rail aren't torn down on suspend.
+	 */
+	ret = ambiq_pwrctrl_acquire(AMBIQ_PWRCTRL_DISP);
+	if (ret) {
+		LOG_ERR("Failed to acquire display peripheral power: %d", ret);
+		return ret;
 	}
 
 	/* Configure clock source, the frequency is up to 192MHz */
@@ -223,19 +226,22 @@ static int mipi_dbi_ambiq_init(const struct device *dev)
 	ret = nemadc_clock_control(DISP_CLOCK_ENABLE, DISPCLKSRC_HFRC_192MHz, 1);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("Failed to configure display clock: %d", ret);
-		return -EIO;
+		ret = -EIO;
+		goto release_disp;
 	}
 #else
 	ret = am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_DISPCLKSEL_HFRC192, NULL);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("Failed to configure display clock: %d", ret);
-		return -EIO;
+		ret = -EIO;
+		goto release_disp;
 	}
 
 	ret = am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_DCCLK_ENABLE, NULL);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("Failed to enable DC clock: %d", ret);
-		return -EIO;
+		ret = -EIO;
+		goto release_disp;
 	}
 
 #endif
@@ -243,7 +249,8 @@ static int mipi_dbi_ambiq_init(const struct device *dev)
 	ret = nemadc_init();
 	if (ret != 0) {
 		LOG_ERR("DC init failed!\n");
-		return -EFAULT;
+		ret = -EFAULT;
+		goto release_disp;
 	}
 
 	/* Enable global interrupts */
@@ -276,7 +283,8 @@ static int mipi_dbi_ambiq_init(const struct device *dev)
 		break;
 	default:
 		LOG_ERR("Invalid color coding!\n");
-		return -ENOTSUP;
+		ret = -ENOTSUP;
+		goto release_disp;
 	}
 
 	data->dc_layer.resx = data->dc_config.ui16ResX;
@@ -293,6 +301,10 @@ static int mipi_dbi_ambiq_init(const struct device *dev)
 	data->dc_layer.flipy_en = 0;
 	data->dc_layer.extra_bits = 0;
 
+	return ret;
+
+release_disp:
+	(void)ambiq_pwrctrl_release(AMBIQ_PWRCTRL_DISP);
 	return ret;
 }
 

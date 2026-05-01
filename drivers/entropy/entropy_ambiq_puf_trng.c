@@ -12,6 +12,7 @@
 #include <zephyr/drivers/entropy.h>
 #include <zephyr/pm/device.h>
 #include <zephyr/pm/device_runtime.h>
+#include <zephyr/drivers/misc/ambiq_pwrctrl/ambiq_pwrctrl.h>
 
 LOG_MODULE_REGISTER(ambiq_puf_trng_entropy, CONFIG_ENTROPY_LOG_LEVEL);
 
@@ -104,13 +105,26 @@ static int entropy_ambiq_get_trng(const struct device *dev, uint8_t *buffer, uin
 
 static int entropy_ambiq_trng_init(const struct device *dev)
 {
-	int ret = entropy_ambiq_otp_power_on();
+	int ret;
 
+	/* OTP backs the memory-mapped TRNG. Hold a permanent reference through
+	 * the shared ambiq_pwrctrl refcount so the crypto driver's suspend
+	 * path can't tear OTP down while we still need it. There is no matching
+	 * release: the entropy device is expected to be available for the life
+	 * of the system.
+	 */
+	ret = ambiq_pwrctrl_acquire(AMBIQ_PWRCTRL_OTP);
 	if (ret) {
 		return ret;
 	}
 
-	return pm_device_runtime_enable(dev);
+	ret = pm_device_runtime_enable(dev);
+	if (ret) {
+		(void)ambiq_pwrctrl_release(AMBIQ_PWRCTRL_OTP);
+		return ret;
+	}
+
+	return 0;
 }
 
 #ifdef CONFIG_PM_DEVICE

@@ -71,6 +71,7 @@ config SPI_AMBIQ_DCIF
 	select GPIO
 	select PINCTRL
 	select AMBIQ_HAL
+	select AMBIQ_PWRCTRL
 	select AMBIQ_COMPONENT_USE_NEMADC
 	help
 	  Enable driver for Ambiq SPI/DSPI/QSPI in controller mode.
