@@ -22,6 +22,7 @@ LOG_MODULE_REGISTER(spi_ambiq);
 
 #include <stdlib.h>
 #include <errno.h>
+#include <stdio.h>
 #include "spi_context.h"
 
 #include <soc.h>
@@ -48,6 +49,8 @@ struct spi_ambiq_data {
 	bool cont;
 	ATOMIC_DEFINE(pm_policy_flag, SPI_AMBIQ_PM_POLICY_FLAG_COUNT);
 	bool dma_mode;
+	bool pm_state_retained;
+	struct k_mutex dev_lock;
 };
 
 typedef void (*spi_context_update_trx)(struct spi_context *ctx, uint8_t dfs, uint32_t len);
@@ -137,29 +140,42 @@ static int spi_config(const struct device *dev, const struct spi_config *config)
 
 	int ret = 0;
 
+	/* Lock device for configuration - use mutex for priority inheritance */
+	if (k_mutex_lock(&data->dev_lock, K_MSEC(100)) == 0) {
+		/* mutex successfully locked */
+	} else {
+		printf("Cannot lock SPI device\n");
+		return -EBUSY;
+	}
+
 	if (spi_context_configured(ctx, config)) {
 		/* Already configured. No need to do it again. */
+		k_mutex_unlock(&data->dev_lock);
 		return 0;
 	}
 
 	if (SPI_WORD_SIZE_GET(config->operation) != SPI_WORD_SIZE) {
 		LOG_ERR("Word size must be %d", SPI_WORD_SIZE);
-		return -ENOTSUP;
+		ret = -ENOTSUP;
+		goto config_error;
 	}
 
 	if ((config->operation & SPI_LINES_MASK) != SPI_LINES_SINGLE) {
 		LOG_ERR("Only supports single mode");
-		return -ENOTSUP;
+		ret = -ENOTSUP;
+		goto config_error;
 	}
 
 	if (config->operation & SPI_LOCK_ON) {
 		LOG_ERR("Lock On not supported");
-		return -ENOTSUP;
+		ret = -ENOTSUP;
+		goto config_error;
 	}
 
 	if (config->operation & SPI_TRANSFER_LSB) {
 		LOG_ERR("LSB first not supported");
-		return -ENOTSUP;
+		ret = -ENOTSUP;
+		goto config_error;
 	}
 
 	if (config->operation & SPI_MODE_CPOL) {
@@ -178,16 +194,19 @@ static int spi_config(const struct device *dev, const struct spi_config *config)
 
 	if (config->operation & SPI_OP_MODE_SLAVE) {
 		LOG_ERR("Device mode not supported");
-		return -ENOTSUP;
+		ret = -ENOTSUP;
+		goto config_error;
 	}
 	if (config->operation & SPI_MODE_LOOP) {
 		LOG_ERR("Loopback mode not supported");
-		return -ENOTSUP;
+		ret = -ENOTSUP;
+		goto config_error;
 	}
 
 	if (cfg->clock_freq > AM_HAL_IOM_MAX_FREQ) {
 		LOG_ERR("Clock frequency too high");
-		return -ENOTSUP;
+		ret = -ENOTSUP;
+		goto config_error;
 	}
 
 	/* Select slower of two: SPI bus frequency for SPI device or SPI controller clock frequency
@@ -197,12 +216,26 @@ static int spi_config(const struct device *dev, const struct spi_config *config)
 	ctx->config = config;
 
 	/* Disable IOM instance as it cannot be configured when enabled*/
-	ret = am_hal_iom_disable(data->iom_handler);
+	if (am_hal_iom_disable(data->iom_handler) != AM_HAL_STATUS_SUCCESS) {
+		LOG_ERR("am_hal_iom_disable failed");
+		ret = -EIO;
+		goto config_error;
+	}
 
-	ret = am_hal_iom_configure(data->iom_handler, &data->iom_cfg);
+	if (am_hal_iom_configure(data->iom_handler, &data->iom_cfg) != AM_HAL_STATUS_SUCCESS) {
+		LOG_ERR("am_hal_iom_configure failed");
+		ret = -EIO;
+		goto config_error;
+	}
 
-	ret = am_hal_iom_enable(data->iom_handler);
+	if (am_hal_iom_enable(data->iom_handler) != AM_HAL_STATUS_SUCCESS) {
+		LOG_ERR("am_hal_iom_enable failed");
+		ret = -EIO;
+		goto config_error;
+	}
 
+config_error:
+	k_mutex_unlock(&data->dev_lock);
 	return ret;
 }
 
@@ -426,18 +459,30 @@ static int spi_ambiq_release(const struct device *dev, const struct spi_config *
 {
 	struct spi_ambiq_data *data = dev->data;
 	am_hal_iom_status_t iom_status;
+	int ret = 0;
+
+	/* Lock device to safely check status */
+	if (k_mutex_lock(&data->dev_lock, K_MSEC(100)) == 0) {
+		/* mutex successfully locked */
+	} else {
+		printf("Cannot lock SPI device\n");
+		return -EBUSY;
+	}
 
 	am_hal_iom_status_get(data->iom_handler, &iom_status);
 
 	if ((iom_status.bStatIdle != IOM0_STATUS_IDLEST_IDLE) ||
 	    (iom_status.bStatCmdAct == IOM0_STATUS_CMDACT_ACTIVE) ||
 	    (iom_status.ui32NumPendTransactions)) {
-		return -EBUSY;
+		ret = -EBUSY;
+		goto release_end;
 	}
 
 	spi_context_unlock_unconditionally(&data->ctx);
 
-	return 0;
+release_end:
+	k_mutex_unlock(&data->dev_lock);
+	return ret;
 }
 
 static DEVICE_API(spi, spi_ambiq_driver_api) = {
@@ -454,6 +499,8 @@ static int spi_ambiq_init(const struct device *dev)
 	const struct spi_ambiq_config *cfg = dev->config;
 	int ret = 0;
 
+	/* Note: Mutex is already initialized by Z_MUTEX_INITIALIZER in data structure */
+
 	if (AM_HAL_STATUS_SUCCESS != am_hal_iom_initialize(cfg->inst_idx, &data->iom_handler)) {
 		LOG_ERR("Fail to initialize SPI\n");
 		return -ENXIO;
@@ -465,12 +512,22 @@ static int spi_ambiq_init(const struct device *dev)
 		atomic_set_bit(data->pm_policy_flag, SPI_AMBIQ_PM_POLICY_CMDQ_FLAG);
 	}
 
-	ret = am_hal_iom_power_ctrl(data->iom_handler, AM_HAL_SYSCTRL_WAKE, false);
+	if (am_hal_iom_power_ctrl(data->iom_handler, AM_HAL_SYSCTRL_WAKE, false) !=
+	    AM_HAL_STATUS_SUCCESS) {
+		LOG_ERR("Fail to power on IOM%d", cfg->inst_idx);
+		am_hal_iom_uninitialize(data->iom_handler);
+		return -EIO;
+	}
 
-	ret |= pinctrl_apply_state(cfg->pcfg, PINCTRL_STATE_DEFAULT);
-	ret |= spi_context_cs_configure_all(&data->ctx);
+	ret = pinctrl_apply_state(cfg->pcfg, PINCTRL_STATE_DEFAULT);
 	if (ret < 0) {
 		LOG_ERR("Fail to config SPI pins\n");
+		goto end;
+	}
+
+	ret = spi_context_cs_configure_all(&data->ctx);
+	if (ret < 0) {
+		LOG_ERR("Fail to config CS GPIOs\n");
 		goto end;
 	}
 
@@ -497,6 +554,7 @@ static int spi_ambiq_pm_action(const struct device *dev, enum pm_device_action a
 	struct spi_ambiq_data *data = dev->data;
 	int err;
 	am_hal_sysctrl_power_state_e status;
+	bool retain;
 
 	switch (action) {
 	case PM_DEVICE_ACTION_RESUME:
@@ -506,13 +564,25 @@ static int spi_ambiq_pm_action(const struct device *dev, enum pm_device_action a
 			return err;
 		}
 		status = AM_HAL_SYSCTRL_WAKE;
+		/* Only restore registers if we previously saved them on suspend. */
+		retain = data->pm_state_retained;
 		break;
-	case PM_DEVICE_ACTION_SUSPEND:
+	case PM_DEVICE_ACTION_SUSPEND: {
+		am_hal_iom_status_t iom_status;
+
+		/* Refuse to suspend while a transfer is active. */
+		am_hal_iom_status_get(data->iom_handler, &iom_status);
+		if ((iom_status.bStatCmdAct == IOM0_STATUS_CMDACT_ACTIVE) ||
+		    (iom_status.ui32NumPendTransactions != 0)) {
+			return -EBUSY;
+		}
+		retain = true;
+
 		/* Move pins to sleep state */
 		err = pinctrl_apply_state(cfg->pcfg, PINCTRL_STATE_SLEEP);
 		if ((err < 0) && (err != -ENOENT)) {
 			/*
-			 * If returning -ENOENT, no pins where defined for sleep mode :
+			 * If returning -ENOENT, no pins were defined for sleep mode :
 			 * Do not output on console (might sleep already) when going to
 			 * sleep,
 			 * "SPI pinctrl sleep state not available"
@@ -523,18 +593,25 @@ static int spi_ambiq_pm_action(const struct device *dev, enum pm_device_action a
 		}
 		status = AM_HAL_SYSCTRL_DEEPSLEEP;
 		break;
+	}
 	default:
 		return -ENOTSUP;
 	}
 
-	err = am_hal_iom_power_ctrl(data->iom_handler, status, true);
+	err = am_hal_iom_power_ctrl(data->iom_handler, status, retain);
 
 	if (err != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("am_hal_iom_power_ctrl failed: %d", err);
 		return -EPERM;
-	} else {
-		return 0;
 	}
+
+	if (action == PM_DEVICE_ACTION_SUSPEND) {
+		data->pm_state_retained = true;
+	} else {
+		data->pm_state_retained = false;
+	}
+
+	return 0;
 }
 #endif /* CONFIG_PM_DEVICE */
 
@@ -568,6 +645,7 @@ static int spi_ambiq_pm_action(const struct device *dev, enum pm_device_action a
 				COND_CODE_1(DT_PROP(DT_INST_PARENT(n), dma_mode),                 \
 					(DT_INST_PROP_OR(n, cmdq_buffer_size, 1024)), (0))),   \
 		.dma_mode = DT_PROP(DT_INST_PARENT(n), dma_mode),                         \
+		.dev_lock = Z_MUTEX_INITIALIZER(spi_ambiq_data##n.dev_lock),                       \
 		SPI_CONTEXT_INIT_LOCK(spi_ambiq_data##n, ctx),                                     \
 		SPI_CONTEXT_INIT_SYNC(spi_ambiq_data##n, ctx),                                     \
 		SPI_CONTEXT_CS_GPIOS_INITIALIZE(DT_DRV_INST(n), ctx)};                             \
