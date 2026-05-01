@@ -1,0 +1,51 @@
+/*
+ * Copyright (c) 2026 Ambiq Micro Inc. <www.ambiq.com>
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Apollo3 MSPI single-board self-test overlay. No external memory device is
+ * required: a stub MSPI device is declared just so the controller has a
+ * target to address. Issuing transfers will toggle the MSPI pins (visible on
+ * a logic analyzer / scope on P22 D0, P24 SCK, P19 nCE) and exercise the
+ * ambiq,mspi-controller driver code paths.
+ */
+
+/ {
+	aliases {
+		mspi-stub = &stub_dev;
+	};
+};
+
+&mspi0 {
+	pinctrl-0 = <&mspi0_default>;
+	pinctrl-1 = <&mspi0_sleep>;
+	pinctrl-names = "default", "sleep";
+	status = "okay";
+
+	clock-frequency = <48000000>;
+
+	ce-gpios = <&gpio0_31 19 GPIO_ACTIVE_LOW>;
+
+	cmdq-buffer-location = ".mspi_buff";
+	cmdq-buffer-size = <256>;
+
+	stub_dev: stub_dev@0 {
+		compatible = "ambiq,mspi-device";
+		status = "okay";
+		reg = <0>;
+		mspi-max-frequency = <1000000>;
+		mspi-io-mode = "MSPI_IO_MODE_SINGLE";
+		mspi-data-rate = "MSPI_DATA_RATE_SINGLE";
+		mspi-cpp-mode = "MSPI_CPP_MODE_0";
+		mspi-endian = "MSPI_BIG_ENDIAN";
+		mspi-ce-polarity = "MSPI_CE_ACTIVE_LOW";
+		mspi-hardware-ce-num = <0>;
+		read-command = <0x03>;
+		write-command = <0x02>;
+		command-length = "INSTR_1_BYTE";
+		address-length = "ADDR_3_BYTE";
+		rx-dummy = <0>;
+		tx-dummy = <0>;
+		ce-break-config = <0 0>;
+		ambiq,timing-config-mask = <0>;
+	};
+};

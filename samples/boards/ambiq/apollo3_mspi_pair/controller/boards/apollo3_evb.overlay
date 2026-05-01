@@ -1,0 +1,84 @@
+/*
+ * Copyright (c) 2026 Ambiq Micro Inc. <www.ambiq.com>
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Apollo3 EVB acting as the MSPI bus controller. The MSPI peripheral runs in
+ * single-bit single-rate (i.e. classic 4-wire SPI) mode so that it can drive a
+ * second Apollo3 EVB whose IOS block is configured as a SPI peripheral.
+ *
+ * Wiring (controller -> peripheral):
+ *   MSPI0_SCK  P24  ->  SLSCK   P0
+ *   MSPI0_D0   P22  ->  SLMOSI  P1     (controller MOSI)
+ *   MSPI0_D1   P26  <-  SLMISO  P2     (controller MISO)
+ *   NCE19      P19  ->  SLNCE   P3
+ *   GPIO_P28        <-  SLINT   P4     (peripheral data-ready interrupt)
+ *   GND             <-> GND
+ */
+
+/ {
+	aliases {
+		mspi-peer = &ios_peer;
+	};
+
+	zephyr,user {
+		peer-int-gpios = <&gpio0_31 28 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&pinctrl {
+	mspi0_peer: mspi0_peer {
+		group1 {
+			pinmux = <MSPI0_0_P22>,
+				 <MSPI0_1_P26>,
+				 <MSPI0_8_P24>;
+			drive-strength = "0.75";
+			ambiq,iom-mspi = <0>;
+			ambiq,iom-num = <0>;
+		};
+
+		group2 {
+			pinmux = <NCE19_P19>;
+			drive-push-pull;
+			drive-strength = "0.5";
+			ambiq,iom-mspi = <0>;
+			ambiq,nce-src = <0>;
+			ambiq,iom-num = <6>;
+		};
+	};
+};
+
+&mspi0 {
+	compatible = "ambiq,mspi-controller";
+	pinctrl-0 = <&mspi0_peer>;
+	pinctrl-1 = <&mspi0_sleep>;
+	pinctrl-names = "default", "sleep";
+	status = "okay";
+
+	clock-frequency = <48000000>;
+
+	ce-gpios = <&gpio0_31 19 GPIO_ACTIVE_LOW>;
+
+	cmdq-buffer-location = ".mspi_buff";
+	cmdq-buffer-size = <256>;
+
+	ios_peer: ios_peer@0 {
+		compatible = "ambiq,mspi-device";
+		status = "okay";
+		reg = <0>;
+		mspi-max-frequency = <1000000>;
+		mspi-io-mode = "MSPI_IO_MODE_SINGLE";
+		mspi-data-rate = "MSPI_DATA_RATE_SINGLE";
+		mspi-cpp-mode = "MSPI_CPP_MODE_0";
+		mspi-endian = "MSPI_BIG_ENDIAN";
+		mspi-ce-polarity = "MSPI_CE_ACTIVE_LOW";
+		mspi-hardware-ce-num = <0>;
+		read-command = <0x00>;
+		write-command = <0x80>;
+		command-length = "INSTR_1_BYTE";
+		address-length = "ADDR_DISABLED";
+		rx-dummy = <0>;
+		tx-dummy = <0>;
+		ce-break-config = <0 0>;
+		ambiq,timing-config-mask = <0>;
+	};
+};

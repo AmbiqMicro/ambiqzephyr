@@ -1,0 +1,26 @@
+# Copyright (c) 2026 Ambiq Micro Inc. <www.ambiq.com>
+# SPDX-License-Identifier: Apache-2.0
+
+sample:
+  name: Apollo3 IOS SPI peripheral paired with MSPI controller
+  description: >
+    Configures the Apollo3 IOS block as a SPI peripheral so that a second
+    Apollo3 EVB acting as the MSPI bus controller can write into and read
+    out of the IOS LRAM. Echoes back the controller's pattern (one's
+    complement) so the controller can verify the link.
+tests:
+  sample.boards.ambiq.apollo3_mspi_pair.peripheral:
+    tags:
+      - drivers
+      - spi
+      - samples
+    filter: dt_compat_enabled("ambiq,spid")
+    platform_allow:
+      - apollo3_evb
+    integration_platforms:
+      - apollo3_evb
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "apollo3_mspi_pair_peripheral: ready"

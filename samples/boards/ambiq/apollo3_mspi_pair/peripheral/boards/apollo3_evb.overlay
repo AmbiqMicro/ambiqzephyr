@@ -1,0 +1,35 @@
+/*
+ * Copyright (c) 2026 Ambiq Micro Inc. <www.ambiq.com>
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Apollo3 EVB acting as a SPI peripheral via the IOS block. Pairs with the
+ * apollo3_mspi_pair_controller sample running on a second EVB.
+ *
+ * Pinout (peripheral side):
+ *   SLSCK   P0   - SPI clock from controller
+ *   SLMOSI  P1   - data from controller
+ *   SLMISO  P2   - data to controller
+ *   SLNCE   P3   - chip select from controller
+ *   SLINT   P4   - data-ready interrupt to controller
+ */
+
+/ {
+	aliases {
+		mspi-peer = &spi_peer;
+	};
+};
+
+&ios0 {
+	status = "okay";
+
+	spi_peer: spi {
+		compatible = "ambiq,spid";
+		status = "okay";
+		pinctrl-0 = <&spid0_default>;
+		pinctrl-names = "default";
+		int-gpios = <&gpio0_31 4 GPIO_ACTIVE_HIGH>;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+};

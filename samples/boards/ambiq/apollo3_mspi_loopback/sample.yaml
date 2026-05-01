@@ -1,0 +1,28 @@
+# Copyright (c) 2026 Ambiq Micro Inc. <www.ambiq.com>
+# SPDX-License-Identifier: Apache-2.0
+
+sample:
+  name: Apollo3 MSPI single-board self-test
+  description: >
+    Single-board Apollo3 MSPI driver smoke test. Configures MSPI0 in
+    single-bit single-rate mode against a stub MSPI device, drives
+    several transmit transactions and verifies that the driver returns
+    success. Useful for validating the ambiq,mspi-controller driver
+    when no external MSPI memory is present. Optionally jumper P22 to
+    P26 (D0 to D1) for half-duplex wire integrity verification.
+tests:
+  sample.boards.ambiq.apollo3_mspi_loopback:
+    tags:
+      - drivers
+      - mspi
+      - samples
+    filter: dt_compat_enabled("ambiq,mspi-controller")
+    platform_allow:
+      - apollo3_evb
+    integration_platforms:
+      - apollo3_evb
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "apollo3_mspi_loopback: PASS"

@@ -1,0 +1,25 @@
+# Copyright (c) 2026 Ambiq Micro Inc. <www.ambiq.com>
+# SPDX-License-Identifier: Apache-2.0
+
+sample:
+  name: Apollo3 MSPI controller paired with IOS peripheral
+  description: >
+    Drives the Apollo3 MSPI in single-bit single-rate mode against another
+    Apollo3 EVB acting as an IOS SPI peripheral. Verifies a known data
+    pattern can be written to and read back from the peripheral's LRAM.
+tests:
+  sample.boards.ambiq.apollo3_mspi_pair.controller:
+    tags:
+      - drivers
+      - mspi
+      - samples
+    filter: dt_compat_enabled("ambiq,mspi-controller")
+    platform_allow:
+      - apollo3_evb
+    integration_platforms:
+      - apollo3_evb
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "apollo3_mspi_pair_controller: PASS"

@@ -1,0 +1,49 @@
+/*
+ * Copyright (c) 2026 Ambiq Micro Inc. <www.ambiq.com>
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Apollo3 Plus single-board self-test overlay (regression of the
+ * Apollo3 Blue overlay). MSPI0 D0=P22, D1=P26, D2=P4, D3=P23, SCK=P24,
+ * nCE0=P37. No external memory is required: a stub MSPI device is
+ * declared so the controller has a target to address.
+ */
+
+/ {
+	aliases {
+		mspi-stub = &stub_dev;
+	};
+};
+
+&mspi0 {
+	pinctrl-0 = <&mspi0_default>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	clock-frequency = <48000000>;
+
+	ce-gpios = <&gpio32_63 5 GPIO_ACTIVE_LOW>;
+
+	cmdq-buffer-location = ".mspi_buff";
+	cmdq-buffer-size = <256>;
+
+	stub_dev: stub_dev@0 {
+		compatible = "ambiq,mspi-device";
+		status = "okay";
+		reg = <0>;
+		mspi-max-frequency = <1000000>;
+		mspi-io-mode = "MSPI_IO_MODE_SINGLE";
+		mspi-data-rate = "MSPI_DATA_RATE_SINGLE";
+		mspi-cpp-mode = "MSPI_CPP_MODE_0";
+		mspi-endian = "MSPI_BIG_ENDIAN";
+		mspi-ce-polarity = "MSPI_CE_ACTIVE_LOW";
+		mspi-hardware-ce-num = <0>;
+		read-command = <0x03>;
+		write-command = <0x02>;
+		command-length = "INSTR_1_BYTE";
+		address-length = "ADDR_3_BYTE";
+		rx-dummy = <0>;
+		tx-dummy = <0>;
+		ce-break-config = <0 0>;
+		ambiq,timing-config-mask = <0>;
+	};
+};
