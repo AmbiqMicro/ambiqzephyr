@@ -9,6 +9,7 @@ config ENTROPY_AMBIQ_PUF_TRNG
 	depends on SOC_AMBIQ_HAS_PUF
 	depends on DT_HAS_AMBIQ_PUF_TRNG_ENABLED
 	select ENTROPY_HAS_DRIVER
+	select AMBIQ_PWRCTRL
 	help
 	  This option enables the true random number generator
 	  driver based on the OTP/PUF TRNG.
