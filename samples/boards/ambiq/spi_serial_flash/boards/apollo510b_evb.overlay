@@ -1,0 +1,51 @@
+/*
+ * Copyright (c) 2025, Ambiq Micro Inc. <www.ambiq.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Overlay for the MikroElektronika "PSRAM 2 Click" (MIKROE-5337) carrying
+ * an APMemory APS6404L 64Mbit SPI/QPI PSRAM. Wired to IOM0 / SPI0 with
+ * the chip-select on a spare GPIO.
+ *
+ *   SCK  : P5  (M0SCK)
+ *   MISO : P7  (M0MISO)
+ *   MOSI : P6  (M0MOSI)
+ *   CS#  : P10 (GPIO, active low)
+ *
+ * Console (uart1 on P12/P14) is on different pins and is unaffected.
+ *
+ * NOTE: This MIKROE Click board run at 3.3V logic. The
+ * apollo510_evb VDDIO must be set to 3.3V (jumper/PMIC config) before
+ * connecting any click board. Driving a click board at 1.8V will produce
+ * unreliable behavior; driving the SoC pins at 5V will damage them.
+ *
+ * Future work: a dedicated mikroBUS shield definition is planned so that
+ * any 3.3V Click board can be layered on top of apollo510_evb /
+ * apollo510b_evb without per-sample overlays. For now, this overlay
+ * targets the PSRAM 2 Click directly.
+ */
+
+/ {
+	aliases {
+		spi-psram = &spi_psram;
+	};
+};
+
+&iom0 {
+	cmdq-buffer-location = "SRAM_NO_CACHE";
+	cmdq-buffer-size = <256>;
+
+	spi0: spi {
+		pinctrl-0 = <&spi0_default>;
+		pinctrl-names = "default";
+		cs-gpios = <&gpio0_31 10 GPIO_ACTIVE_LOW>;
+		clock-frequency = <DT_FREQ_M(24)>;
+		status = "okay";
+
+		spi_psram: aps6404l@0 {
+			compatible = "apm,aps6404l";
+			reg = <0>;
+			spi-max-frequency = <24000000>;
+		};
+	};
+};
