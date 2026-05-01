@@ -221,8 +221,7 @@ static int aps6404l_init(const struct device *dev)
 	static const struct aps6404l_config aps6404l_config_##inst = {                             \
 		.spec = SPI_DT_SPEC_INST_GET(inst,                                                 \
 					     (SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB |              \
-					      SPI_WORD_SET(8) | SPI_LINES_SINGLE),                 \
-					     0),                                                   \
+					      SPI_WORD_SET(8) | SPI_LINES_SINGLE)),                \
 	};                                                                                         \
                                                                                                    \
 	DEVICE_DT_INST_DEFINE(inst, aps6404l_init, NULL, &aps6404l_data_##inst,                    \
