@@ -45,6 +45,7 @@ config MSPI_AMBIQ_AP5
 config MSPI_AMBIQ_BUFF_RAM_LOCATION
 	hex "Byte offset to SRAM_BASE_ADDRESS"
 	default SOC_AMBIQ_DMA_BUFF_LOCATION if SOC_SERIES_APOLLO5X
+	default 0x0 if SOC_APOLLO3_BLUE
 	default 0x50000
 	help
 	  This option specifies the mspi buffer/heap start address
