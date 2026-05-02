@@ -26,6 +26,11 @@
 
 LOG_MODULE_REGISTER(soc, CONFIG_SOC_LOG_LEVEL);
 
+#if (defined(CONFIG_BOARD_APOLLO510DL_EVB) || defined(CONFIG_BOARD_APOLLO330MP_EVB)) && \
+	defined(CONFIG_LOG_BACKEND_SWO)
+#error "LOG_BACKEND_SWO is not supported on this board configuration"
+#endif
+
 static am_hal_pwrctrl_mcu_mode_e ambiq_perf_mode_to_hal(uint32_t mode)
 {
 #if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
