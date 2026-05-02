@@ -26,7 +26,7 @@ Building and Running
 
 .. code-block:: console
 
-   west build -b apollo510_evb zephyr/tests/boards/ambiq/aes_hal_example
+   west build -b apollo510dL_evb zephyr/tests/boards/ambiq/aes_hal_example
 
 On boot, the app prints pass/fail per mode and a final summary.
 

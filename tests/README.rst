@@ -4,11 +4,7 @@ Ambiq Test Build Commands
 This file lists simple test build commands for the Ambiq boards checked from
 these board DTS files:
 
-- ``boards/ambiq/apollo510_evb/apollo510_evb.dts``
-- ``boards/ambiq/apollo510_eb/apollo510_eb.dts``
-- ``boards/ambiq/apollo510L_eb/apollo510L_eb.dts``
 - ``boards/ambiq/apollo510dL_evb/apollo510dL_evb.dts``
-- ``boards/ambiq/apollo510b_evb/apollo510b_evb.dts``
 - ``boards/ambiq/apollo330mP_evb/apollo330mP_evb.dts``
 
 Only test paths that exist in this tree are listed here.
@@ -30,7 +26,7 @@ Crypto:
 
 .. code-block:: console
 
-   west build -b apollo510_evb tests/boards/ambiq/aes_hal_example -p always
+   west build -b apollo510dL_evb tests/boards/ambiq/aes_hal_example -p always
 
 GPIO:
 
@@ -46,22 +42,19 @@ MBOX:
 
 ``tests/drivers/mbox/mbox_data`` uses sysbuild and needs a board with an
 enabled mailbox consumer path. In the checked Ambiq DTS files, that applies to
-``apollo510L_eb``, ``apollo510dL_evb``, and ``apollo330mP_evb``.
+``apollo510dL_evb`` and ``apollo330mP_evb``.
 
 MSPI:
 
 .. code-block:: console
 
-   west build -b apollo510_evb tests/drivers/mspi/api -p always
+   west build -b apollo510dL_evb tests/drivers/mspi/api -p always
 
 Entropy:
 
 .. code-block:: console
 
-   west build -b apollo510_evb tests/drivers/entropy/api -p always
-   west build -b apollo510L_eb tests/drivers/entropy/api -p always
    west build -b apollo510dL_evb tests/drivers/entropy/api -p always
-   west build -b apollo510b_evb tests/drivers/entropy/api -p always
    west build -b apollo330mP_evb tests/drivers/entropy/api -p always
 
 HWINFO:
@@ -83,11 +76,7 @@ SDIO:
 
 .. code-block:: console
 
-   west build -b apollo510_evb tests/subsys/sd/sdio -p always
-   west build -b apollo510_eb tests/subsys/sd/sdio -p always
-   west build -b apollo510L_eb tests/subsys/sd/sdio -p always
    west build -b apollo510dL_evb tests/subsys/sd/sdio -p always
-   west build -b apollo510b_evb tests/subsys/sd/sdio -p always
    west build -b apollo330mP_evb tests/subsys/sd/sdio -p always
 
 Benchmark Tests
@@ -104,14 +93,14 @@ From the Ambiq MCUboot guide:
 
 .. code-block:: console
 
-   west build -b apollo510_evb -p always -d ../build/tests/boot/test_mcuboot ./tests/boot/test_mcuboot/ -T bootloader.mcuboot
-   west build -b apollo510_evb -p always ./tests/boot/with_mcumgr/ -d ../build/tests/boot/with_mcumgr/test_upgrade -T boot.with_mcumgr.test_upgrade
-   west build -b apollo510_evb -p always ./tests/boot/with_mcumgr -d ../build/tests/boot/with_mcumgr/test_upgrade -T boot.with_mcumgr.test_upgrade.swap_using_offset
-   west build -b apollo510_evb -p always ./tests/boot/mcuboot_data_sharing -d ../build/tests/boot/mcuboot_data_sharing -T bootloader.mcuboot.data.sharing
-   west build -b apollo510_evb -p always ./tests/subsys/settings/retention/ -d ../build/tests/settings-retention
-   west build -b apollo510_evb -p always ./tests/drivers/retained_mem/api/ -d ../build/tests/drivers/retained_mem/api
-   west build -b apollo510_evb -p always ./tests/drivers/flash/erase_blocks/ -d ../build/tests/drivers/flash/erase-blocks
-   west build -b apollo510_evb -p always ./tests/subsys/dfu/img_util -d ../build/tests/dfu/img_util -T dfu.image_util
+   west build -b apollo510dL_evb -p always -d ../build/tests/boot/test_mcuboot ./tests/boot/test_mcuboot/ -T bootloader.mcuboot
+   west build -b apollo510dL_evb -p always ./tests/boot/with_mcumgr/ -d ../build/tests/boot/with_mcumgr/test_upgrade -T boot.with_mcumgr.test_upgrade
+   west build -b apollo510dL_evb -p always ./tests/boot/with_mcumgr -d ../build/tests/boot/with_mcumgr/test_upgrade -T boot.with_mcumgr.test_upgrade.swap_using_offset
+   west build -b apollo510dL_evb -p always ./tests/boot/mcuboot_data_sharing -d ../build/tests/boot/mcuboot_data_sharing -T bootloader.mcuboot.data.sharing
+   west build -b apollo510dL_evb -p always ./tests/subsys/settings/retention/ -d ../build/tests/settings-retention
+   west build -b apollo510dL_evb -p always ./tests/drivers/retained_mem/api/ -d ../build/tests/drivers/retained_mem/api
+   west build -b apollo510dL_evb -p always ./tests/drivers/flash/erase_blocks/ -d ../build/tests/drivers/flash/erase-blocks
+   west build -b apollo510dL_evb -p always ./tests/subsys/dfu/img_util -d ../build/tests/dfu/img_util -T dfu.image_util
 
 The MCUboot guide includes ``tests/boot/mcuboot_recovery_retention``, but that
 section is still marked ``#TODO`` in the guide, so no command is duplicated
