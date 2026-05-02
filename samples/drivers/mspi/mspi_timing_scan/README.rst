@@ -20,7 +20,7 @@ They refers to an entry with the following bindings as a compatible:
 
 .. zephyr-app-commands::
    :zephyr-app: samples/drivers/mspi/mspi_timing_scan
-   :board: apollo510_evb
+   :board: apollo510dL_evb
    :goals: build flash
    :compact:
 

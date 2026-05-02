@@ -22,7 +22,7 @@ The application will build only for a target that has a :ref:`devicetree <dt-gui
 
 .. zephyr-app-commands::
    :zephyr-app: samples/drivers/mspi/mspi_flash
-   :board: apollo3p_evb
+   :board: apollo510dL_evb
    :goals: build flash
    :compact:
 
