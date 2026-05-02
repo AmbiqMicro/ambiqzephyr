@@ -112,7 +112,7 @@ And also there are supports for some third-party libs:
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |   Lib  |     Status     |   Stable code at   |              Sample                       |       Board      |
 +========+================+====================+===========================================+==================+
-|coremark|       -        |    ambiq-stable    |   samples\\benchmarks\\coremark           |        All       |
+|coremark|       -        |    ambiq-stable    |  samples\\benchmarks\\coremark            |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |  fatfs |       -        |    ambiq-stable    |  samples\\subsys\\fs\\fs_sample           |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
@@ -154,13 +154,13 @@ Upstream Repository Synchronization
 
 Execute ``git remote -v`` to check if upstream has been configured.
 
-If not, execute ``git remote add upstream https://github.com/AmbiqMicro/ambiqzephyr`` to configure the ambiqzephyr base to your upstream repository.
+If not, execute ``git remote add upstream https://github.com/AmbiqMicro/sdk-zephyr-alpha`` to configure the sdk-zephyr-alpha base to your upstream repository.
 
 Execute ``git remote -v`` again to check if it configures successfully.
 
 Execute ``git fetch upstream`` to fetch the upstream repository.
 
-Execute ``git checkout ambiq-stable`` to get the latest ambiq soc development branch.
+Execute ``git checkout apollo510L-dev`` to get the latest ambiq soc development branch.
 
 
 Get to Know Ambiq Components
@@ -276,7 +276,7 @@ In default we use UART COM for console, and the default baudrate is 115200, so a
 
 You should be able to see the logs in the serial terminal.
 
-``*** Booting Zephyr OS build v4.1.0-7246-gad4c3e3e9afe ***``
+``*** Booting Zephyr OS build zephyr-v2.5.0-71817-ga786a7f23388 ***``
 
 ``Hello World! apollo510dL_evb/apollo510L``
 
