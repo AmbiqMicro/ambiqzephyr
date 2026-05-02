@@ -171,15 +171,16 @@ Get to Know Ambiq Components
   zephyr/
   │
   ├── boards/
-  │   ├── ap4_evb_disp_shield_rev2
-  │   ├── ap510_jdi_disp
-  │   ├── apollo5_eb_display_8080_card
-  │   └── apollo5_eb_display_card
+  │   ├── ambiq/
+  │   │   ├── apollo330mP_evb/
+  │   │   └── apollo510dL_evb/
+  │   └── shields/
+  │       └── ap510_disp/
   ├── drivers/
   │   ├── adc/
-  │   │   ├── adc_ambiq.c
-  │   │   └── amic_ambiq_audadc.c
+  │   │   └── adc_ambiq.c
   │   ├── audio/
+  │   │   ├── amic_ambiq_audadc.c
   │   │   └── dmic_ambiq_pdm.c
   │   ├── bluetooth/
   │   │   └── hci/
@@ -187,14 +188,14 @@ Get to Know Ambiq Components
   │   │       ├── apollox_ipc_support.c
   │   │       ├── hci_ambiq.c
   │   │       └── ipc.c
-  │   ├── crc/
-  │   │   └── crc_ambiq.c
-  │   ├── crypto/
-  │   │   └── crypto_ambiq_aes.c
   │   ├── clock_control/
   │   │   └── clock_control_ambiq.c
   │   ├── counter/
   │   │   └── counter_ambiq_timer.c
+  │   ├── crc/
+  │   │   └── crc_ambiq.c
+  │   ├── crypto/
+  │   │   └── crypto_ambiq_aes.c
   │   ├── display/
   │   │   ├── display_co5300.c
   │   │   └── display_ls014b7dd01.c
@@ -219,7 +220,11 @@ Get to Know Ambiq Components
   │   │   └── mipi_dbi_ambiq.c
   │   ├── mipi_dsi/
   │   │   └── dsi_ambiq.c
+  │   ├── misc/
+  │   │   └── ambiq_pwrctrl/
+  │   │       └── ambiq_pwrctrl.c
   │   ├── mspi/
+  │   │   ├── mspi_ambiq.h
   │   │   ├── mspi_ambiq_ap3.c
   │   │   ├── mspi_ambiq_ap4.c
   │   │   ├── mspi_ambiq_ap5.c
