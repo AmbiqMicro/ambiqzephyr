@@ -91,8 +91,8 @@ int ambiq_pwrctrl_release(enum ambiq_pwrctrl_periph periph)
 			 * than the generic periph_disable, to follow the AmbiqSuite
 			 * recommended sequence for the CC312 engine.
 			 */
-			status = am_hal_pwrctrl_control(
-				AM_HAL_PWRCTRL_CONTROL_CRYPTO_POWERDOWN, NULL);
+			status = am_hal_pwrctrl_control(AM_HAL_PWRCTRL_CONTROL_CRYPTO_POWERDOWN,
+							NULL);
 		} else {
 			status = am_hal_pwrctrl_periph_disable(periph_to_hal[periph]);
 		}
