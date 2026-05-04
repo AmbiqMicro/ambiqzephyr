@@ -13,7 +13,7 @@ checked from these board DTS files:
 
 Only sample and module paths that exist in this tree are listed here.
 Where a sample depends on the selected board exposing the needed peripherals or
-chosen nodes, the regular ``west build -b <board> ... -p always`` form is used.
+chosen nodes, the regular ``west build -b your_board_here ... -p always`` form is used.
 
 Related Ambiq Docs
 ******************
@@ -28,8 +28,8 @@ Common Samples
 
 .. code-block:: console
 
-   west build -b <board> samples/drivers/watchdog -p always
-   west build -b <board> samples/subsys/mgmt/mcumgr/smp_svr -p always
+   west build -b your_board_here samples/drivers/watchdog -p always
+   west build -b your_board_here samples/subsys/mgmt/mcumgr/smp_svr -p always
 
 MCUboot and DFU Samples
 **********************
@@ -38,8 +38,8 @@ From the Ambiq MCUboot guide:
 
 .. code-block:: console
 
-   west build -b apollo510_eb -p always --sysbuild ./samples/sysbuild/with_mcuboot -d ../build/sysbuild/with_mcuboot
-   west build -b apollo510_evb -p always ./samples/subsys/mgmt/mcumgr/smp_svr/ --sysbuild -d ../build/samples/subsys/mgmt-mcumgr-smp-svr/serial -T sample.mcumgr.smp_svr.serial
+   west build -b your_board_here -p always --sysbuild ./samples/sysbuild/with_mcuboot -d ../build/sysbuild/with_mcuboot
+   west build -b your_board_here -p always ./samples/subsys/mgmt/mcumgr/smp_svr/ --sysbuild -d ../build/samples/subsys/mgmt-mcumgr-smp-svr/serial -T sample.mcumgr.smp_svr.serial
 
 The MCUboot guide also lists ``samples/subsys/usb/dfu-next``, but no usable
 command is provided there yet.
@@ -51,16 +51,13 @@ AMIC / AUDADC:
 
 .. code-block:: console
 
-   west build -b apollo510_evb samples/drivers/audio/amic -p always
-   west build -b apollo510b_evb samples/drivers/audio/amic -p always
+   west build -b your_board_here samples/drivers/audio/amic -p always
 
 DMIC / PDM:
 
 .. code-block:: console
 
-   west build -b apollo510_evb samples/drivers/audio/dmic -p always
-   west build -b apollo510b_evb samples/drivers/audio/dmic -p always
-   west build -b apollo510L_eb samples/drivers/audio/dmic -p always
+   west build -b your_board_here samples/drivers/audio/dmic -p always
 
 Bluetooth
 *********
@@ -70,42 +67,35 @@ Bluetooth
 
 .. code-block:: console
 
-   west build -b apollo510b_evb samples/bluetooth/peripheral -p always
-   west build -b apollo510L_eb samples/bluetooth/peripheral -p always
-   west build -b apollo510dL_evb samples/bluetooth/peripheral -p always
-   west build -b apollo330mP_evb samples/bluetooth/peripheral -p always
+   west build -b your_board_here samples/bluetooth/peripheral -p always
 
 Peripheral Samples
 ******************
 
 .. code-block:: console
 
-   west build -b <board> samples/drivers/adc/adc_dt -p always
-   west build -b <board> samples/drivers/counter/alarm -p always
-   west build -b <board> samples/drivers/rtc -p always
-   west build -b apollo510_evb samples/drivers/crc -p always
-   west build -b apollo510b_evb samples/drivers/crc -p always
-   west build -b apollo510_eb samples/drivers/eeprom -p always
-   west build -b apollo510_evb samples/drivers/memc -p always
-   west build -b apollo510_evb samples/drivers/mspi/mspi_flash -p always
-   west build -b apollo510_eb samples/drivers/mspi/mspi_flash -p always
-   west build -b apollo510L_eb samples/drivers/mspi/mspi_flash -p always
-   west build -b apollo510_evb samples/drivers/mspi/mspi_timing_scan -T sample.drivers.mspi.timing_scan.memc -p always
-   west build -b apollo510_evb samples/drivers/mspi/mspi_timing_scan -T sample.drivers.mspi.timing_scan.flash -p always
-   west build -b <board> samples/boards/ambiq/spi_serial_flash -p always
+   west build -b your_board_here samples/drivers/adc/adc_dt -p always
+   west build -b your_board_here samples/drivers/counter/alarm -p always
+   west build -b your_board_here samples/drivers/rtc -p always
+   west build -b your_board_here samples/drivers/crc -p always
+   west build -b your_board_here samples/drivers/eeprom -p always
+   west build -b your_board_here samples/drivers/memc -p always
+   west build -b your_board_here samples/drivers/mspi/mspi_flash -p always
+   west build -b your_board_here samples/drivers/mspi/mspi_timing_scan -T sample.drivers.mspi.timing_scan.memc -p always
+   west build -b your_board_here samples/drivers/mspi/mspi_timing_scan -T sample.drivers.mspi.timing_scan.flash -p always
+   west build -b your_board_here samples/boards/ambiq/spi_serial_flash -p always
 
 Display and UI
 **************
 
 .. code-block:: console
 
-   west build -b apollo510_evb --shield ap510_disp samples/drivers/display -p always
-   west build -b apollo510b_evb --shield ap510_disp samples/drivers/display -p always
-   west build -b apollo510_eb --shield ap510_jdi_disp samples/drivers/display -p always
-   west build -b apollo510_eb --shield apollo5_eb_display_8080_card samples/drivers/display -p always
-   west build -b apollo510L_eb --shield apollo5_eb_display_card samples/drivers/display -p always
-   west build -b apollo510_evb --shield ap510_disp samples/modules/lvgl/demos -p always
-   west build -b <board> samples/subsys/input/draw_touch_events -p always
+   west build -b your_board_here --shield ap510_disp samples/drivers/display -p always
+   west build -b your_board_here --shield ap510_jdi_disp samples/drivers/display -p always
+   west build -b your_board_here --shield apollo5_eb_display_8080_card samples/drivers/display -p always
+   west build -b your_board_here --shield apollo5_eb_display_card samples/drivers/display -p always
+   west build -b your_board_here --shield ap510_disp samples/modules/lvgl/demos -p always
+   west build -b your_board_here samples/subsys/input/draw_touch_events -p always
 
 ``samples/subsys/input/draw_touch_events`` requires both ``zephyr,display``
 and ``zephyr,touch`` chosen nodes on the selected board.
@@ -115,17 +105,8 @@ Storage and USB
 
 .. code-block:: console
 
-   west build -b apollo510_evb samples/subsys/fs/fs_sample -p always
-   west build -b apollo510_eb samples/subsys/fs/fs_sample -p always
-   west build -b apollo510L_eb samples/subsys/fs/fs_sample -p always
-   west build -b apollo510dL_evb samples/subsys/fs/fs_sample -p always
-   west build -b apollo510b_evb samples/subsys/fs/fs_sample -p always
-   west build -b apollo330mP_evb samples/subsys/fs/fs_sample -p always
-   west build -b apollo510_evb samples/subsys/usb/mass -p always
-   west build -b apollo510_eb samples/subsys/usb/mass -p always
-   west build -b apollo510dL_evb samples/subsys/usb/mass -p always
-   west build -b apollo510b_evb samples/subsys/usb/mass -p always
-   west build -b apollo330mP_evb samples/subsys/usb/mass -p always
+   west build -b your_board_here samples/subsys/fs/fs_sample -p always
+   west build -b your_board_here samples/subsys/usb/mass -p always
 
 Guide Notes
 ***********
@@ -149,5 +130,4 @@ Modules
 
 .. code-block:: console
 
-   west build -b apollo510_evb samples/benchmarks/coremark -p always
-   west build -b apollo510L_eb samples/benchmarks/coremark -p always
+   west build -b your_board_here samples/benchmarks/coremark -p always
