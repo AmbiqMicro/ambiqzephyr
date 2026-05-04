@@ -31,7 +31,7 @@ MEMC Example
 
 .. code-block:: bash
 
-   west build -p always -b [board_name] samples/drivers/memc
+   west build -p always -b your_board_here samples/drivers/memc
 
 **Recommendation:**
 
@@ -45,7 +45,7 @@ FLASH Example
 
 .. code-block:: bash
 
-   west build -p always -b [board_name] samples/drivers/mspi/mspi_flash
+   west build -p always -b your_board_here samples/drivers/mspi/mspi_flash
 
 MSPI API Test
 ~~~~~~~~~~~~~
@@ -55,7 +55,7 @@ MSPI API Test
 
 .. code-block:: bash
 
-   west build -p always -b [board_name] tests/drivers/mspi/api
+   west build -p always -b your_board_here tests/drivers/mspi/api
 
 MSPI FLASH Test
 ~~~~~~~~~~~~~~~
@@ -65,7 +65,7 @@ MSPI FLASH Test
 
 .. code-block:: bash
 
-   west build -p always -b [board_name] samples/drivers/mspi/flash
+   west build -p always -b your_board_here samples/drivers/mspi/flash
 
 MSPI Timing Scan Example
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -75,9 +75,9 @@ MSPI Timing Scan Example
 
 .. code-block:: bash
 
-   west build -p always -b [board_name] samples/drivers/mspi/mspi_timing_scan -T sample.drivers.mspi.timing_scan.memc
+   west build -p always -b your_board_here samples/drivers/mspi/mspi_timing_scan -T sample.drivers.mspi.timing_scan.memc
 
-   west build -p always -b [board_name] samples/drivers/mspi/mspi_timing_scan -T sample.drivers.mspi.timing_scan.flash
+   west build -p always -b your_board_here samples/drivers/mspi/mspi_timing_scan -T sample.drivers.mspi.timing_scan.flash
 
 **Note:**
 

@@ -22,8 +22,8 @@ innovative battery-power endpoint devices for their end-users. `Ambiq Products`_
 Command References
 ******************
 
-For command-first build references derived from the Apollo510x and
-Apollo330mP board DTS files, see:
+For command-first build references derived from the apollo510dL_evb and
+apollo330mP_evb board DTS files, see:
 
 - `samples/README.rst <samples/README.rst>`_
 - `tests/README.rst <tests/README.rst>`_
@@ -41,67 +41,78 @@ As of now, Ambiq provides zephyr support for a set of peripherals/drivers:
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
 | Driver | PM_DEVICE      | Stable code at     | Sample/Test                                   | Board            |
 +========+================+====================+===============================================+==================+
-| ADC    | -              | ambiq-stable       | samples\\drivers\\adc\\adc\_dt                | All              |
+| ADC    | PM + RUNTIME   | ambiq-stable       | samples\\drivers\\adc\\adc\_dt                | All              |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| AUDADC | WIP            | ambiq-stable       | samples\\drivers\\adc\\adc\_dt                | apollo510 only   |
+| AUDADC | PM + RUNTIME   | ambiq-stable       | samples\\drivers\\adc\\adc\_dt                | apollo510dL_evb  |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| BLE    |                | ambiq-stable       | samples\\bluetooth                            | blue boards only |
+| BLE    | -              | ambiq-stable       | samples\\bluetooth                            | All              |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| COUNTER|                | ambiq-stable       | samples\\drivers\\counter\\alarm              | All              |
+| COUNTER| -              | ambiq-stable       | samples\\drivers\\counter\\alarm              | All              |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
 | CRC    | -              | ambiq-stable       | samples\\drivers\\crc\\crc\_api               | All              |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| CRYPTO | -              | ambiq-stable       | tests\\boards\\ambiq\\aes_hal_example         | All              |
+| CRYPTO | PM only        | ambiq-stable       | tests\\boards\\ambiq\\aes_hal_example         | All              |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| DISPLAY|                | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
+| DISPLAY| -              | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| FLASH  |                | ambiq-stable       | samples\\subsys\\mgmt\\mcumgr\\smp_svr        | All              |
+| FLASH  | -              | ambiq-stable       | samples\\subsys\\mgmt\\mcumgr\\smp_svr        | All              |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| HWINFO |                | ambiq-stable       | tests\\drivers\\hwinfo\\api                   | All              |
+| HWINFO | -              | ambiq-stable       | tests\\drivers\\hwinfo\\api                   | All              |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| I2C    | -              | ambiq-stable       | samples\\drivers\\eeprom                      | eb boards only   |
+| I2C    | PM + RUNTIME   | ambiq-stable       | samples\\drivers\\eeprom                      | apollo510dL_evb  |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
 | I2S    | -              | ambiq-stable       | samples\\drivers\\audio\\amic                 | All              |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| I3C    |                | coming soon        |                                               | apollo510L only  |
+| I3C    | -              | coming soon        |                                               | apollo510dL_evb  |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| INPUT  |                | ambiq-stable       | samples\\subsys\\input\\draw\_touch\_events   | with disp card   |
+| INPUT  | -              | ambiq-stable       | samples\\subsys\\input\\draw\_touch\_events   | with disp card   |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| JDI    |                | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
+| JDI    | -              | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-|MIPI_DBI|                | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
+|MIPI_DBI| -              | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-|MIPI_DSI|                | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
+|MIPI_DSI| PM + RUNTIME   | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| MSPI   | -              | ambiq-stable       | samples\\drivers\\mspi\\mspi\_flash           | All              |
+| MSPI   | PM + RUNTIME   | ambiq-stable       | samples\\drivers\\mspi\\mspi\_flash           | All              |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| PDM    | -              | ambiq-stable       | samples\\drivers\\audio\\dmic                 | All              |
+| PDM    | PM only        | ambiq-stable       | samples\\drivers\\audio\\dmic                 | All              |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| PWM    |                | ambiq-stable       | tests\\drivers\\pwm\\pwm\_api                 | All              |
+| PWM    | -              | ambiq-stable       | tests\\drivers\\pwm\\pwm\_api                 | All              |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| RTC    |                | ambiq-stable       | samples\\drivers\\rtc                         | All              |
+| RTC    | -              | ambiq-stable       | samples\\drivers\\rtc                         | All              |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| SDHC   | -              | ambiq-stable       | tests\\subsys\\sd\\sdio                       | All              |
+| SDHC   | PM + RUNTIME   | ambiq-stable       | tests\\subsys\\sd\\sdio                       | All              |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| SPI    | -              | ambiq-stable       | samples\\boards\\ambiq\\spi\_serial\_flash    | eb boards only   |
+| SPI    | PM + RUNTIME   | ambiq-stable       | samples\\boards\\ambiq\\spi\_serial\_flash    | apollo510dL_evb  |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| TIMER  |                | ambiq-stable       | samples\\philosophers                         | All              |
+| TIMER  | -              | ambiq-stable       | samples\\philosophers                         | All              |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| TRNG   | -              | ambiq-stable       | tests\\drivers\\entropy\\api                  | All              |
+| TRNG   | PM + RUNTIME   | ambiq-stable       | tests\\drivers\\entropy\\api                  | All              |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| UART   | -              | ambiq-stable       | samples\\drivers\\uart\\echo\_bot             | All              |
+| UART   | PM only        | ambiq-stable       | samples\\drivers\\uart\\echo\_bot             | All              |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| USB    |                | ambiq-stable       | samples\\drivers\\subsys\\usb\\mass           | All              |
+| USB    | -              | ambiq-stable       | samples\\drivers\\subsys\\usb\\mass           | All              |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
-| WDT    |                | ambiq-stable       | samples\\drivers\\watchdog                    | All              |
+| WDT    | -              | ambiq-stable       | samples\\drivers\\watchdog                    | All              |
 +--------+----------------+--------------------+-----------------------------------------------+------------------+
+
+PM_DEVICE column legend:
+
+- ``PM + RUNTIME`` — driver registers a ``PM_DEVICE_DT_INST_DEFINE`` action handler
+  and uses ``pm_device_runtime_get`` / ``pm_device_runtime_put`` to power-cycle the
+  peripheral on demand. Set ``CONFIG_PM_DEVICE=y`` and ``CONFIG_PM_DEVICE_RUNTIME=y``
+  to take advantage of this.
+- ``PM only`` — driver registers a ``PM_DEVICE_DT_INST_DEFINE`` suspend/resume action
+  handler (used during system-managed deep sleep) but does not yet drive runtime PM
+  itself. Enabled with ``CONFIG_PM_DEVICE=y``.
+- ``-`` — no PM hooks in the driver today.
 
 And also there are supports for some third-party libs:
 
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |   Lib  |     Status     |   Stable code at   |              Sample                       |       Board      |
 +========+================+====================+===========================================+==================+
-|coremark|       -        |    ambiq-stable    |   samples\\benchmarks\\coremark           |        All       |
+|coremark|       -        |    ambiq-stable    |  samples\\benchmarks\\coremark            |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
 |  fatfs |       -        |    ambiq-stable    |  samples\\subsys\\fs\\fs_sample           |        All       |
 +--------+----------------+--------------------+-------------------------------------------+------------------+
@@ -143,13 +154,13 @@ Upstream Repository Synchronization
 
 Execute ``git remote -v`` to check if upstream has been configured.
 
-If not, execute ``git remote add upstream https://github.com/AmbiqMicro/ambiqzephyr`` to configure the ambiqzephyr base to your upstream repository.
+If not, execute ``git remote add upstream https://github.com/AmbiqMicro/sdk-zephyr-alpha`` to configure the sdk-zephyr-alpha base to your upstream repository.
 
 Execute ``git remote -v`` again to check if it configures successfully.
 
 Execute ``git fetch upstream`` to fetch the upstream repository.
 
-Execute ``git checkout ambiq-stable`` to get the latest ambiq soc development branch.
+Execute ``git checkout apollo510L-dev`` to get the latest ambiq soc development branch.
 
 
 Get to Know Ambiq Components
@@ -160,15 +171,16 @@ Get to Know Ambiq Components
   zephyr/
   │
   ├── boards/
-  │   ├── ap4_evb_disp_shield_rev2
-  │   ├── ap510_jdi_disp
-  │   ├── apollo5_eb_display_8080_card
-  │   └── apollo5_eb_display_card
+  │   ├── ambiq/
+  │   │   ├── apollo330mP_evb/
+  │   │   └── apollo510dL_evb/
+  │   └── shields/
+  │       └── ap510_disp/
   ├── drivers/
   │   ├── adc/
-  │   │   ├── adc_ambiq.c
-  │   │   └── amic_ambiq_audadc.c
+  │   │   └── adc_ambiq.c
   │   ├── audio/
+  │   │   ├── amic_ambiq_audadc.c
   │   │   └── dmic_ambiq_pdm.c
   │   ├── bluetooth/
   │   │   └── hci/
@@ -176,14 +188,14 @@ Get to Know Ambiq Components
   │   │       ├── apollox_ipc_support.c
   │   │       ├── hci_ambiq.c
   │   │       └── ipc.c
-  │   ├── crc/
-  │   │   └── crc_ambiq.c
-  │   ├── crypto/
-  │   │   └── crypto_ambiq_aes.c
   │   ├── clock_control/
   │   │   └── clock_control_ambiq.c
   │   ├── counter/
   │   │   └── counter_ambiq_timer.c
+  │   ├── crc/
+  │   │   └── crc_ambiq.c
+  │   ├── crypto/
+  │   │   └── crypto_ambiq_aes.c
   │   ├── display/
   │   │   ├── display_co5300.c
   │   │   └── display_ls014b7dd01.c
@@ -208,7 +220,11 @@ Get to Know Ambiq Components
   │   │   └── mipi_dbi_ambiq.c
   │   ├── mipi_dsi/
   │   │   └── dsi_ambiq.c
+  │   ├── misc/
+  │   │   └── ambiq_pwrctrl/
+  │   │       └── ambiq_pwrctrl.c
   │   ├── mspi/
+  │   │   ├── mspi_ambiq.h
   │   │   ├── mspi_ambiq_ap3.c
   │   │   ├── mspi_ambiq_ap4.c
   │   │   ├── mspi_ambiq_ap5.c
@@ -251,8 +267,8 @@ Build and Flash the Samples
 Make sure you have already installed proper version of JLINK which supports corresponding ambiq SoC, and
 added the path of JLINK.exe (e.g. C:\Program Files\SEGGER\JLink) to the environment variables.
 
-Go the Zephyr root path, execute ``west build -b <your-board-name> <samples> -p always`` to build the samples for your board.
-For example, build zephyr/samples/hello_world for apollo510_evb: ``west build -b apollo510_evb ./samples/hello_world -p always``.
+Go the Zephyr root path, execute ``west build -b <board> <samples> -p always`` to build the samples for your board.
+For example, build zephyr/samples/hello_world: ``west build -b <board> ./samples/hello_world -p always``.
 
 Execute ``west flash`` to flash the binary to the EVB if the zephyr.bin has been generated by west build.
 
@@ -260,13 +276,13 @@ In default we use UART COM for console, and the default baudrate is 115200, so a
 
 You should be able to see the logs in the serial terminal.
 
-``*** Booting Zephyr OS build v4.1.0-7246-gad4c3e3e9afe ***``
+``*** Booting Zephyr OS build zephyr-v2.5.0-71817-ga786a7f23388 ***``
 
-``Hello World! apollo510L_eb/apollo510L``
+``Hello World! apollo510_evb``
 
 For those samples that require additional hardware, such as the ap510_disp shield, you need to set the shield option when building. For example:
 
-``west build -b apollo510L_eb --shield ap510_disp ./samples/drivers/display -p always``
+``west build -b <board> --shield ap510_disp ./samples/drivers/display -p always``
 
 For Bluetooth samples, you need to program the BLE Controller firmware via JLINK once before running samples. The programming script and binary locate in ambiq SDK
 ambiqsuite/tools/apollo510L_scripts/firmware_updates/cm4_ble_updates/ble_v1p2. Please get the SDK from `Ambiq Content Portal`_.
@@ -298,7 +314,7 @@ Check `Zephyr Power Management`_ for more detailed information.
 Special Note on MSPI
 --------------------
 
-1. The apollo510L_eb supports MSPI hex psram device only by default and flash devices are disabled in the DTS.
+1. The apollo510dL_evb supports MSPI hex psram device only by default and flash devices are disabled in the DTS.
    Board rework is required to run octal psram and octal flash in parallel as the MSPI hardware interface is limited.
 
 2. The CELatency is forced to 1 for apollo510L SoCs temporarily and will be updated in the future so that it is configurable per device in the DTS.
