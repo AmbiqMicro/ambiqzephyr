@@ -1346,6 +1346,18 @@ static void uart_ambiq_async_rx_timeout(struct k_work *work)
 
 #endif
 
+/**
+ * @brief Ambiq UART driver API.
+ *
+ * Power Management: PM only (not PM + RUNTIME)
+ *
+ * The UART peripheral must remain powered to receive incoming data at any time.
+ * During system suspend (DEEPSLEEP), the HAL sets CR register to 0 to fully disable
+ * and power down the peripheral. There is no wake-on-RX capability, so runtime PM
+ * would cause RX data loss. The driver uses PM policy locks during DMA operations
+ * when buffers are in DTCM to prevent sleep-induced data corruption, but otherwise
+ * stays powered to remain ready for asynchronous RX events.
+ */
 static DEVICE_API(uart, uart_ambiq_driver_api) = {
 	.poll_in = uart_ambiq_poll_in,
 	.poll_out = uart_ambiq_poll_out,
