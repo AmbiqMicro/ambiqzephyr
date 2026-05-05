@@ -38,63 +38,63 @@ Status
 
 As of now, Ambiq provides zephyr support for a set of peripherals/drivers:
 
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| Driver | PM_DEVICE      | Stable code at     | Sample/Test                                   | Board            |
-+========+================+====================+===============================================+==================+
-| ADC    | PM + RUNTIME   | ambiq-stable       | samples\\drivers\\adc\\adc\_dt                | All              |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| AUDADC | PM + RUNTIME   | ambiq-stable       | samples\\drivers\\adc\\adc\_dt                | apollo510dL_evb  |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| BLE    | -              | ambiq-stable       | samples\\bluetooth                            | All              |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| COUNTER| -              | ambiq-stable       | samples\\drivers\\counter\\alarm              | All              |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| CRC    | -              | ambiq-stable       | samples\\drivers\\crc\\crc\_api               | All              |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| CRYPTO | PM only        | ambiq-stable       | tests\\boards\\ambiq\\aes_hal_example         | All              |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| DISPLAY| -              | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| FLASH  | -              | ambiq-stable       | samples\\subsys\\mgmt\\mcumgr\\smp_svr        | All              |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| HWINFO | -              | ambiq-stable       | tests\\drivers\\hwinfo\\api                   | All              |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| I2C    | PM + RUNTIME   | ambiq-stable       | samples\\drivers\\eeprom                      | apollo510dL_evb  |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| I2S    | -              | ambiq-stable       | samples\\drivers\\audio\\amic                 | All              |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| I3C    | -              | coming soon        |                                               | apollo510dL_evb  |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| INPUT  | -              | ambiq-stable       | samples\\subsys\\input\\draw\_touch\_events   | with disp card   |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| JDI    | -              | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-|MIPI_DBI| -              | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-|MIPI_DSI| PM + RUNTIME   | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| MSPI   | PM + RUNTIME   | ambiq-stable       | samples\\drivers\\mspi\\mspi\_flash           | All              |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| PDM    | PM only        | ambiq-stable       | samples\\drivers\\audio\\dmic                 | All              |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| PWM    | -              | ambiq-stable       | tests\\drivers\\pwm\\pwm\_api                 | All              |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| RTC    | -              | ambiq-stable       | samples\\drivers\\rtc                         | All              |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| SDHC   | PM + RUNTIME   | ambiq-stable       | tests\\subsys\\sd\\sdio                       | All              |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| SPI    | PM + RUNTIME   | ambiq-stable       | samples\\boards\\ambiq\\spi\_serial\_flash    | apollo510dL_evb  |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| TIMER  | -              | ambiq-stable       | samples\\philosophers                         | All              |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| TRNG   | PM + RUNTIME   | ambiq-stable       | tests\\drivers\\entropy\\api                  | All              |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| UART   | PM only        | ambiq-stable       | samples\\drivers\\uart\\echo\_bot             | All              |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| USB    | -              | ambiq-stable       | samples\\drivers\\subsys\\usb\\mass           | All              |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
-| WDT    | -              | ambiq-stable       | samples\\drivers\\watchdog                    | All              |
-+--------+----------------+--------------------+-----------------------------------------------+------------------+
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| Driver | PM_DEVICE        | Stable code at     | Sample/Test                                   | Board            |
++========+==================+====================+===============================================+==================+
+| ADC    | PM + RUNTIME     | ambiq-stable       | samples\\drivers\\adc\\adc\_dt                | All              |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| AUDADC | PM + RUNTIME     | ambiq-stable       | samples\\drivers\\adc\\adc\_dt                | apollo510dL_evb  |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| BLE    | Not Included (1) | ambiq-stable       | samples\\bluetooth                            | All              |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| COUNTER| Not Included (1) | ambiq-stable       | samples\\drivers\\counter\\alarm              | All              |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| CRC    | Not Included (1) | ambiq-stable       | samples\\drivers\\crc\\crc\_api               | All              |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| CRYPTO | PM Only (2)      | ambiq-stable       | tests\\boards\\ambiq\\aes_hal_example         | All              |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| DISPLAY| Not Included (1) | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| FLASH  | Not Included (1) | ambiq-stable       | samples\\subsys\\mgmt\\mcumgr\\smp\_svr        | All              |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| HWINFO | Not Included (1) | ambiq-stable       | tests\\drivers\\hwinfo\\api                   | All              |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| I2C    | PM + RUNTIME     | ambiq-stable       | samples\\drivers\\eeprom                      | apollo510dL_evb  |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| I2S    | Not Included (1) | ambiq-stable       | samples\\drivers\\audio\\amic                 | All              |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| I3C    | Not Included (1) | coming soon        |                                               | apollo510dL_evb  |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| INPUT  | Not Included (1) | ambiq-stable       | samples\\subsys\\input\\draw\_touch\_events   | with disp card   |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| JDI    | Not Included (1) | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+|MIPI_DBI| Not Included (1) | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+|MIPI_DSI| PM + RUNTIME     | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| MSPI   | PM + RUNTIME     | ambiq-stable       | samples\\drivers\\mspi\\mspi\_flash           | All              |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| PDM    | PM Only (2)      | ambiq-stable       | samples\\drivers\\audio\\dmic                 | All              |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| PWM    | Not Included (1) | ambiq-stable       | tests\\drivers\\pwm\\pwm\_api                 | All              |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| RTC    | Not Included (1) | ambiq-stable       | samples\\drivers\\rtc                         | All              |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| SDHC   | PM + RUNTIME     | ambiq-stable       | tests\\subsys\\sd\\sdio                       | All              |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| SPI    | PM + RUNTIME     | ambiq-stable       | samples\\boards\\ambiq\\spi\_serial\_flash    | apollo510dL_evb  |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| TIMER  | Not Included (1) | ambiq-stable       | samples\\philosophers                         | All              |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| TRNG   | PM + RUNTIME     | ambiq-stable       | tests\\drivers\\entropy\\api                  | All              |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| UART   | PM Only (2)      | ambiq-stable       | samples\\drivers\\uart\\echo\_bot             | All              |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| USB    | Not Included (1) | ambiq-stable       | samples\\drivers\\subsys\\usb\\mass           | All              |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| WDT    | Not Included (1) | ambiq-stable       | samples\\drivers\\watchdog                    | All              |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
 
 PM_DEVICE column legend:
 
@@ -102,10 +102,13 @@ PM_DEVICE column legend:
   and uses ``pm_device_runtime_get`` / ``pm_device_runtime_put`` to power-cycle the
   peripheral on demand. Set ``CONFIG_PM_DEVICE=y`` and ``CONFIG_PM_DEVICE_RUNTIME=y``
   to take advantage of this.
-- ``PM only`` — driver registers a ``PM_DEVICE_DT_INST_DEFINE`` suspend/resume action
-  handler (used during system-managed deep sleep) but does not yet drive runtime PM
-  itself. Enabled with ``CONFIG_PM_DEVICE=y``.
-- ``-`` — no PM hooks in the driver today.
+- ``PM Only (2)`` — driver registers a ``PM_DEVICE_DT_INST_DEFINE`` suspend/resume action
+  handler (used during system-managed deep sleep) but does not use runtime PM.
+  Enabled with ``CONFIG_PM_DEVICE=y``. Examples: CRYPTO (per-operation power via
+  shared power rail), UART (must stay powered for RX), PDM (active during audio capture).
+- ``Not Included (1)`` — no PM hooks needed. Peripheral is either always-on by design
+  (RTC, WDT use LFRC/XTAL clocks), externally powered (BLE, USB), or has no significant
+  power draw when idle (FLASH, HWINFO, DISPLAY controllers).
 
 And also there are supports for some third-party libs:
 
