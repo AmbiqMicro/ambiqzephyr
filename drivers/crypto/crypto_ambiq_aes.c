@@ -2163,6 +2163,19 @@ static int ambiq_aes_init(const struct device *dev)
 	return ambiq_aes_enable_peripherals();
 }
 
+/**
+ * @brief Ambiq AES crypto driver API.
+ *
+ * Power Management: PM only (not PM + RUNTIME)
+ *
+ * This driver uses per-operation power management via the ambiq_pwrctrl shared
+ * power rail management system. Each encrypt/decrypt operation calls
+ * ambiq_aes_periph_acquire() to power on the CRYPTO and OTP domains, then
+ * ambiq_aes_periph_release() to power them down after completion. This provides
+ * fine-grained power management without using the PM device runtime framework,
+ * as the power rails are shared with other drivers (TRNG uses OTP) and require
+ * refcounting. PM device callbacks handle system suspend/resume only.
+ */
 static DEVICE_API(crypto, ambiq_aes_crypto_api) = {
 	.query_hw_caps = ambiq_aes_query_hw_caps,
 	.cipher_begin_session = ambiq_aes_begin_session,
