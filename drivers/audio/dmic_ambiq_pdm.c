@@ -15,7 +15,6 @@
 #include <zephyr/cache.h>
 #include <zephyr/pm/device.h>
 #include <zephyr/pm/policy.h>
-#include <zephyr/pm/device_runtime.h>
 #include <zephyr/sys/atomic.h>
 #include <am_mcu_apollo.h>
 
@@ -174,8 +173,8 @@ static void dmic_ambiq_pdm_isr(const struct device *dev)
 	}
 }
 
-static bool div_derive(uint32_t pdm_op_freq, uint32_t io_clk,
-		       uint32_t *mclk_div, uint32_t *pdma_div)
+static bool div_derive(uint32_t pdm_op_freq, uint32_t io_clk, uint32_t *mclk_div,
+		       uint32_t *pdma_div)
 {
 	uint32_t div_total, div1, div2;
 
@@ -242,8 +241,8 @@ static int pdm_clock_settings_derive(const struct device *dev, struct dmic_cfg *
 				continue;
 			}
 
-			ret = am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_SYSPLL,
-							 pdm_op_freq, NULL);
+			ret = am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_SYSPLL, pdm_op_freq,
+							 NULL);
 			if (ret != AM_HAL_STATUS_SUCCESS) {
 				continue;
 			}
@@ -280,8 +279,7 @@ static int pdm_clock_settings_derive(const struct device *dev, struct dmic_cfg *
 	} pdm_setting;
 
 	pdm_setting settings_table[] = {
-		{8000, 128}, {16000, 128}, {24000, 128}, {32000, 96}, {48000, 64}
-	};
+		{8000, 128}, {16000, 128}, {24000, 128}, {32000, 96}, {48000, 64}};
 
 	uint32_t freq_table[] = {12288, 24576, 49152};
 
@@ -318,8 +316,8 @@ static int pdm_clock_settings_derive(const struct device *dev, struct dmic_cfg *
 				continue;
 			}
 
-			ret = am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_PLLVCO,
-							 245760000, NULL);
+			ret = am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_PLLVCO, 245760000,
+							 NULL);
 			if (ret != AM_HAL_STATUS_SUCCESS) {
 				continue;
 			}
@@ -467,6 +465,10 @@ static int dmic_ambiq_pdm_configure(const struct device *dev, struct dmic_cfg *d
 #endif
 
 	am_hal_pdm_configure(data->pdm_handler, &data->hal_cfg);
+
+	/* Setup the FIFO threshold */
+	am_hal_pdm_fifo_threshold_setup(data->pdm_handler, 16);
+
 	config->irq_config_func();
 
 	data->mem_slab = stream->mem_slab;
@@ -567,8 +569,7 @@ static int dmic_ambiq_pdm_read(const struct device *dev, uint8_t stream, void **
 	ARG_UNUSED(stream);
 
 	if ((data->dmic_state != DMIC_STATE_CONFIGURED) &&
-	    (data->dmic_state != DMIC_STATE_ACTIVE) &&
-	    (data->dmic_state != DMIC_STATE_PAUSED)) {
+	    (data->dmic_state != DMIC_STATE_ACTIVE) && (data->dmic_state != DMIC_STATE_PAUSED)) {
 		LOG_ERR("Device state is not valid for read");
 		return -EIO;
 	}
