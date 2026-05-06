@@ -8,7 +8,7 @@
 #include <zephyr/dt-bindings/display/panel.h>
 #include <zephyr/dt-bindings/i2c/i2c.h>
 
-&chsc5x {
+&chsc6540 {
 	int-gpios = <&gpio32_63 25 GPIO_ACTIVE_LOW>;
 	reset-gpios = <&gpio32_63 21 GPIO_ACTIVE_LOW>;
 };
