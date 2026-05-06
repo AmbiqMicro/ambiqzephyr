@@ -125,7 +125,7 @@ From the Ambiq MCUboot guide:
    west build -b your_board_here -p always ./tests/drivers/flash/erase_blocks/ -d ../build/tests/drivers/flash/erase-blocks
    west build -b your_board_here -p always ./tests/subsys/dfu/img_util -d ../build/tests/dfu/img_util -T dfu.image_util
 
-The MCUboot guide includes ``tests/boot/myour_board_herecuboot_recovery_retention``, but that
+The MCUboot guide includes ``tests/boot/mcuboot_recovery_retention``, but that
 section is still marked ``#TODO`` in the guide, so no command is duplicated
 here yet.
 

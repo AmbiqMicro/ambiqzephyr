@@ -11,6 +11,10 @@
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/pm/device.h>
+#include <zephyr/pm/device_runtime.h>
+#include <zephyr/pm/policy.h>
+#include <zephyr/sys/atomic.h>
 /* ambiq-sdk includes */
 #include <soc.h>
 
@@ -34,23 +38,96 @@ struct counter_ambiq_data {
 	counter_alarm_callback_t callback;
 	uint32_t freq;
 	void *user_data;
+#if defined(CONFIG_PM_DEVICE)
+	bool pm_lock_held;
+#endif
 };
 
 static struct k_spinlock lock;
 
+#if defined(CONFIG_SOC_SERIES_APOLLO3X) || defined(CONFIG_SOC_SERIES_APOLLO4X) ||                  \
+	defined(CONFIG_SOC_SERIES_APOLLO5X)
+/*
+ * Check if the timer clock source is a high-frequency clock that stops during sleep.
+ * High-frequency clocks (HFRC, HFRC2, XTAL_HS, HCLK) stop in sleep mode.
+ * Low-frequency clocks (LFRC, XT, RTC) continue running in sleep mode.
+ */
+static inline bool is_high_freq_clock(uint32_t clk_src)
+{
+	switch (clk_src) {
+#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+	/* HFRC clock variants - stop during sleep */
+	case AM_HAL_CTIMER_HFRC_12MHZ:
+	case AM_HAL_CTIMER_HFRC_3MHZ:
+	case AM_HAL_CTIMER_HFRC_187_5KHZ:
+	case AM_HAL_CTIMER_HFRC_47KHZ:
+	case AM_HAL_CTIMER_HFRC_12KHZ:
+	/* HCLK (system clock) - stops during sleep */
+	case AM_HAL_CTIMER_HCLK_DIV4:
+		return true;
+#elif defined(CONFIG_SOC_APOLLO510) || defined(CONFIG_SOC_APOLLO510B)
+	/* HFRC clock variants - stop during sleep */
+	case AM_HAL_TIMER_CLOCK_HFRC_DIV4:
+	case AM_HAL_TIMER_CLOCK_HFRC_DIV16:
+	case AM_HAL_TIMER_CLOCK_HFRC_DIV64:
+	case AM_HAL_TIMER_CLOCK_HFRC_DIV256:
+	case AM_HAL_TIMER_CLOCK_HFRC_DIV1024:
+	case AM_HAL_TIMER_CLOCK_HFRC_DIV4K:
+	/* HFRC2 125MHz clock variants - stop during sleep */
+	case AM_HAL_TIMER_CLOCK_HFRC2_125MHz_DIV8:
+	case AM_HAL_TIMER_CLOCK_HFRC2_125MHz_DIV16:
+	case AM_HAL_TIMER_CLOCK_HFRC2_125MHz_DIV32:
+	case AM_HAL_TIMER_CLOCK_HFRC2_125MHz_DIV64:
+	case AM_HAL_TIMER_CLOCK_HFRC2_125MHz_DIV128:
+	case AM_HAL_TIMER_CLOCK_HFRC2_125MHz_DIV256:
+	/* XTAL high-speed variants - stop during sleep */
+	case AM_HAL_TIMER_CLOCK_XTAL_HS:
+	case AM_HAL_TIMER_CLOCK_XTAL_HS_DIV2:
+	case AM_HAL_TIMER_CLOCK_XTAL_HS_DIV4:
+		return true;
+#elif defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
+	/* PLL post-divider - stops during sleep */
+	case AM_HAL_TIMER_CLOCK_PLL_POSTDIV:
+	/* RF XTAL variants - stop during sleep */
+	case AM_HAL_TIMER_CLOCK_RF_XTAL:
+	case AM_HAL_TIMER_CLOCK_RF_XTAL_DIV2:
+	case AM_HAL_TIMER_CLOCK_RF_XTAL_DIV4:
+	/* External reference clock variants - stop during sleep */
+	case AM_HAL_TIMER_CLOCK_XTHS_EXTREF_CLK:
+	case AM_HAL_TIMER_CLOCK_XTHS_EXTREF_CLK_DIV2:
+	case AM_HAL_TIMER_CLOCK_XTHS_EXTREF_CLK_DIV4:
+	case AM_HAL_TIMER_CLOCK_XTHS_EXTREF_CLK_DIV8:
+		return true;
+#elif defined(CONFIG_SOC_SERIES_APOLLO4X)
+	/* HFRC clock variants - stop during sleep */
+	case AM_HAL_TIMER_CLOCK_HFRC_DIV4:
+	case AM_HAL_TIMER_CLOCK_HFRC_DIV16:
+	case AM_HAL_TIMER_CLOCK_HFRC_DIV64:
+	case AM_HAL_TIMER_CLOCK_HFRC_DIV256:
+	case AM_HAL_TIMER_CLOCK_HFRC_DIV1024:
+	case AM_HAL_TIMER_CLOCK_HFRC_DIV4K:
+		return true;
+#endif
+	default:
+		/* All other clocks (LFRC, XT, RTC, etc.) are low-frequency and continue in sleep */
+		return false;
+	}
+}
+#endif
+/* CONFIG_SOC_SERIES_APOLLO3X || CONFIG_SOC_SERIES_APOLLO4X || CONFIG_SOC_SERIES_APOLLO5X */
+
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
 static void counter_irq_config_func(void)
 {
-	/* Apollo3 counters share the same irq number, connect to counter0 once when init and handle
+	/* Apollo3 counters share the same irq number,
+	 * connect to counter0 once when init and handle
 	 * different banks in counter_ambiq_isr
 	 */
-	static bool global_irq_init = true;
+	static atomic_t global_irq_init = ATOMIC_INIT(1);
 
-	if (!global_irq_init) {
+	if (!atomic_cas(&global_irq_init, 1, 0)) {
 		return;
 	}
-
-	global_irq_init = false;
 
 	/* Shared irq config default to ctimer0. */
 	NVIC_ClearPendingIRQ(CTIMER_IRQn);
@@ -106,8 +183,8 @@ static uint32_t get_clock_cycles(uint32_t clock_sel)
 	case 14:
 		ret = 100;
 		break;
-	case 15: /* todo: check on value */
-		ret = 0;
+	case 15: /* AM_HAL_CTIMER_HCLK_DIV4: 48MHz / 4 = 12MHz */
+		ret = 12000000;
 		break;
 	case 16:
 		ret = 8192;
@@ -134,8 +211,8 @@ static uint32_t get_clock_cycles(uint32_t clock_sel)
 		break;
 #endif /* CONFIG_SOC_SERIES_APOLLO4X || CONFIG_SOC_SERIES_APOLLO5X */
 
-#if defined(CONFIG_SOC_SERIES_APOLLO4X) ||                                                         \
-	defined(CONFIG_SOC_APOLLO510) || defined(CONFIG_SOC_APOLLO510B)
+#if defined(CONFIG_SOC_SERIES_APOLLO4X) || defined(CONFIG_SOC_APOLLO510) ||                        \
+	defined(CONFIG_SOC_APOLLO510B)
 	case 7:
 		ret = 500;
 		break;
@@ -211,9 +288,16 @@ static uint32_t get_clock_cycles(uint32_t clock_sel)
 	case 16:
 		ret = 256;
 		break;
-	case 17:
-		am_hal_clkmgr_clock_config_get(AM_HAL_CLKMGR_CLK_ID_PLLPOSTDIV, &ret, NULL);
+	case 17: {
+		uint32_t status;
+
+		status =
+			am_hal_clkmgr_clock_config_get(AM_HAL_CLKMGR_CLK_ID_PLLPOSTDIV, &ret, NULL);
+		if (status != AM_HAL_STATUS_SUCCESS) {
+			ret = 0; /* Fallback to default if query fails */
+		}
 		break;
+	}
 	case 18:
 	case 19:
 	case 20:
@@ -259,7 +343,10 @@ static int counter_ambiq_init(const struct device *dev)
 	data->freq = get_clock_cycles(cfg->clk_src);
 
 	am_hal_ctimer_clear(cfg->instance, AM_HAL_CTIMER_BOTH);
-	am_hal_ctimer_config(cfg->instance, &sContTimer);
+	if (am_hal_ctimer_config(cfg->instance, &sContTimer) != AM_HAL_STATUS_SUCCESS) {
+		k_spin_unlock(&lock, key);
+		return -EIO;
+	}
 	counter_irq_config_func();
 #else
 	am_hal_timer_config_t tc;
@@ -271,7 +358,10 @@ static int counter_ambiq_init(const struct device *dev)
 
 	data->freq = get_clock_cycles(cfg->clk_src);
 
-	am_hal_timer_config(cfg->instance, &tc);
+	if (am_hal_timer_config(cfg->instance, &tc) != AM_HAL_STATUS_SUCCESS) {
+		k_spin_unlock(&lock, key);
+		return -EIO;
+	}
 	cfg->irq_config_func();
 #endif
 
@@ -293,6 +383,47 @@ static int counter_ambiq_start(const struct device *dev)
 
 	k_spin_unlock(&lock, key);
 
+#if defined(CONFIG_PM_DEVICE)
+	/*
+	 * If using a high-frequency clock, prevent sleep while timer is running
+	 * because HF clocks stop during sleep. LF clocks can continue in sleep.
+	 */
+	if (is_high_freq_clock(cfg->clk_src)) {
+		struct counter_ambiq_data *data = dev->data;
+		int ret;
+
+		if (!data->pm_lock_held) {
+			/* Block all sleep states that would stop high-frequency clocks */
+			pm_policy_state_lock_get(PM_STATE_SUSPEND_TO_IDLE, PM_ALL_SUBSTATES);
+			pm_policy_state_lock_get(PM_STATE_SUSPEND_TO_RAM, PM_ALL_SUBSTATES);
+#if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
+			pm_policy_state_lock_get(PM_STATE_SUSPEND_TO_DISK, PM_ALL_SUBSTATES);
+#endif
+			ret = pm_device_runtime_get(dev);
+			if (ret < 0) {
+				/* Unwind the policy locks on error */
+				pm_policy_state_lock_put(PM_STATE_SUSPEND_TO_IDLE,
+							 PM_ALL_SUBSTATES);
+				pm_policy_state_lock_put(PM_STATE_SUSPEND_TO_RAM, PM_ALL_SUBSTATES);
+#if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
+				pm_policy_state_lock_put(PM_STATE_SUSPEND_TO_DISK,
+							 PM_ALL_SUBSTATES);
+#endif
+				/* Stop the timer since we can't prevent sleep */
+				key = k_spin_lock(&lock);
+#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+				am_hal_ctimer_stop(cfg->instance, AM_HAL_CTIMER_BOTH);
+#else
+				am_hal_timer_stop(cfg->instance);
+#endif
+				k_spin_unlock(&lock, key);
+				return ret;
+			}
+			data->pm_lock_held = true;
+		}
+	}
+#endif
+
 	return 0;
 }
 
@@ -309,6 +440,31 @@ static int counter_ambiq_stop(const struct device *dev)
 #endif
 
 	k_spin_unlock(&lock, key);
+
+#if defined(CONFIG_PM_DEVICE)
+	/*
+	 * If using a high-frequency clock, allow sleep now that timer is stopped.
+	 */
+	if (is_high_freq_clock(cfg->clk_src)) {
+		struct counter_ambiq_data *data = dev->data;
+		int ret;
+
+		if (data->pm_lock_held) {
+			ret = pm_device_runtime_put(dev);
+			if (ret < 0) {
+				LOG_WRN("Failed to release PM runtime reference: %d", ret);
+				/* Continue with lock release to avoid PM usage count leak */
+			}
+			/* Release all sleep state locks */
+			pm_policy_state_lock_put(PM_STATE_SUSPEND_TO_IDLE, PM_ALL_SUBSTATES);
+			pm_policy_state_lock_put(PM_STATE_SUSPEND_TO_RAM, PM_ALL_SUBSTATES);
+#if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
+			pm_policy_state_lock_put(PM_STATE_SUSPEND_TO_DISK, PM_ALL_SUBSTATES);
+#endif
+			data->pm_lock_held = false;
+		}
+	}
+#endif
 
 	return 0;
 }
@@ -424,6 +580,34 @@ static uint32_t counter_ambiq_get_freq(const struct device *dev)
 	return data->freq;
 }
 
+#if defined(CONFIG_PM_DEVICE)
+static int counter_ambiq_pm_action(const struct device *dev, enum pm_device_action action)
+{
+	ARG_UNUSED(dev);
+
+	switch (action) {
+	case PM_DEVICE_ACTION_SUSPEND:
+		/*
+		 * For high-frequency clocks, PM policy locks prevent this from being called
+		 * while timer is running. For low-frequency clocks, timer continues in sleep
+		 * and retains configuration, so no action needed.
+		 */
+		break;
+	case PM_DEVICE_ACTION_RESUME:
+		/*
+		 * Timer configuration is retained during sleep. If timer was using a
+		 * low-frequency clock and running, it continued during sleep.
+		 * No restoration needed.
+		 */
+		break;
+	default:
+		return -ENOTSUP;
+	}
+
+	return 0;
+}
+#endif /* CONFIG_PM_DEVICE */
+
 static DEVICE_API(counter, counter_api) = {
 	.start = counter_ambiq_start,
 	.stop = counter_ambiq_stop,
@@ -505,7 +689,9 @@ static void counter_ambiq_isr(void *arg)
 		.irq_config_func = counter_irq_config_func_##idx,                                  \
 	};                                                                                         \
 	AMBIQ_COUNTER_CONFIG_FUNC(idx)                                                             \
-	DEVICE_DT_INST_DEFINE(idx, counter_ambiq_init, NULL, &counter_data_##idx,                  \
-			      &counter_config_##idx, PRE_KERNEL_1, CONFIG_COUNTER_INIT_PRIORITY,   \
-			      &counter_api);
+	IF_ENABLED(CONFIG_PM_DEVICE,                                                            \
+		   (PM_DEVICE_DT_INST_DEFINE(idx, counter_ambiq_pm_action);)) \
+	DEVICE_DT_INST_DEFINE(idx, counter_ambiq_init, PM_DEVICE_DT_INST_GET_OR_NULL(idx),         \
+			      &counter_data_##idx, &counter_config_##idx, PRE_KERNEL_1,            \
+			      CONFIG_COUNTER_INIT_PRIORITY, &counter_api);
 DT_INST_FOREACH_STATUS_OKAY(AMBIQ_COUNTER_INIT);
