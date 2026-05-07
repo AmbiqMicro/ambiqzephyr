@@ -120,5 +120,5 @@ static DEVICE_API(entropy, entropy_ambiq_api_funcs) = {
 	.get_entropy = entropy_ambiq_get_trng,
 };
 
-DEVICE_DT_INST_DEFINE(0, NULL, NULL, NULL, NULL, POST_KERNEL,
-		      CONFIG_KERNEL_INIT_PRIORITY_DEFAULT, &entropy_ambiq_api_funcs);
+DEVICE_DT_INST_DEFINE(0, NULL, NULL, NULL, NULL, POST_KERNEL, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT,
+		      &entropy_ambiq_api_funcs);

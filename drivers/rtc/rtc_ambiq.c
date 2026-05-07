@@ -378,6 +378,14 @@ static int ambiq_rtc_init(const struct device *dev)
 	return 0;
 }
 
+/**
+ * @brief Ambiq RTC driver API.
+ *
+ * Provides real-time clock functionality including time/date management and alarm support.
+ * Uses always-on clocks (XTAL 32KHz or LFRC) that continue running during system sleep,
+ * ensuring accurate timekeeping in all power states. Supports Apollo3x, Apollo4x, and
+ * Apollo5x series with conditional Century/CenturyBit handling.
+ */
 static DEVICE_API(rtc, ambiq_rtc_driver_api) = {
 	.set_time = ambiq_rtc_set_time,
 	.get_time = ambiq_rtc_get_time,

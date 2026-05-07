@@ -49,13 +49,13 @@ As of now, Ambiq provides zephyr support for a set of peripherals/drivers:
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
 | COUNTER| Not Included (1) | ambiq-stable       | samples\\drivers\\counter\\alarm              | All              |
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
-| CRC    | Not Included (1) | ambiq-stable       | samples\\drivers\\crc\\crc\_api               | All              |
+| CRC    | policy locks     | ambiq-stable       | samples\\drivers\\crc\\crc\_api               | All              |
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
 | CRYPTO | PM Only (2)      | ambiq-stable       | tests\\boards\\ambiq\\aes_hal_example         | All              |
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
 | DISPLAY| Not Included (1) | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
-| FLASH  | Not Included (1) | ambiq-stable       | samples\\subsys\\mgmt\\mcumgr\\smp\_svr        | All              |
+| FLASH  | not needed       | ambiq-stable       | samples\\subsys\\mgmt\\mcumgr\\smp\_svr        | All              |
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
 | HWINFO | Not Included (1) | ambiq-stable       | tests\\drivers\\hwinfo\\api                   | All              |
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
@@ -79,7 +79,7 @@ As of now, Ambiq provides zephyr support for a set of peripherals/drivers:
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
 | PWM    | Not Included (1) | ambiq-stable       | tests\\drivers\\pwm\\pwm\_api                 | All              |
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
-| RTC    | Not Included (1) | ambiq-stable       | samples\\drivers\\rtc                         | All              |
+| RTC    | always-on clk    | ambiq-stable       | samples\\drivers\\rtc                         | All              |
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
 | SDHC   | PM + RUNTIME     | ambiq-stable       | tests\\subsys\\sd\\sdio                       | All              |
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
@@ -93,7 +93,7 @@ As of now, Ambiq provides zephyr support for a set of peripherals/drivers:
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
 | USB    | Not Included (1) | ambiq-stable       | samples\\drivers\\subsys\\usb\\mass           | All              |
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
-| WDT    | Not Included (1) | ambiq-stable       | samples\\drivers\\watchdog                    | All              |
+| WDT    | always-on clk    | ambiq-stable       | samples\\drivers\\watchdog                    | All              |
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
 
 PM_DEVICE column legend:
@@ -106,9 +106,15 @@ PM_DEVICE column legend:
   handler (used during system-managed deep sleep) but does not use runtime PM.
   Enabled with ``CONFIG_PM_DEVICE=y``. Examples: CRYPTO (per-operation power via
   shared power rail), UART (must stay powered for RX), PDM (active during audio capture).
+- ``policy locks`` — no PM device hooks, but operations use PM policy locks to prevent
+  entering deep sleep while hardware state is active (for example, CRC sessions).
+- ``always-on clk`` — peripheral uses always-on low-frequency clock sources required
+  across sleep states, so device suspend/resume hooks are unnecessary (for example, RTC/WDT).
+- ``not needed`` — peripheral remains memory accessible without device-level power
+  gating, so PM device hooks provide no benefit (for example, MRAM FLASH access).
 - ``Not Included (1)`` — no PM hooks needed. Peripheral is either always-on by design
-  (RTC, WDT use LFRC/XTAL clocks), externally powered (BLE, USB), or has no significant
-  power draw when idle (FLASH, HWINFO, DISPLAY controllers).
+  (for example COUNTER/TIMER), externally powered (BLE, USB), or has no significant
+  power draw when idle (HWINFO, DISPLAY controllers).
 
 And also there are supports for some third-party libs:
 

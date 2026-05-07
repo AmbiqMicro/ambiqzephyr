@@ -257,6 +257,18 @@ static int wdt_ambiq_init(const struct device *dev)
 	return 0;
 }
 
+/**
+ * @brief Watchdog runs from a hardware-supported watchdog clock for system safety.
+ *
+ * The WDT peripheral is designed to monitor system health during all power states, including
+ * deep sleep. The exact watchdog clock source and supported frequencies are SoC-dependent and
+ * selected by the device configuration; this driver supports multiple hardware-defined clock
+ * rates rather than only LFRC-derived 128 Hz, 16 Hz, and 1 Hz clocks. Configuration and
+ * countdown state are hardware-retained, and the watchdog remains active through sleep states
+ * to provide system reset capability if the system fails to wake or becomes unresponsive. No
+ * power management intervention is required.
+ */
+
 static DEVICE_API(wdt, wdt_ambiq_driver_api) = {
 	.setup = wdt_ambiq_setup,
 	.disable = wdt_ambiq_disable,

@@ -455,6 +455,17 @@ static void flash_ambiq_pages_layout(const struct device *dev,
 }
 #endif /* CONFIG_FLASH_PAGE_LAYOUT */
 
+/**
+ * @brief Ambiq MRAM flash driver API
+ *
+ * Power Management: NOT NEEDED
+ *
+ * The Ambiq internal MRAM flash is always accessible for read/write/erase operations
+ * via memory-mapped access and HAL register programming. There are no power domains to
+ * gate or clocks to manage - the memory array and flash controller remain powered and
+ * operational throughout all system power states. All operations complete synchronously
+ * before returning, so runtime PM would provide no benefit.
+ */
 static DEVICE_API(flash, flash_ambiq_driver_api) = {
 	.read = flash_ambiq_read,
 	.write = flash_ambiq_write,
