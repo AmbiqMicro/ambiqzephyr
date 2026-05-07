@@ -688,7 +688,7 @@ static void counter_ambiq_isr(void *arg)
 	AMBIQ_COUNTER_CONFIG_FUNC(idx)                                                             \
 	IF_ENABLED(CONFIG_PM_DEVICE,                                                            \
 		   (PM_DEVICE_DT_INST_DEFINE(idx, counter_ambiq_pm_action);)) \
-	DEVICE_DT_INST_DEFINE(idx, counter_ambiq_init, PM_DEVICE_DT_INST_GET(idx),         \
+	DEVICE_DT_INST_DEFINE(idx, counter_ambiq_init, PM_DEVICE_DT_INST_GET(idx),                 \
 			      &counter_data_##idx, &counter_config_##idx, PRE_KERNEL_1,            \
 			      CONFIG_COUNTER_INIT_PRIORITY, &counter_api);
 DT_INST_FOREACH_STATUS_OKAY(AMBIQ_COUNTER_INIT);

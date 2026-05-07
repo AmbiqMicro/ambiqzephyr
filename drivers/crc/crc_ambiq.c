@@ -257,6 +257,14 @@ static int crc_ambiq_init(const struct device *dev)
 	return 0;
 }
 
+/**
+ * @brief Ambiq CRC32 hardware driver API.
+ *
+ * Provides hardware-accelerated CRC32_IEEE (polynomial 0x04C11DB7) calculation using the
+ * SECURITY peripheral. The hardware produces reflected CRC32 with reversed input/output.
+ * Operations are protected by PM policy locks to prevent CRYPTO power domain gating during
+ * active CRC sessions.
+ */
 static DEVICE_API(crc, crc_ambiq_api) = {
 	.begin = crc_ambiq_begin,
 	.update = crc_ambiq_update,
