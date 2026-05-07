@@ -8,6 +8,40 @@
 #include <zephyr/dt-bindings/display/panel.h>
 #include <zephyr/dt-bindings/i2c/i2c.h>
 
+/*
+ * Shield defaults use IOM2 for touch (apollo510_evb). On apollo510dL_evb, touch is on
+ * IOM1 (TOUCH_M1SCL / TOUCH_M1SDA = P8 / P9).
+ */
+&iom2 {
+	/delete-property/ cmdq-buffer-location;
+	/delete-property/ cmdq-buffer-size;
+
+	i2c2: i2c {
+		status = "disabled";
+		/delete-node/ chsc6540@2e;
+	};
+};
+
+&iom1 {
+	cmdq-buffer-location = "SRAM_NO_CACHE";
+	cmdq-buffer-size = <256>;
+
+	i2c1: i2c {
+		pinctrl-0 = <&i2c1_default>;
+		pinctrl-1 = <&i2c1_sleep>;
+		pinctrl-names = "default", "sleep";
+		clock-frequency = <I2C_BITRATE_FAST>;
+		scl-gpios = <&gpio0_31 8 (GPIO_OPEN_DRAIN | GPIO_PULL_UP)>;
+		sda-gpios = <&gpio0_31 9 (GPIO_OPEN_DRAIN | GPIO_PULL_UP)>;
+		status = "okay";
+
+		chsc6540: chsc6540@2e {
+			compatible = "chipsemi,chsc6540";
+			reg = <0x2e>;
+		};
+	};
+};
+
 &chsc6540 {
 	int-gpios = <&gpio32_63 25 GPIO_ACTIVE_LOW>;
 	reset-gpios = <&gpio32_63 21 GPIO_ACTIVE_LOW>;

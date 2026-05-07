@@ -1,0 +1,107 @@
+/*
+ * Copyright (c) 2025 Ambiq Micro Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+#include <apollo510L/ambiq-apollo510L-pinmux.h>
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/display/panel.h>
+#include <zephyr/dt-bindings/i2c/i2c.h>
+
+/ {
+	/*
+	 * SPI shield does not probe MIPI; turn on the same 1.8 V load switch as the DSI
+	 * shield (&mipi_dsi vdd18-gpios on gpio96_119 pin 17).
+	 */
+	disp_panel_vdd18: disp-panel-vdd18 {
+		compatible = "regulator-fixed";
+		regulator-name = "disp-panel-vdd18";
+		enable-gpios = <&gpio96_119 17 GPIO_ACTIVE_HIGH>;
+		regulator-boot-on;
+		startup-delay-us = <5000>;
+	};
+};
+
+/*
+ * Shield defaults use IOM2 for touch (apollo510_evb P25/P26). On apollo510dL_evb,
+ * touch is on IOM1 (connector TOUCH_M1SCL / TOUCH_M1SDA = P8 / P9).
+ */
+&iom2 {
+	/delete-property/ cmdq-buffer-location;
+	/delete-property/ cmdq-buffer-size;
+
+	i2c2: i2c {
+		status = "disabled";
+		/delete-node/ chsc6540@2e;
+	};
+};
+
+&iom1 {
+	cmdq-buffer-location = "SRAM_NO_CACHE";
+	cmdq-buffer-size = <256>;
+
+	i2c1: i2c {
+		pinctrl-0 = <&i2c1_default>;
+		pinctrl-1 = <&i2c1_sleep>;
+		pinctrl-names = "default", "sleep";
+		clock-frequency = <I2C_BITRATE_FAST>;
+		scl-gpios = <&gpio0_31 8 (GPIO_OPEN_DRAIN | GPIO_PULL_UP)>;
+		sda-gpios = <&gpio0_31 9 (GPIO_OPEN_DRAIN | GPIO_PULL_UP)>;
+		status = "okay";
+
+		chsc6540: chsc6540@2e {
+			compatible = "chipsemi,chsc6540";
+			reg = <0x2e>;
+		};
+	};
+};
+
+&chsc6540 {
+	int-gpios = <&gpio32_63 25 GPIO_ACTIVE_LOW>;
+	reset-gpios = <&gpio32_63 21 GPIO_ACTIVE_LOW>;
+};
+
+&pinctrl {
+	/* QSPI: connector DISP_QSPI P92-P96, TE P80, CS P101 (apollo510dL_evb_connector.dtsi) */
+	dc_spi_default: dc_spi_default {
+		group1 {
+			pinmux = <DISP_TE_P80>,
+				 <DISP_QSPI_D0_P92>,
+				 <DISP_QSPI_D1_P93>,
+				 <DISP_QSPI_SCK_P94>,
+				 <DISP_QSPI_D2_P95>,
+				 <DISP_QSPI_D3_P96>;
+			drive-strength = "0.5";
+		};
+
+		group2 {
+			pinmux = <NCE101_P101>;
+			ambiq,nce-src = <0x33>;
+			drive-strength = "0.5";
+		};
+	};
+};
+
+/*
+ * Do not add &mipi_dsi { co5300: ... } here — ap510_disp_spi.overlay already defines
+ * label co5300 under &dc_spi; a second co5300 label under MIPI causes a devicetree error.
+ */
+&dc_spi {
+	disp-te;
+
+	co5300: co5300@0 {
+		reset-gpios = <&gpio32_63 9 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+	};
+};
+
+&gpio32_63 {
+	status = "okay";
+};
+
+&gpio64_95 {
+	status = "okay";
+};
+
+&gpio96_119 {
+	status = "okay";
+};
