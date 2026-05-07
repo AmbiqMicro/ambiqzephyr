@@ -343,10 +343,7 @@ static int counter_ambiq_init(const struct device *dev)
 	data->freq = get_clock_cycles(cfg->clk_src);
 
 	am_hal_ctimer_clear(cfg->instance, AM_HAL_CTIMER_BOTH);
-	if (am_hal_ctimer_config(cfg->instance, &sContTimer) != AM_HAL_STATUS_SUCCESS) {
-		k_spin_unlock(&lock, key);
-		return -EIO;
-	}
+	am_hal_ctimer_config(cfg->instance, &sContTimer);
 	counter_irq_config_func();
 #else
 	am_hal_timer_config_t tc;
@@ -691,7 +688,7 @@ static void counter_ambiq_isr(void *arg)
 	AMBIQ_COUNTER_CONFIG_FUNC(idx)                                                             \
 	IF_ENABLED(CONFIG_PM_DEVICE,                                                            \
 		   (PM_DEVICE_DT_INST_DEFINE(idx, counter_ambiq_pm_action);)) \
-	DEVICE_DT_INST_DEFINE(idx, counter_ambiq_init, PM_DEVICE_DT_INST_GET_OR_NULL(idx),         \
+	DEVICE_DT_INST_DEFINE(idx, counter_ambiq_init, PM_DEVICE_DT_INST_GET(idx),         \
 			      &counter_data_##idx, &counter_config_##idx, PRE_KERNEL_1,            \
 			      CONFIG_COUNTER_INIT_PRIORITY, &counter_api);
 DT_INST_FOREACH_STATUS_OKAY(AMBIQ_COUNTER_INIT);
