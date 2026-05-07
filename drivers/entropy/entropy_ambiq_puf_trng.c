@@ -10,8 +10,6 @@
 #include "soc.h"
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/entropy.h>
-#include <zephyr/pm/device.h>
-#include <zephyr/pm/device_runtime.h>
 #include <zephyr/drivers/misc/ambiq_pwrctrl/ambiq_pwrctrl.h>
 
 LOG_MODULE_REGISTER(ambiq_puf_trng_entropy, CONFIG_ENTROPY_LOG_LEVEL);
@@ -33,43 +31,57 @@ static inline uint32_t get_trng_u32(void)
 	return AM_REGVAL(TRNG_BASE);
 }
 
-static int entropy_ambiq_otp_power_on(void)
+/* Acquire OTP and CRYPTO power rails for TRNG access.
+ * The TRNG is memory-mapped into OTP, and CRYPTO must also be powered on
+ * for proper operation. Both rails are managed through ambiq_pwrctrl to
+ * allow sharing with other drivers (e.g., AES crypto).
+ */
+static int entropy_ambiq_periph_acquire(void)
 {
-	uint32_t status;
-	bool peripheral_enabled = false;
+	int ret;
 
-	status = am_hal_pwrctrl_periph_enabled(AM_HAL_PWRCTRL_PERIPH_OTP, &peripheral_enabled);
-	if (status != AM_HAL_STATUS_SUCCESS) {
-		LOG_ERR("Failed to check OTP peripheral status, error: 0x%x", status);
-		return -EBUSY;
+	ret = ambiq_pwrctrl_acquire(AMBIQ_PWRCTRL_OTP);
+	if (ret) {
+		LOG_ERR("Failed to acquire OTP power: %d", ret);
+		return ret;
 	}
 
-	if (!peripheral_enabled) {
-		status = am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_OTP);
-		if (status != AM_HAL_STATUS_SUCCESS) {
-			LOG_ERR("Failed to enable OTP peripheral, error: 0x%x", status);
-			return -EBUSY;
-		}
+	ret = ambiq_pwrctrl_acquire(AMBIQ_PWRCTRL_CRYPTO);
+	if (ret) {
+		LOG_ERR("Failed to acquire CRYPTO power: %d", ret);
+		(void)ambiq_pwrctrl_release(AMBIQ_PWRCTRL_OTP);
+		return ret;
 	}
 
 	return 0;
 }
 
+static void entropy_ambiq_periph_release(void)
+{
+	(void)ambiq_pwrctrl_release(AMBIQ_PWRCTRL_CRYPTO);
+	(void)ambiq_pwrctrl_release(AMBIQ_PWRCTRL_OTP);
+}
+
 static int entropy_ambiq_get_trng(const struct device *dev, uint8_t *buffer, uint16_t length)
 {
+	int ret;
+	uint8_t *byte_buffer;
+	uint8_t fail_cnt = 0;
+
+	ARG_UNUSED(dev);
+
 	/* Validate input parameters */
 	if (length == 0 || buffer == NULL) {
 		return -EINVAL;
 	}
 
-	int ret = pm_device_runtime_get(dev);
-
+	/* Power on OTP and CRYPTO peripherals */
+	ret = entropy_ambiq_periph_acquire();
 	if (ret < 0) {
 		return ret;
 	}
 
-	uint8_t *byte_buffer = buffer;
-	uint8_t fail_cnt = 0;
+	byte_buffer = buffer;
 
 	/*
 	 * While the passed in length is greater than zero
@@ -94,7 +106,8 @@ static int entropy_ambiq_get_trng(const struct device *dev, uint8_t *buffer, uin
 		length -= copy_length;
 	}
 
-	(void)pm_device_runtime_put(dev);
+	/* Power down OTP and CRYPTO before returning */
+	entropy_ambiq_periph_release();
 
 	if (fail_cnt >= MAX_FAIL_COUNT) {
 		return -EIO;
@@ -103,52 +116,9 @@ static int entropy_ambiq_get_trng(const struct device *dev, uint8_t *buffer, uin
 	return 0;
 }
 
-static int entropy_ambiq_trng_init(const struct device *dev)
-{
-	int ret;
-
-	/* OTP backs the memory-mapped TRNG. Hold a permanent reference through
-	 * the shared ambiq_pwrctrl refcount so the crypto driver's suspend
-	 * path can't tear OTP down while we still need it. There is no matching
-	 * release: the entropy device is expected to be available for the life
-	 * of the system.
-	 */
-	ret = ambiq_pwrctrl_acquire(AMBIQ_PWRCTRL_OTP);
-	if (ret) {
-		return ret;
-	}
-
-	ret = pm_device_runtime_enable(dev);
-	if (ret) {
-		(void)ambiq_pwrctrl_release(AMBIQ_PWRCTRL_OTP);
-		return ret;
-	}
-
-	return 0;
-}
-
-#ifdef CONFIG_PM_DEVICE
-static int entropy_ambiq_trng_pm_action(const struct device *dev,
-					enum pm_device_action action)
-{
-	switch (action) {
-	case PM_DEVICE_ACTION_RESUME:
-		/* OTP power domain may have been gated during deep sleep; restore it. */
-		return entropy_ambiq_otp_power_on();
-	case PM_DEVICE_ACTION_SUSPEND:
-		/* Nothing to do — the OTP power domain is managed by the SoC HAL. */
-		return 0;
-	default:
-		return -ENOTSUP;
-	}
-}
-#endif /* CONFIG_PM_DEVICE */
-
 static DEVICE_API(entropy, entropy_ambiq_api_funcs) = {
 	.get_entropy = entropy_ambiq_get_trng,
 };
 
-PM_DEVICE_DT_INST_DEFINE(0, entropy_ambiq_trng_pm_action);
-
-DEVICE_DT_INST_DEFINE(0, entropy_ambiq_trng_init, PM_DEVICE_DT_INST_GET(0), NULL, NULL,
-		      PRE_KERNEL_1, CONFIG_ENTROPY_INIT_PRIORITY, &entropy_ambiq_api_funcs);
+DEVICE_DT_INST_DEFINE(0, NULL, NULL, NULL, NULL, POST_KERNEL,
+		      CONFIG_KERNEL_INIT_PRIORITY_DEFAULT, &entropy_ambiq_api_funcs);
