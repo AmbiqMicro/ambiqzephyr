@@ -1,0 +1,39 @@
+/*
+ * Copyright (c) 2025 Ambiq Micro Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Apollo510dL EVB display connector: JDI RGB/control on pads P88–P99; VA/VCOM PWM
+ * uses CT pads P102 / P103 with timer 7 via OUTCFG (same arrangement as apollo510_eb,
+ * adapted for Apollo510L pin numbering).
+ */
+#include <apollo510L/ambiq-apollo510L-pinmux.h>
+
+&pinctrl {
+	/omit-if-no-ref/dc_jdi_default: dc_jdi_default {
+		group1 {
+			pinmux = <DISP_ENB_P88>,
+				 <DISP_XRST_P89>,
+				 <DISP_R1_P90>,
+				 <DISP_R2_P91>,
+				 <DISP_G1_P92>,
+				 <DISP_G2_P93>,
+				 <DISP_B1_P94>,
+				 <DISP_B2_P95>,
+				 <DISP_HST_P96>,
+				 <DISP_VST_P97>,
+				 <DISP_HCK_P98>,
+				 <DISP_VCK_P99>;
+			drive-strength = "0.5";
+			drive-push-pull;
+		};
+	};
+
+	/omit-if-no-ref/pwm_default: pwm_default {
+		group1 {
+			pinmux = <CT102_P102>, <CT103_P103>;
+			drive-strength = "0.5";
+			drive-push-pull;
+		};
+	};
+};
