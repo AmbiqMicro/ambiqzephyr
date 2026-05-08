@@ -15,7 +15,7 @@ will show progress bar if the OTA has been started successfully.
 Requirements
 ************
 
-* An apollo4p_blue_kxr_evb or Apollo510b_evb
+* An apollo510dL_evb or apollo330mP_evb
 * An Android or iOS smartphone installed with Ambiq OTA APP
 
 Building and Running
@@ -25,11 +25,11 @@ This application can be built and executed as follows:
 
 .. zephyr-app-commands::
    :zephyr-app: samples/bluetooth/peripheral_amota
-   :board: apollo4p_blue_kxr_evb
+   :board: apollo510dL_evb
 
 .. zephyr-app-commands::
    :zephyr-app: samples/bluetooth/peripheral_amota
-   :board: Apollo510b_evb
+   :board: apollo330mP_evb
 
 Sample Output
 =============

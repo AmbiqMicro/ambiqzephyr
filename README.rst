@@ -38,6 +38,8 @@ Status
 
 As of now, Ambiq provides zephyr support for a set of peripherals/drivers:
 
+This table reflects the current Ambiq board focus and PM behavior in this tree.
+
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
 | Driver | PM_DEVICE        | Stable code at     | Sample/Test                                   | Board            |
 +========+==================+====================+===============================================+==================+

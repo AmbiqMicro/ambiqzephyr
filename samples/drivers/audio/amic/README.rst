@@ -14,10 +14,10 @@ buffer.
 Requirements
 ************
 
-This sample has been tested on the Apollo510 EVB with the ICS40310 AMIC (Analog Microphone) board connected to the J12 header.
+This sample has been tested on the apollo510dL_evb with the ICS40310 AMIC (Analog Microphone) board connected to the J12 header.
 
 Hardware setup requirements:
-- Connect the ICS40310 AMIC board to the J12 header on the Apollo510 EVB.
+- Connect the ICS40310 AMIC board to the J12 header on the apollo510dL_evb.
 
 Building and Running
 ********************
@@ -28,6 +28,6 @@ To build and flash the application:
 
 .. zephyr-app-commands::
    :zephyr-app: samples/drivers/audio/amic
-   :board: apollo510_evb
+   :board: apollo510dL_evb
    :goals: build flash
    :compact:
