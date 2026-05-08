@@ -394,9 +394,14 @@ static inline int mspi_context_lock(struct mspi_context          *ctx,
 		} else if (ctx->packets_left == 0) {
 			if (ctx->callback_ctx) {
 				volatile struct mspi_event_data *evt_data;
+				k_timepoint_t end = sys_timepoint_calc(K_MSEC(xfer->timeout));
 
 				evt_data = &ctx->callback_ctx->mspi_evt.evt_data;
 				while (evt_data->status != 0) {
+					if (sys_timepoint_expired(end)) {
+						return -ETIMEDOUT;
+					}
+					k_yield();
 				}
 				ret = 1;
 			} else {
