@@ -57,7 +57,7 @@ This table reflects the current Ambiq board focus and PM behavior in this tree.
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
 | DISPLAY| Not Included (1) | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
-| FLASH  | not needed       | ambiq-stable       | samples\\subsys\\mgmt\\mcumgr\\smp\_svr        | All              |
+| FLASH  | not needed       | ambiq-stable       | samples\\subsys\\mgmt\\mcumgr\\smp\_svr       | All              |
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
 | HWINFO | Not Included (1) | ambiq-stable       | tests\\drivers\\hwinfo\\api                   | All              |
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
