@@ -168,7 +168,8 @@ static ssize_t mipi_dsi_ambiq_transfer(const struct device *dev, uint8_t channel
 			nemadc_timing(data->dc_layer.resx, data->dc_config.ui32FrontPorchX,
 				      data->dc_config.ui32BlankingX, data->dc_config.ui32BackPorchX,
 				      data->dc_layer.resy, data->dc_config.ui32FrontPorchY,
-				      data->dc_config.ui32BlankingY, data->dc_config.ui32BlankingY);
+				      data->dc_config.ui32BlankingY,
+				      data->dc_config.ui32BackPorchY);
 			data->dc_layer.stride =
 				nemadc_stride_size(data->dc_layer.format, data->dc_layer.resx);
 			data->dc_layer.baseaddr_virt = (void *)msg->tx_buf;
