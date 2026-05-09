@@ -1,0 +1,16 @@
+# Copyright (c) 2026 Ambiq Micro Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  Ambiq CRYPTO (CC312) power domain. Manages the CRYPTO peripheral rail.
+  On RESUME, enables CRYPTO via am_hal_pwrctrl_periph_enable. On SUSPEND,
+  uses the dedicated am_hal_pwrctrl_control(CRYPTO_POWERDOWN) sequence
+  required by the CC312 engine.
+
+  Declare power-domains = <&otp_pd> on this node to ensure the OTP rail
+  is brought up before CRYPTO is enabled (required by the Apollo5X HAL).
+  Children (AES, TRNG, CRC) acquire the domain via pm_device_runtime_get/put.
+
+compatible: "ambiq,crypto-power-domain"
+
+include: power-domain.yaml

@@ -1,0 +1,18 @@
+# Copyright (c) 2026 Ambiq Micro Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  Ambiq DISP power domain.
+
+  Manages am_hal_pwrctrl_periph_enable/disable for the shared DISP rail
+  used by MIPI-DSI, MIPI-DBI, JDI display controller, and the SPI
+  display controller (spi-dcif).  Multiple display drivers may be compiled
+  in simultaneously but only one is active on a board; this domain ensures
+  the rail is enabled at boot and disabled on system suspend.
+
+  Consumers declare this domain via:
+    power-domains = <&disp_pd>;
+
+compatible: "ambiq,disp-power-domain"
+
+include: power-domain.yaml

@@ -158,18 +158,41 @@
 		zephyr,memory-region = "XIP2";
 	};
 
+	otp_pd: otp-pd {
+		compatible = "ambiq,otp-power-domain";
+		#power-domain-cells = <0>;
+		status = "okay";
+		zephyr,pm-device-runtime-auto;
+	};
+
+	crypto_pd: crypto-pd {
+		compatible = "ambiq,crypto-power-domain";
+		#power-domain-cells = <0>;
+		power-domains = <&otp_pd>;
+		status = "okay";
+		zephyr,pm-device-runtime-auto;
+	};
+
+	disp_pd: disp-pd {
+		compatible = "ambiq,disp-power-domain";
+		#power-domain-cells = <0>;
+		status = "okay";
+	};
+
 	soc {
 		compatible = "ambiq,apollo510L", "ambiq,apollo5x", "simple-bus";
 
 		trng: trng@40009aa0 {
 			compatible = "ambiq,puf-trng";
 			reg = <0x40009aa0 0x4>;
+			power-domains = <&crypto_pd>;
 			status = "disabled";
 		};
 
 		crc32: crc32@40030030 {
 			compatible = "ambiq,hw-crc32";
 			reg = <0x40030030 0x4>;
+			power-domains = <&crypto_pd>;
 			status = "disabled";
 		};
 
@@ -728,6 +751,7 @@
 			#size-cells = <0>;
 			reg = <DC_REG_BASE DC_REG_SIZE>;
 			interrupts = <29 0>;/* DC interrupt */
+			power-domains = <&disp_pd>;
 			status = "disabled";
 		};
 
@@ -737,6 +761,7 @@
 			#size-cells = <0>;
 			reg = <DC_REG_BASE DC_REG_SIZE>;
 			interrupts = <29 0>;/* DC interrupt */
+			power-domains = <&disp_pd>;
 			status = "disabled";
 			hactive = <468>;/*Its value should be an integer multiple of 4.*/
 			hfp = <1>;
@@ -756,6 +781,7 @@
 			dbi-width = <16>;
 			phy-clock = <384000000>;
 			interrupts = <29 0>;/* DC interrupt */
+			power-domains = <&disp_pd>;
 			status = "disabled";
 			zephyr,pm-device-runtime-auto;
 		};

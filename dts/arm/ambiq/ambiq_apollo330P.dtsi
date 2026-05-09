@@ -158,18 +158,35 @@
 		zephyr,memory-region = "XIP2";
 	};
 
+	otp_pd: otp-pd {
+		compatible = "ambiq,otp-power-domain";
+		#power-domain-cells = <0>;
+		status = "okay";
+		zephyr,pm-device-runtime-auto;
+	};
+
+	crypto_pd: crypto-pd {
+		compatible = "ambiq,crypto-power-domain";
+		#power-domain-cells = <0>;
+		power-domains = <&otp_pd>;
+		status = "okay";
+		zephyr,pm-device-runtime-auto;
+	};
+
 	soc {
 		compatible = "ambiq,apollo330P", "ambiq,apollo5x", "simple-bus";
 
 		trng: trng@40009aa0 {
 			compatible = "ambiq,puf-trng";
 			reg = <0x40009aa0 0x4>;
+			power-domains = <&crypto_pd>;
 			status = "disabled";
 		};
 
 		crc32: crc32@40030030 {
 			compatible = "ambiq,hw-crc32";
 			reg = <0x40030030 0x4>;
+			power-domains = <&crypto_pd>;
 			status = "disabled";
 		};
 
