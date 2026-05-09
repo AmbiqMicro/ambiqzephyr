@@ -199,7 +199,7 @@
 
 		timer5: timer@400080a0 {
 			compatible = "ambiq,ctimer";
-			reg = <0x400080A0 0x20>;
+			reg = <0x400080a0 0x20>;
 			interrupts = <14 0>;
 			clk-source = "CLK_SELECT_HFRC_3MHZ";
 			status = "disabled";
@@ -218,7 +218,7 @@
 
 		timer6: timer@400080c0 {
 			compatible = "ambiq,ctimer";
-			reg = <0x400080C0 0x20>;
+			reg = <0x400080c0 0x20>;
 			interrupts = <14 0>;
 			clk-source = "CLK_SELECT_HFRC_3MHZ";
 			status = "disabled";
@@ -237,7 +237,7 @@
 
 		timer7: timer@400080e0 {
 			compatible = "ambiq,ctimer";
-			reg = <0x400080E0 0x20>;
+			reg = <0x400080e0 0x20>;
 			interrupts = <14 0>;
 			clk-source = "CLK_SELECT_HFRC_3MHZ";
 			status = "disabled";
@@ -437,9 +437,10 @@
 			#io-channel-cells = <1>;
 		};
 
-		mspi0: spi@40020000 {
-			compatible = "ambiq,mspi";
+		mspi0: mspi@40020000 {
+			compatible = "ambiq,mspi-controller";
 			reg = <0x40020000 0x400>;
+			clock-frequency = <48000000>;
 			interrupts = <20 0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -448,7 +449,7 @@
 
 		rtc0: rtc@40004240 {
 			compatible = "ambiq,rtc";
-			reg = <0x40004240 0xD0>;
+			reg = <0x40004240 0xd0>;
 			interrupts = <2 0>;
 			alarms-count = <1>;
 			status = "disabled";

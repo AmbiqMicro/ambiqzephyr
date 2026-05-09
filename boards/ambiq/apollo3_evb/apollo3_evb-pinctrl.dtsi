@@ -150,8 +150,20 @@
 			pinmux = <NCE19_P19>;
 			drive-push-pull;
 			drive-strength = "0.5";
+			ambiq,iom-mspi = <0>;
 			ambiq,nce-src = <0>;
 			ambiq,iom-num = <6>;
+		};
+	};
+
+	mspi0_sleep: mspi0_sleep {
+		group1 {
+			pinmux = <GPIO_P22>,
+				 <GPIO_P26>,
+				 <GPIO_P4>,
+				 <GPIO_P23>,
+				 <GPIO_P24>,
+				 <GPIO_P19>;
 		};
 	};
 
