@@ -17,8 +17,9 @@ and I2S streaming.
    Audio samples require Apollo510 or Apollo4P. They are not supported on
    Apollo3 variants.
 
-Unless stated otherwise, build commands are run from the Zephyr root directory
-and target ``apollo510_evb``. Substitute the board name as appropriate.
+Unless stated otherwise, build commands are run from the Zephyr root directory.
+Substitute ``your_board_here`` with the appropriate supported board for the
+sample.
 
 
 Analog Microphone (AUDADC)
