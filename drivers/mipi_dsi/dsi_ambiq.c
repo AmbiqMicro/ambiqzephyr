@@ -12,7 +12,6 @@
 #include <zephyr/drivers/mipi_dsi.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/gpio.h>
-#include <zephyr/drivers/misc/ambiq_pwrctrl/ambiq_pwrctrl.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/pm/device.h>
 #include <zephyr/pm/device_runtime.h>
@@ -261,22 +260,12 @@ static int mipi_dsi_ambiq_init(const struct device *dev)
 		return -EFAULT;
 	}
 
-	/* Enable display peripheral power via the shared refcount so other
-	 * display drivers sharing the DISP rail aren't torn down on suspend.
-	 */
-	ret = ambiq_pwrctrl_acquire(AMBIQ_PWRCTRL_DISP);
-	if (ret) {
-		LOG_ERR("Failed to acquire display peripheral power: %d", ret);
-		return ret;
-	}
-
 	ret = nemadc_init();
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("DC init failed!\n");
-		ret = -EFAULT;
-		goto release_disp;
+		return -EFAULT;
 	}
-#ifdef CONFIG_PM_DEVICE
+
 	/*
 	 * To work around software limitations, it causes logic abnormal
 	 * if we don't update HAL when PM enabled.
@@ -284,25 +273,22 @@ static int mipi_dsi_ambiq_init(const struct device *dev)
 	ret = am_hal_dsi_para_config(1, 16, AM_HAL_DSI_FREQ_TRIM_X20, true);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("DSI config failed!\n");
-		ret = -EFAULT;
-		goto release_disp;
+		return -EFAULT;
 	}
-#endif
-	config->irq_config_func(dev);
-	return 0;
 
-release_disp:
-	(void)ambiq_pwrctrl_release(AMBIQ_PWRCTRL_DISP);
-	return ret;
+	config->irq_config_func(dev);
+	return pm_device_runtime_enable(dev);
 }
 
-#ifdef CONFIG_PM_DEVICE
 static int mipi_dsi_ambiq_pm_action(const struct device *dev, enum pm_device_action action)
 {
 	int ret;
 
+	ARG_UNUSED(dev);
+
 	switch (action) {
 	case PM_DEVICE_ACTION_SUSPEND:
+	case PM_DEVICE_ACTION_TURN_OFF:
 		LOG_DBG("Suspending MIPI-DSI device");
 		ret = am_hal_dsi_power_control(AM_HAL_SYSCTRL_DEEPSLEEP, true);
 		if (ret != AM_HAL_STATUS_SUCCESS) {
@@ -319,6 +305,7 @@ static int mipi_dsi_ambiq_pm_action(const struct device *dev, enum pm_device_act
 		break;
 
 	case PM_DEVICE_ACTION_RESUME:
+	case PM_DEVICE_ACTION_TURN_ON:
 		LOG_DBG("Resuming MIPI-DSI device");
 #ifndef CONFIG_SOC_APOLLO510L
 		ret = nemadc_power_control(AM_HAL_SYSCTRL_WAKE, true);
@@ -340,7 +327,6 @@ static int mipi_dsi_ambiq_pm_action(const struct device *dev, enum pm_device_act
 
 	return 0;
 }
-#endif /* CONFIG_PM_DEVICE */
 
 /*
  * Ambiq DC interrupt service routine
