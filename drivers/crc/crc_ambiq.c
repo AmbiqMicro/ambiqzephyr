@@ -13,7 +13,8 @@
 #include <zephyr/drivers/crc.h>
 #include <zephyr/kernel.h>
 #include <zephyr/cache.h>
-#include <zephyr/pm/policy.h>
+#include <zephyr/pm/device.h>
+#include <zephyr/pm/device_runtime.h>
 
 LOG_MODULE_REGISTER(ambiq_hw_crc32, CONFIG_CRC_DRIVER_LOG_LEVEL);
 
@@ -52,7 +53,7 @@ static void crc_ambiq_release(const struct device *dev, struct crc_ctx *ctx)
 
 	am_hal_crc_finalize();
 	ctx->state = CRC_STATE_IDLE;
-	pm_policy_state_lock_put(PM_STATE_SUSPEND_TO_RAM, PM_ALL_SUBSTATES);
+	(void)pm_device_runtime_put(dev);
 	k_sem_give(&data->lock);
 }
 
@@ -95,12 +96,13 @@ static int crc_ambiq_begin(const struct device *dev, struct crc_ctx *ctx)
 	}
 
 	/*
-	 * Prevent the system from entering deep sleep while the CRC
-	 * session is active. The SECURITY peripheral lives in the
-	 * CRYPTO power domain -- if it gets gated between begin() and
-	 * finish(), the RESULT accumulator is lost.
+	 * Acquire the CRYPTO power domain for the duration of this CRC
+	 * session. Released in crc_ambiq_release() via pm_device_runtime_put.
 	 */
-	pm_policy_state_lock_get(PM_STATE_SUSPEND_TO_RAM, PM_ALL_SUBSTATES);
+	if (pm_device_runtime_get(dev) != 0) {
+		k_sem_give(&data->lock);
+		return -EIO;
+	}
 
 	/*
 	 * Seed the hardware accumulator from ctx->seed so callers can run
@@ -122,7 +124,7 @@ static int crc_ambiq_begin(const struct device *dev, struct crc_ctx *ctx)
 }
 
 static int crc_ambiq_update(const struct device *dev, struct crc_ctx *ctx, const void *buffer,
-				size_t bufsize)
+			    size_t bufsize)
 {
 	uint32_t addr;
 	uint32_t remaining;
@@ -176,8 +178,7 @@ static int crc_ambiq_update(const struct device *dev, struct crc_ctx *ctx, const
 
 		while (remaining > 0) {
 			boundary = am_hal_crc_find_next_boundary(addr, remaining);
-			chunk = (boundary < addr + remaining)
-				? (boundary - addr) : remaining;
+			chunk = (boundary < addr + remaining) ? (boundary - addr) : remaining;
 
 			if (chunk > 0) {
 				hal_status = am_hal_crc32(addr, chunk, &ctx->result);
@@ -206,15 +207,12 @@ static int crc_ambiq_update(const struct device *dev, struct crc_ctx *ctx, const
 			uint32_t left = n;
 
 			while (left > 0) {
-				boundary = am_hal_crc_find_next_boundary(
-						local_addr, left);
-				chunk = (boundary < local_addr + left)
-					? (boundary - local_addr) : left;
+				boundary = am_hal_crc_find_next_boundary(local_addr, left);
+				chunk = (boundary < local_addr + left) ? (boundary - local_addr)
+								       : left;
 
 				if (chunk > 0) {
-					hal_status = am_hal_crc32(local_addr,
-								  chunk,
-								  &ctx->result);
+					hal_status = am_hal_crc32(local_addr, chunk, &ctx->result);
 					if (hal_status != AM_HAL_STATUS_SUCCESS) {
 						crc_ambiq_release(dev, ctx);
 						return -EIO;
@@ -247,6 +245,23 @@ static int crc_ambiq_finish(const struct device *dev, struct crc_ctx *ctx)
 	return 0;
 }
 
+static int crc_ambiq_pm_action(const struct device *dev, enum pm_device_action action)
+{
+	ARG_UNUSED(dev);
+
+	switch (action) {
+	case PM_DEVICE_ACTION_RESUME:
+	case PM_DEVICE_ACTION_SUSPEND:
+	case PM_DEVICE_ACTION_TURN_ON:
+	case PM_DEVICE_ACTION_TURN_OFF:
+		break;
+	default:
+		return -ENOTSUP;
+	}
+
+	return 0;
+}
+
 static int crc_ambiq_init(const struct device *dev)
 {
 	struct crc_ambiq_data *data = dev->data;
@@ -254,7 +269,7 @@ static int crc_ambiq_init(const struct device *dev)
 	/* Binary semaphore: initial count 1, max 1 (one outstanding CRC session) */
 	k_sem_init(&data->lock, 1, 1);
 
-	return 0;
+	return pm_device_runtime_enable(dev);
 }
 
 /**
@@ -262,8 +277,8 @@ static int crc_ambiq_init(const struct device *dev)
  *
  * Provides hardware-accelerated CRC32_IEEE (polynomial 0x04C11DB7) calculation using the
  * SECURITY peripheral. The hardware produces reflected CRC32 with reversed input/output.
- * Operations are protected by PM policy locks to prevent CRYPTO power domain gating during
- * active CRC sessions.
+ * Power is managed via the CRYPTO power domain using pm_device_runtime_get/put around
+ * each CRC session.
  */
 static DEVICE_API(crc, crc_ambiq_api) = {
 	.begin = crc_ambiq_begin,
@@ -273,7 +288,8 @@ static DEVICE_API(crc, crc_ambiq_api) = {
 
 #define CRC_AMBIQ_INIT(n)                                                                          \
 	static struct crc_ambiq_data crc_ambiq_data_##n;                                           \
-	DEVICE_DT_INST_DEFINE(n, crc_ambiq_init, NULL, &crc_ambiq_data_##n, NULL, POST_KERNEL,     \
-			      CONFIG_CRC_DRIVER_INIT_PRIORITY, &crc_ambiq_api);
+	PM_DEVICE_DT_INST_DEFINE(n, crc_ambiq_pm_action);                                          \
+	DEVICE_DT_INST_DEFINE(n, crc_ambiq_init, PM_DEVICE_DT_INST_GET(n), &crc_ambiq_data_##n,    \
+			      NULL, POST_KERNEL, CONFIG_CRC_DRIVER_INIT_PRIORITY, &crc_ambiq_api);
 
 DT_INST_FOREACH_STATUS_OKAY(CRC_AMBIQ_INIT)
