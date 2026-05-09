@@ -10,6 +10,7 @@ config CRC_AMBIQ
 	depends on DT_HAS_AMBIQ_HW_CRC32_ENABLED
 	depends on SOC_SERIES_APOLLO5X
 	select CRC_DRIVER_HAS_CRC32_IEEE
+	select POWER_DOMAIN
 	help
 	  Enable hardware-accelerated CRC32 IEEE support for Ambiq
 	  Apollo510 SoCs. Uses the SECURITY CRC engine
