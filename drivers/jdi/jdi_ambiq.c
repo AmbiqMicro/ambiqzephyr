@@ -226,6 +226,23 @@ static DEVICE_API(jdi, jdi_ambiq_driver_api) = {
 	.transfer = jdi_ambiq_transfer,
 };
 
+/**
+ * @brief JDI Power Management support
+ *
+ * Power Management: PM Only (2) - This driver uses init-time refcounted power rail
+ * acquisition via the ambiq_pwrctrl shared power rail management system.
+ *
+ * The JDI display controller acquires power for the DISP domain during initialization
+ * via ambiq_pwrctrl_acquire(AMBIQ_PWRCTRL_DISP) and holds it for device lifetime.
+ * The shared power rail system uses reference counting to manage power across multiple
+ * display drivers (JDI, MIPI_DBI, MIPI_DSI) that share the DISP power domain.
+ *
+ * This driver does not implement PM_DEVICE callbacks or runtime PM because:
+ * - Power is managed at initialization time via the shared refcounted power rail system
+ * - The display must remain powered when actively driving a panel
+ * - Applications control display on/off at the JDI API level
+ * - The ambiq_pwrctrl system handles power domain coordination across display drivers
+ */
 static int jdi_ambiq_init(const struct device *dev)
 {
 	const struct jdi_ambiq_config *config = dev->config;
