@@ -11,17 +11,24 @@ Overview
 This guide covers display, graphics (LVGL) and touch-input samples on Ambiq
 Apollo510. Multiple display interfaces are supported via shield overlays:
 
-+---------------------+------------+-------------------------------------------+
-| Shield              | Interface  | Board                                     |
-+=====================+============+===========================================+
-| ``ap510_disp``      | MIPI-DSI   | ``apollo510_evb`` / ``apollo510_eb``      |
-+---------------------+------------+-------------------------------------------+
-| ``ap510_jdi_disp``  | JDI        | ``apollo510_evb`` / ``apollo510_eb``      |
-+---------------------+------------+-------------------------------------------+
-| ``display_8080_card``| MIPI-DBI  | ``apollo510_eb`` only                     |
-+---------------------+------------+-------------------------------------------+
-| ``ap4_evb_disp_shield_rev2`` | SPI/parallel | ``apollo4p_evb``         |
-+---------------------+------------+-------------------------------------------+
+.. list-table::
+   :header-rows: 1
+
+   * - Shield
+     - Interface
+     - Board
+   * - ``ap510_disp``
+     - MIPI-DSI
+     - ``apollo510_evb`` / ``apollo510_eb``
+   * - ``ap510_jdi_disp``
+     - JDI
+     - ``apollo510_evb`` / ``apollo510_eb``
+   * - ``display_8080_card``
+     - MIPI-DBI
+     - ``apollo510_eb`` only
+   * - ``ap4_evb_disp_shield_rev2``
+     - SPI/parallel
+     - ``apollo4p_evb``
 
 All display samples are located under ``samples/drivers/display`` or
 ``samples/modules/lvgl``. The ``--shield`` flag selects the active panel.
