@@ -737,6 +737,29 @@ static int mspi_ambiq_dev_config(const struct device         *controller,
 				ret = -EHOSTDOWN;
 				goto e_return;
 			}
+#else
+			hal_dev_cfg.bSendInstr = true;
+			ret = am_hal_mspi_disable(data->mspiHandle);
+			if (ret) {
+				LOG_INST_ERR(cfg->log, "%u, fail to disable MSPI, code:%d.",
+					     __LINE__, ret);
+				ret = -EHOSTDOWN;
+				goto e_return;
+			}
+			ret = am_hal_mspi_device_configure(data->mspiHandle, &hal_dev_cfg);
+			if (ret) {
+				LOG_INST_ERR(cfg->log, "%u, fail to configure MSPI, code:%d.",
+					     __LINE__, ret);
+				ret = -EHOSTDOWN;
+				goto e_return;
+			}
+			ret = am_hal_mspi_enable(data->mspiHandle);
+			if (ret) {
+				LOG_INST_ERR(cfg->log, "%u, fail to enable MSPI, code:%d.",
+					     __LINE__, ret);
+				ret = -EHOSTDOWN;
+				goto e_return;
+			}
 #endif
 			data->dev_cfg.cmd_length = dev_cfg->cmd_length;
 		}
@@ -755,6 +778,29 @@ static int mspi_ambiq_dev_config(const struct device         *controller,
 			if (ret) {
 				LOG_INST_ERR(cfg->log, "%u, failed to configure addr_length.",
 					     __LINE__);
+				ret = -EHOSTDOWN;
+				goto e_return;
+			}
+#else
+			hal_dev_cfg.bSendAddr = true;
+			ret = am_hal_mspi_disable(data->mspiHandle);
+			if (ret) {
+				LOG_INST_ERR(cfg->log, "%u, fail to disable MSPI, code:%d.",
+					     __LINE__, ret);
+				ret = -EHOSTDOWN;
+				goto e_return;
+			}
+			ret = am_hal_mspi_device_configure(data->mspiHandle, &hal_dev_cfg);
+			if (ret) {
+				LOG_INST_ERR(cfg->log, "%u, fail to configure MSPI, code:%d.",
+					     __LINE__, ret);
+				ret = -EHOSTDOWN;
+				goto e_return;
+			}
+			ret = am_hal_mspi_enable(data->mspiHandle);
+			if (ret) {
+				LOG_INST_ERR(cfg->log, "%u, fail to enable MSPI, code:%d.",
+					     __LINE__, ret);
 				ret = -EHOSTDOWN;
 				goto e_return;
 			}
@@ -1110,6 +1156,13 @@ static int mspi_pio_prepare(const struct device        *controller,
 	const struct mspi_xfer *xfer = &data->ctx.xfer;
 
 	int ret = 0;
+
+#if !defined(CONFIG_SOC_APOLLO3P_BLUE)
+	ret = mspi_xfer_config(controller, xfer);
+	if (ret) {
+		return ret;
+	}
+#endif
 
 	trans->bScrambling  = false;
 	trans->bSendAddr = (xfer->addr_length != 0);
