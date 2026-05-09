@@ -204,6 +204,21 @@ static int flash_ambiq_write(const struct device *dev, off_t offset, const void 
 				AM_HAL_MRAM_PROGRAM_KEY, aligned,
 				(uint32_t *)(SOC_NV_FLASH_ADDR + current_offset), words);
 #endif
+			/*
+			 * Invalidate caches before re-enabling interrupts so an
+			 * ISR taken after irq_unlock cannot observe stale code or
+			 * data from the just-modified flash. Also ensures the
+			 * subsequent verify reads actual flash contents.
+			 */
+			if (ret == AM_HAL_STATUS_SUCCESS) {
+				sys_cache_data_invd_range(
+					(uint32_t *)(SOC_NV_FLASH_ADDR + current_offset),
+					chunk_size);
+				sys_cache_instr_flush_range(
+					(uint32_t *)(SOC_NV_FLASH_ADDR + current_offset),
+					chunk_size);
+			}
+
 			/* Unlock interrupts to allow timing-critical ISRs */
 			irq_unlock(key);
 
@@ -216,15 +231,6 @@ static int flash_ambiq_write(const struct device *dev, off_t offset, const void 
 					FLASH_OPERATION_MAX_RETRIES, ret);
 				continue;
 			}
-
-			/*
-			 * Invalidate cache before verification to ensure we read
-			 * actual flash data
-			 */
-			sys_cache_data_invd_range(
-				(uint32_t *)(SOC_NV_FLASH_ADDR + current_offset), chunk_size);
-			sys_cache_instr_flush_range(
-				(uint32_t *)(SOC_NV_FLASH_ADDR + current_offset), chunk_size);
 
 			/* Verify write */
 			if (memcmp((void *)(SOC_NV_FLASH_ADDR + current_offset), src,
@@ -310,6 +316,21 @@ static int flash_ambiq_erase(const struct device *dev, off_t offset, size_t len)
 			ret = am_hal_flash_page_erase(AM_HAL_FLASH_PROGRAM_KEY, page_inst,
 						       page_num);
 
+			/*
+			 * Invalidate caches before re-enabling interrupts so an
+			 * ISR taken after irq_unlock cannot observe stale code or
+			 * data from the just-erased flash. Also ensures the
+			 * subsequent verify reads actual flash contents.
+			 */
+			if (ret == AM_HAL_STATUS_SUCCESS) {
+				sys_cache_data_invd_range(
+					(uint32_t *)(SOC_NV_FLASH_ADDR + current_offset),
+					FLASH_ERASE_BLOCK_SIZE);
+				sys_cache_instr_flush_range(
+					(uint32_t *)(SOC_NV_FLASH_ADDR + current_offset),
+					FLASH_ERASE_BLOCK_SIZE);
+			}
+
 			irq_unlock(key);
 
 			/* Map HAL error code to errno */
@@ -321,17 +342,6 @@ static int flash_ambiq_erase(const struct device *dev, off_t offset, size_t len)
 					FLASH_OPERATION_MAX_RETRIES, ret);
 				continue;
 			}
-
-			/*
-			 * Invalidate cache before verification to ensure we read
-			 * actual flash data
-			 */
-			sys_cache_data_invd_range(
-				(uint32_t *)(SOC_NV_FLASH_ADDR + current_offset),
-				FLASH_ERASE_BLOCK_SIZE);
-			sys_cache_instr_flush_range(
-				(uint32_t *)(SOC_NV_FLASH_ADDR + current_offset),
-				FLASH_ERASE_BLOCK_SIZE);
 
 			/* Verify erase - check if all bytes are 0xFF */
 			const uint8_t *flash_ptr =
@@ -373,6 +383,16 @@ static int flash_ambiq_erase(const struct device *dev, off_t offset, size_t len)
 					    (uint32_t *)(SOC_NV_FLASH_ADDR + offset),
 					    (len / sizeof(uint32_t)));
 
+		/*
+		 * Invalidate caches immediately after the HAL fill so any ISR
+		 * taken before the verify (or before this function returns)
+		 * cannot observe stale code or data from the just-erased flash.
+		 */
+		if (ret == AM_HAL_STATUS_SUCCESS) {
+			sys_cache_data_invd_range((uint32_t *)(SOC_NV_FLASH_ADDR + offset), len);
+			sys_cache_instr_flush_range((uint32_t *)(SOC_NV_FLASH_ADDR + offset), len);
+		}
+
 		/* Map HAL error code to errno */
 		ret = flash_ambiq_hal_status_to_errno(ret);
 
@@ -381,13 +401,6 @@ static int flash_ambiq_erase(const struct device *dev, off_t offset, size_t len)
 				(long)offset, retry_count + 1, FLASH_OPERATION_MAX_RETRIES, ret);
 			continue;
 		}
-
-		/*
-		 * Invalidate cache before verification to ensure we read
-		 * actual flash data
-		 */
-		sys_cache_data_invd_range((uint32_t *)(SOC_NV_FLASH_ADDR + offset), len);
-		sys_cache_instr_flush_range((uint32_t *)(SOC_NV_FLASH_ADDR + offset), len);
 
 		/* Verify erase */
 		const uint8_t *flash_ptr = (const uint8_t *)(SOC_NV_FLASH_ADDR + offset);
