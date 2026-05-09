@@ -16,9 +16,12 @@ controller.
 
 .. note::
 
-   Before running any BLE sample, the BLE controller firmware must be flashed
-   to the radio core once using SEGGER J-Link and the programming scripts
-   provided in the AmbiqSuite SDK. Obtain the SDK from the
+   For boards that use an external BLE controller, or for SoCs/controllers
+   that require radio-core/controller firmware provisioning, flash the BLE
+   controller firmware once using SEGGER J-Link and the programming scripts
+   provided in the AmbiqSuite SDK before running BLE samples. Boards with an
+   integrated BLE radio, such as ``apollo510b_evb``, do not require this
+   external controller firmware flashing step. Obtain the SDK from the
    `Ambiq Content Portal <https://contentportal.ambiq.com/>`_.
 
 Board Support
