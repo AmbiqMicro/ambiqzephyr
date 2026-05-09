@@ -57,7 +57,7 @@ The following are the subsystems and drivers related to MCUboot in Zephyr:
 .. code-block:: console
 
    # Ubuntu build
-   west build -b apollo510_eb -p=always --sysbuild ./samples/sysbuild/with_mcuboot -d ../build/sysbuild/with_mcuboot
+   west build -b your_board_here -p=always --sysbuild ./samples/sysbuild/with_mcuboot -d ../build/sysbuild/with_mcuboot
 
    # flash
    west flash -d ../build/sysbuild/with_mcuboot
@@ -88,7 +88,7 @@ See the Practical Guide.
 .. code-block:: console
 
    # Ubuntu build
-   west build -b apollo510_evb -p=auto -d ../build/tests/boot/test_mcuboot ./tests/boot/test_mcuboot/ -T bootloader.mcuboot
+   west build -b your_board_here -p=auto -d ../build/tests/boot/test_mcuboot ./tests/boot/test_mcuboot/ -T bootloader.mcuboot
 
    # flash
    west flash -d ../build/tests/boot/test_mcuboot
@@ -106,8 +106,8 @@ Note: Sometimes the twister test fails due to incomplete serial log when MCU res
 .. code-block:: console
 
    # Ubuntu build
-   west build -b apollo510_evb -p=auto ./tests/boot/with_mcumgr/ -d ../build/tests/boot/with_mcumgr/test_upgrade -T boot.with_mcumgr.test_upgrade
-   west build -b apollo510_evb -p=auto ./tests/boot/with_mcumgr -d ../build/tests/boot/with_mcumgr/test_upgrade -T boot.with_mcumgr.test_upgrade.swap_using_offset
+   west build -b your_board_here -p=auto ./tests/boot/with_mcumgr/ -d ../build/tests/boot/with_mcumgr/test_upgrade -T boot.with_mcumgr.test_upgrade
+   west build -b your_board_here -p=auto ./tests/boot/with_mcumgr -d ../build/tests/boot/with_mcumgr/test_upgrade -T boot.with_mcumgr.test_upgrade.swap_using_offset
 
    # flash
    west flash -d ../build/tests/boot/mcuboot_data_sharing
@@ -132,7 +132,7 @@ The test requires installing the ``mcumgr`` CLI: ``apache/mynewt-mcumgr-cli``.
 .. code-block:: console
 
    # Ubuntu build
-   west build -b apollo510_evb -p=auto ./tests/boot/mcuboot_data_sharing -d ../build/tests/boot/mcuboot_data_sharing -T bootloader.mcuboot.data.sharing
+   west build -b your_board_here -p=auto ./tests/boot/mcuboot_data_sharing -d ../build/tests/boot/mcuboot_data_sharing -T bootloader.mcuboot.data.sharing
 
    # flash
    west flash -d ../build/tests/boot/mcuboot_data_sharing
@@ -147,7 +147,7 @@ The test requires installing the ``mcumgr`` CLI: ``apache/mynewt-mcumgr-cli``.
 
 .. code-block:: console
 
-   west build -b apollo510_evb -p=always ./tests/subsys/settings/retention/ -d ../build/tests/settings-retention
+   west build -b your_board_here -p=always ./tests/subsys/settings/retention/ -d ../build/tests/settings-retention
    west flash -d ../build/tests/settings-retention
 
 4.6 retained_mem
@@ -157,7 +157,7 @@ The test requires installing the ``mcumgr`` CLI: ``apache/mynewt-mcumgr-cli``.
 
 .. code-block:: console
 
-   west build -b apollo510_evb -p=always ./tests/drivers/retained_mem/api/ -d ../build/tests/drivers/retained_mem/api
+   west build -b your_board_here -p=always ./tests/drivers/retained_mem/api/ -d ../build/tests/drivers/retained_mem/api
    west flash -d ../build/tests/drivers/retained_mem/api
 
    # twister test
@@ -171,7 +171,7 @@ The test requires installing the ``mcumgr`` CLI: ``apache/mynewt-mcumgr-cli``.
 
 .. code-block:: console
 
-   west build -b apollo510_evb -p=always ./tests/drivers/flash/erase_blocks/ -d ../build/tests/drivers/flash/erase-blocks
+   west build -b your_board_here -p=always ./tests/drivers/flash/erase_blocks/ -d ../build/tests/drivers/flash/erase-blocks
    west flash -d ../build/tests/drivers/flash/erase-blocks
 
 4.8 dfu/img_util
@@ -181,7 +181,7 @@ The test requires installing the ``mcumgr`` CLI: ``apache/mynewt-mcumgr-cli``.
 
 .. code-block:: console
 
-   west build -b apollo510_evb -p=always ./tests/subsys/dfu/img_util -d ../build/tests/dfu/img_util -T dfu.image_util
+   west build -b your_board_here -p=always ./tests/subsys/dfu/img_util -d ../build/tests/dfu/img_util -T dfu.image_util
    west flash -d ../build/tests/dfu/img_util
 
 
@@ -199,7 +199,7 @@ The test requires installing the ``mcumgr`` CLI: ``apache/mynewt-mcumgr-cli``.
 .. code-block:: console
 
    # Path: samples/sysbuild/hello_world
-   west build -b apollo510_evb -p auto --sysbuild ./samples/hello_world -d ../build/sysbuild/helloworld
+   west build -b your_board_here -p auto --sysbuild ./samples/hello_world -d ../build/sysbuild/helloworld
 
 
 5.2 DFU over UART
@@ -210,7 +210,7 @@ The test requires installing the ``mcumgr`` CLI: ``apache/mynewt-mcumgr-cli``.
 .. code-block:: console
 
    # Ubuntu build
-   west build -b apollo510_evb -p=always ./samples/subsys/mgmt/mcumgr/smp_svr/ --sysbuild -d ../build/samples/susys/mgmt-mcumgr-smp-svr/serial -T sample.mcumgr.smp_svr.serial
+   west build -b your_board_here -p=always ./samples/subsys/mgmt/mcumgr/smp_svr/ --sysbuild -d ../build/samples/susys/mgmt-mcumgr-smp-svr/serial -T sample.mcumgr.smp_svr.serial
 
    # flash
    west flash -d ../build/samples/susys/mgmt-mcumgr-smp-svr/serial
