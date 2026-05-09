@@ -15,13 +15,13 @@ To compile the example:
 
   .. code-block:: bash
 
-     west build --pristine -b apollo510_evb -- -DCONF_FILE="usbd_next_prj.conf"
+     west build --pristine -b your_board_here -- -DCONF_FILE="usbd_next_prj.conf"
 
 - **From Zephyr root directory:**
 
   .. code-block:: bash
 
-     west build .\samples\subsys\usb\cdc_acm\ --pristine -b apollo510_evb -- -DCONF_FILE="usbd_next_prj.conf"
+     west build .\samples\subsys\usb\cdc_acm\ --pristine -b your_board_here -- -DCONF_FILE="usbd_next_prj.conf"
 
 To run ``usb_cdc_test`` (available in internal ambiqsuite codebase), you will need to specify the VID and PID mask as the tool recognizes only TinyUSB default IDs by default. For example:
 
@@ -43,13 +43,13 @@ To compile the example:
 
   .. code-block:: bash
 
-     west build -b apollo510_evb -p
+     west build -b your_board_here -p
 
 - **From Zephyr root directory:**
 
   .. code-block:: bash
 
-     west build .\samples\subsys\usb\console-next -b apollo510_evb -p
+     west build .\samples\subsys\usb\console-next -b your_board_here -p
 
 mass Sample
 -----------
@@ -63,13 +63,13 @@ To compile the example:
 
   .. code-block:: bash
 
-     west build --pristine -b apollo510_evb -- -DCONF_FILE="usbd_next_prj.conf" -DEXTRA_DTC_OVERLAY_FILE="ramdisk.overlay"
+     west build --pristine -b your_board_here -- -DCONF_FILE="usbd_next_prj.conf" -DEXTRA_DTC_OVERLAY_FILE="ramdisk.overlay"
 
 - **From Zephyr root directory:**
 
   .. code-block:: bash
 
-     west build .\samples\subsys\usb\mass --pristine -b apollo510_evb -- -DCONF_FILE="usbd_next_prj.conf" -DEXTRA_DTC_OVERLAY_FILE="ramdisk.overlay"
+     west build .\samples\subsys\usb\mass --pristine -b your_board_here -- -DCONF_FILE="usbd_next_prj.conf" -DEXTRA_DTC_OVERLAY_FILE="ramdisk.overlay"
 
 **Notes:**
 
@@ -99,13 +99,13 @@ To compile the example:
 
   .. code-block:: bash
 
-     west build -b apollo510_evb -p
+     west build -b your_board_here -p
 
 - **From Zephyr root directory:**
 
   .. code-block:: bash
 
-     west build .\samples\subsys\usb\hid-keyboard -b apollo510_evb -p
+     west build .\samples\subsys\usb\hid-keyboard -b your_board_here -p
 
 **Note:**
 On upstream/main, there is an issue with the ``gpio-keys`` driver where the button event is not detected when ``CONFIG_PM_DEVICE=y``.
@@ -129,13 +129,13 @@ To compile the example:
 
   .. code-block:: bash
 
-     west build --pristine -b apollo510_evb -- -DCONF_FILE="usbd_next_prj.conf" -DDTC_OVERLAY_FILE="usbd_next.overlay"
+     west build --pristine -b your_board_here -- -DCONF_FILE="usbd_next_prj.conf" -DDTC_OVERLAY_FILE="usbd_next.overlay"
 
 - **From Zephyr root directory:**
 
   .. code-block:: bash
 
-     west build .\samples\subsys\usb\hid-mouse --pristine -b apollo510_evb -- -DCONF_FILE="usbd_next_prj.conf" -DDTC_OVERLAY_FILE="usbd_next.overlay"
+     west build .\samples\subsys\usb\hid-mouse --pristine -b your_board_here -- -DCONF_FILE="usbd_next_prj.conf" -DDTC_OVERLAY_FILE="usbd_next.overlay"
 
 **Notes:**
 
@@ -156,13 +156,13 @@ To compile the example:
 
   .. code-block:: bash
 
-     west build --pristine -b apollo510_evb
+     west build --pristine -b your_board_here
 
 - **From Zephyr root directory:**
 
   .. code-block:: bash
 
-     west build .\samples\subsys\usb\webusb-next --pristine -b apollo510_evb
+     west build .\samples\subsys\usb\webusb-next --pristine -b your_board_here
 
 To test the WebUSB interface:
 

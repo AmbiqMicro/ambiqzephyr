@@ -244,11 +244,22 @@ For those samples that require additional hardware, such as the ap510_disp shiel
 For Bluetooth samples, you need to program the BLE Controller firmware via JLINK once before running samples. The programming script and binary locate in ambiq SDK ambiqsuite.
 Please get the SDK from Ambiq Content Portal.
 
-For MSPI samples, please refer to How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst
+For ADC, I2C, SPI, PM, SDHC, flash, counter, RTC, WDT, UART and other general
+samples, please refer to ``doc/ambiq/general-samples-and-tests.rst``
 
-For USB samples, please refer to How_to_Run_Zephyr_USB_Samples.rst
+For audio (AUDADC, PDM, I2S) samples, please refer to ``doc/ambiq/audio-samples-and-tests.rst``
 
-For MCU_Boot samples, please refer to How_to_Run_MCUBoot_Samples_and_Tests.rst
+For BLE samples, please refer to ``doc/ambiq/ble-samples-and-tests.rst``
+
+For hardware entropy (TRNG) and hardware CRC samples, please refer to ``doc/ambiq/crypto-samples-and-tests.rst``
+
+For display, LVGL and input samples, please refer to ``doc/ambiq/display-samples-and-tests.rst``
+
+For MSPI samples, please refer to ``doc/ambiq/mspi-samples-and-tests.rst``
+
+For USB samples, please refer to ``doc/ambiq/usb-samples-and-tests.rst``
+
+For MCUboot samples, please refer to ``doc/ambiq/mcuboot-samples-and-tests.rst``
 
 
 Power Management Instructions
