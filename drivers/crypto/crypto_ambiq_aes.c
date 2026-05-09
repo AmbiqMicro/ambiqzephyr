@@ -6,12 +6,12 @@
 
 #include <zephyr/device.h>
 #include <zephyr/crypto/crypto.h>
-#include <zephyr/drivers/misc/ambiq_pwrctrl/ambiq_pwrctrl.h>
 #include <zephyr/irq.h>
 #include <zephyr/kernel.h>
 #include <zephyr/linker/section_tags.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/pm/device.h>
+#include <zephyr/pm/device_runtime.h>
 #include <zephyr/sys/atomic.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/cache.h>
@@ -79,34 +79,6 @@ static void ambiq_aes_finish_irq_wait(struct ambiq_aes_data *data)
 {
 	irq_disable(data->irq_num);
 	(void)atomic_set(&data->irq_wait_mask, 0U);
-}
-
-/* OTP and CRYPTO power rails are managed through the shared ambiq_pwrctrl
- * helper. OTP is also used by the entropy/TRNG driver; without the shared
- * refcount, this driver's PM-suspend path would tear OTP down out from under
- * the TRNG. The helper guarantees the rail is only physically toggled on the
- * 0->1 / 1->0 edges, so multiple users coexist safely.
- */
-static int ambiq_aes_periph_acquire(void)
-{
-	int ret;
-
-	ret = ambiq_pwrctrl_acquire(AMBIQ_PWRCTRL_OTP);
-	if (ret) {
-		return ret;
-	}
-	ret = ambiq_pwrctrl_acquire(AMBIQ_PWRCTRL_CRYPTO);
-	if (ret) {
-		(void)ambiq_pwrctrl_release(AMBIQ_PWRCTRL_OTP);
-		return ret;
-	}
-	return 0;
-}
-
-static void ambiq_aes_periph_release(void)
-{
-	(void)ambiq_pwrctrl_release(AMBIQ_PWRCTRL_CRYPTO);
-	(void)ambiq_pwrctrl_release(AMBIQ_PWRCTRL_OTP);
 }
 
 static void ambiq_cc312_isr(const void *arg)
@@ -589,7 +561,6 @@ static int ambiq_aes_ecb_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, int3
 	int op_ctx_init = 0;
 	uint8_t *out_buf;
 	int ret;
-	uint8_t periph_acquired = 0;
 
 	if (ctx == NULL || pkt == NULL) {
 		return -EINVAL;
@@ -610,12 +581,6 @@ static int ambiq_aes_ecb_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, int3
 	dma = data->dma;
 
 	k_mutex_lock(&data->lock, K_FOREVER);
-
-	ret = ambiq_aes_periph_acquire();
-	if (ret != 0) {
-		goto cleanup;
-	}
-	periph_acquired = 1;
 
 	status = ambiq_aes_prepare_op_ctx(&dma->op_ctx, ctx, hal_mode);
 	if (status != AM_HAL_STATUS_SUCCESS) {
@@ -649,9 +614,6 @@ cleanup:
 	/* Clear DMA scratch buffers */
 	ambiq_aes_clear_dma_scratch(dma);
 
-	if (periph_acquired) {
-		ambiq_aes_periph_release();
-	}
 	k_mutex_unlock(&data->lock);
 	return ret;
 }
@@ -679,7 +641,6 @@ static int ambiq_aes_ctr_ofb_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, 
 	uint8_t iv_local[AMBIQ_AES_BLOCK_SIZE] __aligned(AMBIQ_AES_DMA_ALIGNMENT);
 	uint8_t *out_buf;
 	int ret;
-	uint8_t periph_acquired = 0;
 
 	if (ctx == NULL || pkt == NULL) {
 		return -EINVAL;
@@ -718,12 +679,6 @@ static int ambiq_aes_ctr_ofb_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, 
 	dma = data->dma;
 
 	k_mutex_lock(&data->lock, K_FOREVER);
-
-	ret = ambiq_aes_periph_acquire();
-	if (ret != 0) {
-		goto cleanup;
-	}
-	periph_acquired = 1;
 
 	status = ambiq_aes_prepare_op_ctx(&dma->op_ctx, ctx, AM_HAL_AES_ENCRYPT);
 	if (status != AM_HAL_STATUS_SUCCESS) {
@@ -766,9 +721,6 @@ cleanup:
 	/* Clear DMA scratch buffers */
 	ambiq_aes_clear_dma_scratch(dma);
 
-	if (periph_acquired) {
-		ambiq_aes_periph_release();
-	}
 	k_mutex_unlock(&data->lock);
 	return ret;
 }
@@ -795,7 +747,6 @@ static int ambiq_aes_xts_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint
 	int crypt_ctx_init = 0;
 	uint8_t *out_buf;
 	int ret;
-	uint8_t periph_acquired = 0;
 
 	if (ctx == NULL || pkt == NULL) {
 		return -EINVAL;
@@ -819,12 +770,6 @@ static int ambiq_aes_xts_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint
 
 	dma = data->dma;
 	k_mutex_lock(&data->lock, K_FOREVER);
-
-	ret = ambiq_aes_periph_acquire();
-	if (ret != 0) {
-		goto cleanup;
-	}
-	periph_acquired = 1;
 
 	key1 = ctx->key.bit_stream;
 	key2 = ctx->key.bit_stream + (ctx->keylen / 2U);
@@ -1025,9 +970,6 @@ cleanup:
 	/* Clear DMA scratch buffers */
 	ambiq_aes_clear_dma_scratch(dma);
 
-	if (periph_acquired) {
-		ambiq_aes_periph_release();
-	}
 	k_mutex_unlock(&data->lock);
 	return ret;
 }
@@ -1369,7 +1311,6 @@ static uint32_t ambiq_cc312_ccm_auth_crypt(struct ambiq_aes_data *data,
 					   uint32_t tag_len, uint8_t dir, uint32_t ccm_mode)
 {
 	uint32_t status;
-	uint8_t periph_acquired = 0;
 
 	if (ctx == NULL || key == NULL || iv == NULL || input == NULL || output == NULL ||
 	    tag == NULL) {
@@ -1377,12 +1318,6 @@ static uint32_t ambiq_cc312_ccm_auth_crypt(struct ambiq_aes_data *data,
 	}
 
 	k_mutex_lock(&data->lock, K_FOREVER);
-	status = (uint32_t)ambiq_aes_periph_acquire();
-	if (status != 0U) {
-		status = AM_HAL_STATUS_FAIL;
-		goto cleanup_unlock;
-	}
-	periph_acquired = 1;
 	status = ambiq_aes_prepare_ccm_ctx(ctx, key, key_bits);
 	if (status != AM_HAL_STATUS_SUCCESS) {
 		goto cleanup_unlock;
@@ -1416,9 +1351,6 @@ static uint32_t ambiq_cc312_ccm_auth_crypt(struct ambiq_aes_data *data,
 cleanup:
 	am_hal_aes_ccm_free(ctx);
 cleanup_unlock:
-	if (periph_acquired) {
-		ambiq_aes_periph_release();
-	}
 	k_mutex_unlock(&data->lock);
 	return status;
 }
@@ -1801,19 +1733,12 @@ static uint32_t ambiq_aes_gcm_crypt_and_tag(struct ambiq_aes_data *data, int mod
 {
 	am_hal_cc312_aes_gcm_context_t *ctx;
 	uint32_t status;
-	int periph_acquired = 0;
 
 	if (data == NULL) {
 		return AM_HAL_STATUS_INVALID_ARG;
 	}
 
 	k_mutex_lock(&data->lock, K_FOREVER);
-	status = (uint32_t)ambiq_aes_periph_acquire();
-	if (status != 0U) {
-		status = AM_HAL_STATUS_FAIL;
-		goto cleanup_unlock;
-	}
-	periph_acquired = 1;
 	ctx = &data->dma->gcm_ctx;
 	status = ambiq_aes_prepare_gcm_ctx(ctx, key, key_bits);
 	if (status != AM_HAL_STATUS_SUCCESS) {
@@ -1867,9 +1792,6 @@ cleanup:
 	am_hal_cc312_clock_disable(AM_HAL_CC312_CLK_HASH);
 	am_hal_cc312_aes_disable_clocks();
 cleanup_unlock:
-	if (periph_acquired) {
-		ambiq_aes_periph_release();
-	}
 	k_mutex_unlock(&data->lock);
 
 	return status;
@@ -2078,20 +2000,25 @@ static int ambiq_aes_begin_session(const struct device *dev, struct cipher_ctx *
 		return ret;
 	}
 
+	ret = pm_device_runtime_get(dev);
+	if (ret != 0) {
+		return ret;
+	}
+
 	data = dev->data;
 	k_mutex_lock(&data->lock, K_FOREVER);
 	ambiq_aes_clear_session_ops(ctx);
 	ret = ambiq_aes_set_session_ops(ctx, mode, op_type);
 	if (ret != 0) {
-		goto out;
+		k_mutex_unlock(&data->lock);
+		(void)pm_device_runtime_put(dev);
+		return ret;
 	}
 
 	ctx->drv_sessn_state = NULL;
 	ctx->ops.cipher_mode = mode;
-
-out:
 	k_mutex_unlock(&data->lock);
-	return ret;
+	return 0;
 }
 
 static int ambiq_aes_free_session(const struct device *dev, struct cipher_ctx *ctx)
@@ -2109,6 +2036,8 @@ static int ambiq_aes_free_session(const struct device *dev, struct cipher_ctx *c
 	ctx->drv_sessn_state = NULL;
 	k_mutex_unlock(&data->lock);
 
+	(void)pm_device_runtime_put(dev);
+
 	return 0;
 }
 
@@ -2120,30 +2049,22 @@ static int ambiq_aes_callback_set(const struct device *dev, cipher_completion_cb
 	return -ENOTSUP;
 }
 
-static int ambiq_aes_enable_peripherals(void)
-{
-	return ambiq_aes_periph_acquire();
-}
-
-static int ambiq_aes_disable_peripherals(void)
-{
-	ambiq_aes_periph_release();
-	return 0;
-}
-
-#ifdef CONFIG_PM_DEVICE
 static int ambiq_aes_pm_action(const struct device *dev, enum pm_device_action action)
 {
+	ARG_UNUSED(dev);
+
 	switch (action) {
 	case PM_DEVICE_ACTION_RESUME:
-		return ambiq_aes_enable_peripherals();
 	case PM_DEVICE_ACTION_SUSPEND:
-		return ambiq_aes_disable_peripherals();
+	case PM_DEVICE_ACTION_TURN_ON:
+	case PM_DEVICE_ACTION_TURN_OFF:
+		break;
 	default:
 		return -ENOTSUP;
 	}
+
+	return 0;
 }
-#endif /* CONFIG_PM_DEVICE */
 
 static int ambiq_aes_init(const struct device *dev)
 {
@@ -2160,22 +2081,9 @@ static int ambiq_aes_init(const struct device *dev)
 	cfg->irq_config_func();
 	irq_disable(data->irq_num);
 
-	return ambiq_aes_enable_peripherals();
+	return pm_device_runtime_enable(dev);
 }
 
-/**
- * @brief Ambiq AES crypto driver API.
- *
- * Power Management: PM only (not PM + RUNTIME)
- *
- * This driver uses per-operation power management via the ambiq_pwrctrl shared
- * power rail management system. Each encrypt/decrypt operation calls
- * ambiq_aes_periph_acquire() to power on the CRYPTO and OTP domains, then
- * ambiq_aes_periph_release() to power them down after completion. This provides
- * fine-grained power management without using the PM device runtime framework,
- * as the power rails are shared with other drivers (TRNG uses OTP) and require
- * refcounting. PM device callbacks handle system suspend/resume only.
- */
 static DEVICE_API(crypto, ambiq_aes_crypto_api) = {
 	.query_hw_caps = ambiq_aes_query_hw_caps,
 	.cipher_begin_session = ambiq_aes_begin_session,

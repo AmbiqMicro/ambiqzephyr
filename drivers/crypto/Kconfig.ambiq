@@ -6,7 +6,7 @@ config CRYPTO_AMBIQ_AES
 	default y
 	depends on DT_HAS_AMBIQ_CRYPTO_AES_ENABLED
 	select AMBIQ_HAL
-	select AMBIQ_PWRCTRL
+	select POWER_DOMAIN
 	help
 		Enable the Ambiq CryptoCell-312 AES cipher driver.
 
