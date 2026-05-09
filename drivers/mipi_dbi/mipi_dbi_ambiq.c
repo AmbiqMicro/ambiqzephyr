@@ -200,6 +200,23 @@ static int mipi_dbi_ambiq_write_display(const struct device *dev,
 	return 0;
 }
 
+/**
+ * @brief MIPI DBI Power Management support
+ *
+ * Power Management: PM Only (2) - This driver uses per-operation power management
+ * via the ambiq_pwrctrl shared power rail management system.
+ *
+ * The MIPI DBI display controller acquires power for the DISP domain during
+ * initialization via ambiq_pwrctrl_acquire(AMBIQ_PWRCTRL_DISP). The shared power
+ * rail system uses reference counting to manage power across multiple display
+ * drivers (JDI, MIPI_DBI, MIPI_DSI) that share the DISP power domain.
+ *
+ * This driver does not implement PM_DEVICE callbacks or runtime PM because:
+ * - Power is managed at initialization time via the shared refcounted power rail system
+ * - The display must remain powered when actively driving a panel
+ * - Applications control display on/off at the MIPI DBI API level
+ * - The ambiq_pwrctrl system handles power domain coordination across display drivers
+ */
 static int mipi_dbi_ambiq_init(const struct device *dev)
 {
 	const struct mipi_dbi_ambiq_config *config = dev->config;
