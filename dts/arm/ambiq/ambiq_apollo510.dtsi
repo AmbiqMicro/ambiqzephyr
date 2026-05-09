@@ -162,12 +162,51 @@
 		zephyr,memory-region = "XIP3";
 	};
 
+	/*
+	 * OTP power domain — manages the OTP (INFOC/EFUSE) peripheral rail.
+	 * Must be active before the CRYPTO rail can be enabled (HAL enforced).
+	 * The CRYPTO domain declares power-domains = <&otp_pd> so the
+	 * framework enables OTP automatically before CRYPTO is brought up.
+	 */
+	otp_pd: otp-pd {
+		compatible = "ambiq,otp-power-domain";
+		#power-domain-cells = <0>;
+		status = "okay";
+		zephyr,pm-device-runtime-auto;
+	};
+
+	/*
+	 * CRYPTO power domain — manages the CC312 CRYPTO peripheral rail.
+	 * Declares power-domains = <&otp_pd> so OTP is enabled first.
+	 * Starts suspended; rails power on the first pm_device_runtime_get
+	 * from any child and power off when all children have released.
+	 */
+	crypto_pd: crypto-pd {
+		compatible = "ambiq,crypto-power-domain";
+		#power-domain-cells = <0>;
+		power-domains = <&otp_pd>;
+		status = "okay";
+		zephyr,pm-device-runtime-auto;
+	};
+
+	/*
+	 * DISP power domain — manages the DISP rail shared by MIPI-DSI,
+	 * MIPI-DBI, JDI, and the SPI display controller.
+	 * Starts active (DISP rail on at boot).
+	 */
+	disp_pd: disp-pd {
+		compatible = "ambiq,disp-power-domain";
+		#power-domain-cells = <0>;
+		status = "okay";
+	};
+
 	soc {
 		compatible = "ambiq,apollo510", "ambiq,apollo5x", "simple-bus";
 
 		trng: trng@40014aa0 {
 			compatible = "ambiq,puf-trng";
 			reg = <0x40014aa0 0x4>;
+			power-domains = <&crypto_pd>;
 			status = "disabled";
 		};
 
@@ -175,12 +214,14 @@
 			compatible = "ambiq,crypto-aes";
 			reg = <0x400c0000 0x1f30>;
 			interrupts = <24 0>;
+			power-domains = <&crypto_pd>;
 			status = "disabled";
 		};
 
 		crc32: crc32@40030030 {
 			compatible = "ambiq,hw-crc32";
 			reg = <0x40030030 0x4>;
+			power-domains = <&crypto_pd>;
 			status = "disabled";
 		};
 
@@ -807,6 +848,7 @@
 			#size-cells = <0>;
 			reg = <DC_REG_BASE DC_REG_SIZE>;
 			interrupts = <29 0>;/* DC interrupt */
+			power-domains = <&disp_pd>;
 			status = "disabled";
 		};
 
@@ -816,6 +858,7 @@
 			#size-cells = <0>;
 			reg = <DC_REG_BASE DC_REG_SIZE>;
 			interrupts = <29 0>;/* DC interrupt */
+			power-domains = <&disp_pd>;
 			status = "disabled";
 			hactive = <468>;/*Its value should be an integer multiple of 4.*/
 			hfp = <1>;
@@ -833,6 +876,7 @@
 			#size-cells = <0>;
 			reg = <DC_REG_BASE DC_REG_SIZE>;
 			interrupts = <29 0>;/* DC interrupt */
+			power-domains = <&disp_pd>;
 			status = "disabled";
 
 			clock-frequency = <192000000>;
@@ -854,8 +898,8 @@
 			dbi-width = <16>;
 			phy-clock = <384000000>;
 			interrupts = <29 0>;/* DC interrupt */
+			power-domains = <&disp_pd>;
 			status = "disabled";
-			zephyr,pm-device-runtime-auto;
 		};
 
 		pinctrl: pin-controller@GPIO_BASE_NAME {
@@ -873,8 +917,8 @@
 					    0x40 0x0 &gpio64_95 0x0 0x0
 					    0x60 0x0 &gpio96_127 0x0 0x0
 					    0x80 0x0 &gpio128_159 0x0 0x0
-					    0xA0 0x0 &gpio160_191 0x0 0x0
-					    0xC0 0x0 &gpio192_223 0x0 0x0>;
+					    0xa0 0x0 &gpio160_191 0x0 0x0
+					    0xc0 0x0 &gpio192_223 0x0 0x0>;
 				reg = <GPIO_REG_BASE>;
 				#gpio-cells = <2>;
 				#address-cells = <1>;

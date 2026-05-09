@@ -1,0 +1,15 @@
+# Copyright (c) 2026 Ambiq Micro Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  Ambiq OTP (INFOC/EFUSE) power domain. Manages the OTP peripheral
+  rail via am_hal_pwrctrl_periph_enable/disable(AM_HAL_PWRCTRL_PERIPH_OTP).
+
+  On Apollo5X SoCs the OTP rail must be active before the CRYPTO (CC312)
+  rail can be enabled. Model this by having the CRYPTO power domain node
+  declare power-domains = <&otp_pd> so the framework automatically
+  enables OTP before CRYPTO and disables it after.
+
+compatible: "ambiq,otp-power-domain"
+
+include: power-domain.yaml

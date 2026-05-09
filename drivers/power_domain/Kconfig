@@ -127,4 +127,40 @@ rsource "Kconfig.nrfs_gdpwr"
 rsource "Kconfig.nrfs_swext"
 rsource "Kconfig.silabs_siwx91x"
 
+config POWER_DOMAIN_AMBIQ_OTP
+	bool "Ambiq OTP power domain"
+	default y
+	depends on DT_HAS_AMBIQ_OTP_POWER_DOMAIN_ENABLED
+	depends on AMBIQ_HAL
+	select DEVICE_DEPS
+	help
+	  Power domain driver for the Ambiq OTP (INFOC/EFUSE) peripheral rail.
+	  Enables and disables the OTP rail via am_hal_pwrctrl_periph_enable/
+	  disable(AM_HAL_PWRCTRL_PERIPH_OTP). Intended to be the parent domain
+	  of the CRYPTO domain so the framework enables OTP automatically
+	  before CRYPTO is brought up.
+
+config POWER_DOMAIN_AMBIQ_CRYPTO
+	bool "Ambiq CRYPTO power domain"
+	default y
+	depends on DT_HAS_AMBIQ_CRYPTO_POWER_DOMAIN_ENABLED
+	depends on AMBIQ_HAL
+	select DEVICE_DEPS
+	help
+	  Power domain driver for the Ambiq CRYPTO (CC312) peripheral rail.
+	  On RESUME enables CRYPTO via am_hal_pwrctrl_periph_enable; on SUSPEND
+	  uses the dedicated am_hal_pwrctrl_control(CRYPTO_POWERDOWN) sequence
+	  required by the CC312 engine. Children (AES, TRNG, CRC) acquire the
+	  domain via pm_device_runtime_get/put.
+
+config POWER_DOMAIN_AMBIQ_DISP
+	bool "Ambiq DISP power domain"
+	default y
+	depends on DT_HAS_AMBIQ_DISP_POWER_DOMAIN_ENABLED
+	depends on AMBIQ_HAL
+	select DEVICE_DEPS
+	help
+	  Power domain driver for the Ambiq DISP peripheral rail shared by
+	  MIPI-DSI, MIPI-DBI, JDI, and SPI display controller drivers.
+
 endif
