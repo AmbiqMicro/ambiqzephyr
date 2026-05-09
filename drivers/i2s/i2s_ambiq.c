@@ -13,6 +13,7 @@
 #include <zephyr/drivers/i2s.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/pm/device.h>
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(ambiq_i2s, CONFIG_I2S_LOG_LEVEL);
@@ -728,6 +729,55 @@ static DEVICE_API(i2s, i2s_ambiq_driver_api) = {
 	.trigger = i2s_ambiq_trigger,
 };
 
+/**
+ * @brief I2S Power Management support
+ *
+ * Power Management: PM Only (2) - This driver implements PM_DEVICE callbacks for
+ * system suspend/resume but does not use runtime PM (no pm_device_runtime_get/put).
+ *
+ * The I2S peripheral must remain powered during active audio streaming. When the
+ * system suspends, the HAL's power control function is used to power down the I2S
+ * hardware to save power during deep sleep. Configuration is retained and restored
+ * on resume.
+ *
+ * This driver does not benefit from runtime PM because I2S audio streaming is
+ * continuous when active, and applications control start/stop at the I2S API level.
+ */
+#ifdef CONFIG_PM_DEVICE
+static int i2s_ambiq_pm_action(const struct device *dev, enum pm_device_action action)
+{
+	struct i2s_ambiq_data *data = dev->data;
+	uint32_t ret;
+
+	switch (action) {
+	case PM_DEVICE_ACTION_RESUME:
+		ret = am_hal_i2s_power_control(data->i2s_handler, AM_HAL_I2S_POWER_ON, false);
+		if (ret != AM_HAL_STATUS_SUCCESS) {
+			LOG_ERR("I2S power on failed: %d", ret);
+			return -EIO;
+		}
+		break;
+
+	case PM_DEVICE_ACTION_SUSPEND:
+		/* Reject suspend if actively streaming or stopping to prevent DMA corruption */
+		if (data->i2s_state == I2S_STATE_RUNNING || data->i2s_state == I2S_STATE_STOPPING) {
+			return -EBUSY;
+		}
+		ret = am_hal_i2s_power_control(data->i2s_handler, AM_HAL_I2S_POWER_OFF, false);
+		if (ret != AM_HAL_STATUS_SUCCESS) {
+			LOG_ERR("I2S power off failed: %d", ret);
+			return -EIO;
+		}
+		break;
+
+	default:
+		return -ENOTSUP;
+	}
+
+	return 0;
+}
+#endif /* CONFIG_PM_DEVICE */
+
 #define AMBIQ_I2S_DEFINE(n)                                                                        \
 	PINCTRL_DT_INST_DEFINE(n);                                                                 \
 	static void i2s_irq_config_func_##n(void)                                                  \
@@ -752,7 +802,9 @@ static DEVICE_API(i2s, i2s_ambiq_driver_api) = {
 		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                         \
 		.irq_config_func = i2s_irq_config_func_##n,                                        \
 	};                                                                                         \
-	DEVICE_DT_INST_DEFINE(n, i2s_ambiq_init, NULL, &i2s_ambiq_data##n, &i2s_ambiq_cfg##n,      \
-			      POST_KERNEL, CONFIG_I2S_INIT_PRIORITY, &i2s_ambiq_driver_api);
+	PM_DEVICE_DT_INST_DEFINE(n, i2s_ambiq_pm_action);                                          \
+	DEVICE_DT_INST_DEFINE(n, i2s_ambiq_init, PM_DEVICE_DT_INST_GET(n), &i2s_ambiq_data##n,     \
+			      &i2s_ambiq_cfg##n, POST_KERNEL, CONFIG_I2S_INIT_PRIORITY,            \
+			      &i2s_ambiq_driver_api);
 
 DT_INST_FOREACH_STATUS_OKAY(AMBIQ_I2S_DEFINE)
