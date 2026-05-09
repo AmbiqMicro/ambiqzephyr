@@ -9,9 +9,10 @@
 #include <zephyr/drivers/mipi_dbi.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/gpio.h>
-#include <zephyr/drivers/misc/ambiq_pwrctrl/ambiq_pwrctrl.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/kernel.h>
+#include <zephyr/pm/device.h>
+#include <zephyr/pm/device_runtime.h>
 #include <zephyr/sys/byteorder.h>
 
 #include <am_mcu_apollo.h>
@@ -203,20 +204,28 @@ static int mipi_dbi_ambiq_write_display(const struct device *dev,
 /**
  * @brief MIPI DBI Power Management support
  *
- * Power Management: PM Only (2) - This driver uses per-operation power management
- * via the ambiq_pwrctrl shared power rail management system.
- *
- * The MIPI DBI display controller acquires power for the DISP domain during
- * initialization via ambiq_pwrctrl_acquire(AMBIQ_PWRCTRL_DISP). The shared power
- * rail system uses reference counting to manage power across multiple display
- * drivers (JDI, MIPI_DBI, MIPI_DSI) that share the DISP power domain.
- *
- * This driver does not implement PM_DEVICE callbacks or runtime PM because:
- * - Power is managed at initialization time via the shared refcounted power rail system
- * - The display must remain powered when actively driving a panel
- * - Applications control display on/off at the MIPI DBI API level
- * - The ambiq_pwrctrl system handles power domain coordination across display drivers
+ * Power is managed via the Zephyr power domain framework. The DISP rail is
+ * enabled by the disp_pd power domain device and stays on as long as a
+ * consumer holds a runtime PM reference. This driver registers a no-op PM
+ * action so the power domain lifecycle is tracked correctly.
  */
+static int mipi_dbi_ambiq_pm_action(const struct device *dev, enum pm_device_action action)
+{
+	ARG_UNUSED(dev);
+
+	switch (action) {
+	case PM_DEVICE_ACTION_RESUME:
+	case PM_DEVICE_ACTION_SUSPEND:
+	case PM_DEVICE_ACTION_TURN_ON:
+	case PM_DEVICE_ACTION_TURN_OFF:
+		break;
+	default:
+		return -ENOTSUP;
+	}
+
+	return 0;
+}
+
 static int mipi_dbi_ambiq_init(const struct device *dev)
 {
 	const struct mipi_dbi_ambiq_config *config = dev->config;
@@ -229,36 +238,24 @@ static int mipi_dbi_ambiq_init(const struct device *dev)
 		return ret;
 	}
 
-	/* Enable display peripheral power via the shared refcount so other
-	 * display drivers sharing the DISP rail aren't torn down on suspend.
-	 */
-	ret = ambiq_pwrctrl_acquire(AMBIQ_PWRCTRL_DISP);
-	if (ret) {
-		LOG_ERR("Failed to acquire display peripheral power: %d", ret);
-		return ret;
-	}
-
 	/* Configure clock source, the frequency is up to 192MHz */
 #ifdef CONFIG_SOC_APOLLO510L
 	ret = nemadc_clock_control(DISP_CLOCK_ENABLE, DISPCLKSRC_HFRC_192MHz, 1);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("Failed to configure display clock: %d", ret);
-		ret = -EIO;
-		goto release_disp;
+		return -EIO;
 	}
 #else
 	ret = am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_DISPCLKSEL_HFRC192, NULL);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("Failed to configure display clock: %d", ret);
-		ret = -EIO;
-		goto release_disp;
+		return -EIO;
 	}
 
 	ret = am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_DCCLK_ENABLE, NULL);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("Failed to enable DC clock: %d", ret);
-		ret = -EIO;
-		goto release_disp;
+		return -EIO;
 	}
 
 #endif
@@ -266,11 +263,8 @@ static int mipi_dbi_ambiq_init(const struct device *dev)
 	ret = nemadc_init();
 	if (ret != 0) {
 		LOG_ERR("DC init failed!\n");
-		ret = -EFAULT;
-		goto release_disp;
+		return -EFAULT;
 	}
-
-	/* Enable global interrupts */
 	am_hal_interrupt_master_enable();
 
 	/* Configure interrupts */
@@ -300,8 +294,7 @@ static int mipi_dbi_ambiq_init(const struct device *dev)
 		break;
 	default:
 		LOG_ERR("Invalid color coding!\n");
-		ret = -ENOTSUP;
-		goto release_disp;
+		return -ENOTSUP;
 	}
 
 	data->dc_layer.resx = data->dc_config.ui16ResX;
@@ -318,11 +311,7 @@ static int mipi_dbi_ambiq_init(const struct device *dev)
 	data->dc_layer.flipy_en = 0;
 	data->dc_layer.extra_bits = 0;
 
-	return ret;
-
-release_disp:
-	(void)ambiq_pwrctrl_release(AMBIQ_PWRCTRL_DISP);
-	return ret;
+	return pm_device_runtime_enable(dev);
 }
 
 static DEVICE_API(mipi_dbi, mipi_dbi_ambiq_driver_api) = {
@@ -358,8 +347,9 @@ extern void am_disp_isr(void);
 			      .ui32FrontPorchY = DT_INST_PROP_OR(n, vfp, 1),                       \
 			      .ui32BackPorchY = DT_INST_PROP_OR(n, vbp, 1),                        \
 			      .ui32BlankingY = DT_INST_PROP_OR(n, vsync, 1)}};                     \
-	DEVICE_DT_INST_DEFINE(n, mipi_dbi_ambiq_init, NULL, &mipi_dbi_ambiq_data_##n,              \
-			      &mipi_dbi_ambiq_config_##n, POST_KERNEL,                             \
+	PM_DEVICE_DT_INST_DEFINE(n, mipi_dbi_ambiq_pm_action);                                     \
+	DEVICE_DT_INST_DEFINE(n, mipi_dbi_ambiq_init, PM_DEVICE_DT_INST_GET(n),                    \
+			      &mipi_dbi_ambiq_data_##n, &mipi_dbi_ambiq_config_##n, POST_KERNEL,   \
 			      CONFIG_MIPI_DBI_INIT_PRIORITY, &mipi_dbi_ambiq_driver_api);
 
 DT_INST_FOREACH_STATUS_OKAY(AMBIQ_MIPI_DBI_DEVICE)
