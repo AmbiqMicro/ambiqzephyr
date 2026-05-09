@@ -12,8 +12,9 @@
 #include <zephyr/drivers/jdi.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/gpio.h>
-#include <zephyr/drivers/misc/ambiq_pwrctrl/ambiq_pwrctrl.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/pm/device.h>
+#include <zephyr/pm/device_runtime.h>
 
 #include <am_mcu_apollo.h>
 #include <nema_dc_regs.h>
@@ -229,20 +230,28 @@ static DEVICE_API(jdi, jdi_ambiq_driver_api) = {
 /**
  * @brief JDI Power Management support
  *
- * Power Management: PM Only (2) - This driver uses init-time refcounted power rail
- * acquisition via the ambiq_pwrctrl shared power rail management system.
- *
- * The JDI display controller acquires power for the DISP domain during initialization
- * via ambiq_pwrctrl_acquire(AMBIQ_PWRCTRL_DISP) and holds it for device lifetime.
- * The shared power rail system uses reference counting to manage power across multiple
- * display drivers (JDI, MIPI_DBI, MIPI_DSI) that share the DISP power domain.
- *
- * This driver does not implement PM_DEVICE callbacks or runtime PM because:
- * - Power is managed at initialization time via the shared refcounted power rail system
- * - The display must remain powered when actively driving a panel
- * - Applications control display on/off at the JDI API level
- * - The ambiq_pwrctrl system handles power domain coordination across display drivers
+ * Power is managed via the Zephyr power domain framework. The DISP rail is
+ * enabled by the disp_pd power domain device and stays on as long as a
+ * consumer holds a runtime PM reference. This driver registers a no-op PM
+ * action so the power domain lifecycle is tracked correctly.
  */
+static int jdi_ambiq_pm_action(const struct device *dev, enum pm_device_action action)
+{
+	ARG_UNUSED(dev);
+
+	switch (action) {
+	case PM_DEVICE_ACTION_RESUME:
+	case PM_DEVICE_ACTION_SUSPEND:
+	case PM_DEVICE_ACTION_TURN_ON:
+	case PM_DEVICE_ACTION_TURN_OFF:
+		break;
+	default:
+		return -ENOTSUP;
+	}
+
+	return 0;
+}
+
 static int jdi_ambiq_init(const struct device *dev)
 {
 	const struct jdi_ambiq_config *config = dev->config;
@@ -257,37 +266,24 @@ static int jdi_ambiq_init(const struct device *dev)
 		return ret;
 	}
 
-	/* Enable display peripheral power via the shared refcount so other
-	 * display drivers (DSI, MIPI-DBI, SPI display controller) sharing the
-	 * DISP rail aren't torn down when one of us suspends.
-	 */
-	ret = ambiq_pwrctrl_acquire(AMBIQ_PWRCTRL_DISP);
-	if (ret) {
-		LOG_ERR("Failed to acquire display peripheral power: %d", ret);
-		return ret;
-	}
-
 	/* Configure clock to 48MHz, the frequency is up to 192MHz */
 #ifdef CONFIG_SOC_APOLLO510L
 	ret = nemadc_clock_control(DISP_CLOCK_ENABLE, DISPCLKSRC_HFRC_192MHz, 4);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("Failed to configure display clock: %d", ret);
-		ret = -EIO;
-		goto release_disp;
+		return -EIO;
 	}
 #else
 	ret = am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_DISPCLKSEL_HFRC48, NULL);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("Failed to configure display clock: %d", ret);
-		ret = -EIO;
-		goto release_disp;
+		return -EIO;
 	}
 
 	ret = am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_DCCLK_ENABLE, NULL);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("Failed to enable DC clock: %d", ret);
-		ret = -EIO;
-		goto release_disp;
+		return -EIO;
 	}
 #endif
 
@@ -295,8 +291,7 @@ static int jdi_ambiq_init(const struct device *dev)
 	ret = nemadc_init();
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("NemaDC initialization failed");
-		ret = -EFAULT;
-		goto release_disp;
+		return -EFAULT;
 	}
 
 	/* Enable global interrupts */
@@ -304,11 +299,7 @@ static int jdi_ambiq_init(const struct device *dev)
 
 	/* Configure interrupts */
 	config->irq_config_func(dev);
-	return 0;
-
-release_disp:
-	(void)ambiq_pwrctrl_release(AMBIQ_PWRCTRL_DISP);
-	return ret;
+	return pm_device_runtime_enable(dev);
 }
 
 /*
@@ -345,7 +336,9 @@ extern void am_disp_isr(void);
 		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                         \
 		.irq_config_func = disp_##n##_irq_config_func,                                     \
 	};                                                                                         \
-	DEVICE_DT_INST_DEFINE(n, jdi_ambiq_init, NULL, &jdi_ambiq_data_##n, &jdi_ambiq_config_##n, \
-			      POST_KERNEL, CONFIG_JDI_INIT_PRIORITY, &jdi_ambiq_driver_api);
+	PM_DEVICE_DT_INST_DEFINE(n, jdi_ambiq_pm_action);                                          \
+	DEVICE_DT_INST_DEFINE(n, jdi_ambiq_init, PM_DEVICE_DT_INST_GET(n), &jdi_ambiq_data_##n,    \
+			      &jdi_ambiq_config_##n, POST_KERNEL, CONFIG_JDI_INIT_PRIORITY,        \
+			      &jdi_ambiq_driver_api);
 
 DT_INST_FOREACH_STATUS_OKAY(AMBIQ_JDI_DEVICE)
