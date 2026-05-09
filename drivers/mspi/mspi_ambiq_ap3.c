@@ -286,6 +286,34 @@ static inline bool mspi_is_inp(const struct device *controller)
 	return (k_sem_count_get(&data->ctx.lock) == 0);
 }
 
+static int mspi_apply_dev_config(const struct device *controller,
+				 am_hal_mspi_dev_config_t *hal_dev_cfg)
+{
+	const struct mspi_ambiq_config *cfg = controller->config;
+	struct mspi_ambiq_data *data = controller->data;
+	int ret;
+
+	ret = am_hal_mspi_disable(data->mspiHandle);
+	if (ret) {
+		LOG_INST_ERR(cfg->log, "%u, fail to disable MSPI, code:%d.", __LINE__, ret);
+		return -EHOSTDOWN;
+	}
+
+	ret = am_hal_mspi_device_configure(data->mspiHandle, hal_dev_cfg);
+	if (ret) {
+		LOG_INST_ERR(cfg->log, "%u, fail to configure MSPI, code:%d.", __LINE__, ret);
+		return -EHOSTDOWN;
+	}
+
+	ret = am_hal_mspi_enable(data->mspiHandle);
+	if (ret) {
+		LOG_INST_ERR(cfg->log, "%u, fail to enable MSPI, code:%d.", __LINE__, ret);
+		return -EHOSTDOWN;
+	}
+
+	return 0;
+}
+
 static inline int mspi_verify_device(const struct device      *controller,
 				     const struct mspi_dev_id *dev_id)
 {
@@ -739,25 +767,8 @@ static int mspi_ambiq_dev_config(const struct device         *controller,
 			}
 #else
 			hal_dev_cfg.bSendInstr = true;
-			ret = am_hal_mspi_disable(data->mspiHandle);
+			ret = mspi_apply_dev_config(controller, &hal_dev_cfg);
 			if (ret) {
-				LOG_INST_ERR(cfg->log, "%u, fail to disable MSPI, code:%d.",
-					     __LINE__, ret);
-				ret = -EHOSTDOWN;
-				goto e_return;
-			}
-			ret = am_hal_mspi_device_configure(data->mspiHandle, &hal_dev_cfg);
-			if (ret) {
-				LOG_INST_ERR(cfg->log, "%u, fail to configure MSPI, code:%d.",
-					     __LINE__, ret);
-				ret = -EHOSTDOWN;
-				goto e_return;
-			}
-			ret = am_hal_mspi_enable(data->mspiHandle);
-			if (ret) {
-				LOG_INST_ERR(cfg->log, "%u, fail to enable MSPI, code:%d.",
-					     __LINE__, ret);
-				ret = -EHOSTDOWN;
 				goto e_return;
 			}
 #endif
@@ -783,25 +794,8 @@ static int mspi_ambiq_dev_config(const struct device         *controller,
 			}
 #else
 			hal_dev_cfg.bSendAddr = true;
-			ret = am_hal_mspi_disable(data->mspiHandle);
+			ret = mspi_apply_dev_config(controller, &hal_dev_cfg);
 			if (ret) {
-				LOG_INST_ERR(cfg->log, "%u, fail to disable MSPI, code:%d.",
-					     __LINE__, ret);
-				ret = -EHOSTDOWN;
-				goto e_return;
-			}
-			ret = am_hal_mspi_device_configure(data->mspiHandle, &hal_dev_cfg);
-			if (ret) {
-				LOG_INST_ERR(cfg->log, "%u, fail to configure MSPI, code:%d.",
-					     __LINE__, ret);
-				ret = -EHOSTDOWN;
-				goto e_return;
-			}
-			ret = am_hal_mspi_enable(data->mspiHandle);
-			if (ret) {
-				LOG_INST_ERR(cfg->log, "%u, fail to enable MSPI, code:%d.",
-					     __LINE__, ret);
-				ret = -EHOSTDOWN;
 				goto e_return;
 			}
 #endif
