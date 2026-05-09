@@ -55,14 +55,14 @@ static int mipi_dbi_ambiq_command_write(const struct device *dev,
 			LOG_ERR("Invalid argument.");
 			return -EINVAL;
 		}
-		data->dc_layer.resx = (int32_t)((data_buf[2] << 8) | data_buf[3]) -
+		data->dc_layer.resx = (int32_t)((data_buf[2] << 8) | data_buf[3]) + 1 -
 				      (int32_t)((data_buf[0] << 8) | data_buf[1]);
 	} else if (cmd == MIPI_DCS_SET_PAGE_ADDRESS) {
 		if (len < 4) {
 			LOG_ERR("Invalid argument.");
 			return -EINVAL;
 		}
-		data->dc_layer.resy = (int32_t)((data_buf[2] << 8) | data_buf[3]) -
+		data->dc_layer.resy = (int32_t)((data_buf[2] << 8) | data_buf[3]) + 1 -
 				      (int32_t)((data_buf[0] << 8) | data_buf[1]);
 	}
 
@@ -182,7 +182,7 @@ static int mipi_dbi_ambiq_write_display(const struct device *dev,
 	nemadc_timing(data->dc_layer.resx, data->dc_config.ui32FrontPorchX,
 		      data->dc_config.ui32BlankingX, data->dc_config.ui32BackPorchX,
 		      data->dc_layer.resy, data->dc_config.ui32FrontPorchY,
-		      data->dc_config.ui32BlankingY, data->dc_config.ui32BlankingY);
+		      data->dc_config.ui32BlankingY, data->dc_config.ui32BackPorchY);
 	data->dc_layer.stride = nemadc_stride_size(data->dc_layer.format, data->dc_layer.resx);
 
 	data->dc_layer.baseaddr_virt = (void *)framebuf;
