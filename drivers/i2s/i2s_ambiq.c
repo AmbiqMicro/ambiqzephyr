@@ -398,7 +398,6 @@ static int i2s_ambiq_configure(const struct device *dev, enum i2s_dir dir,
 	case 24:
 		hal_cfg->eData->eChannelLenPhase1 = AM_HAL_I2S_FRAME_WDLEN_24BITS;
 		hal_cfg->eData->eSampleLenPhase1 = AM_HAL_I2S_SAMPLE_LENGTH_24BITS;
-		break;
 	case 32:
 		hal_cfg->eData->eChannelLenPhase1 = AM_HAL_I2S_FRAME_WDLEN_32BITS;
 		hal_cfg->eData->eSampleLenPhase1 = AM_HAL_I2S_SAMPLE_LENGTH_32BITS;
