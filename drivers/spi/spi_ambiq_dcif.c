@@ -16,7 +16,8 @@ LOG_MODULE_REGISTER(spi_ambiq_dcif, CONFIG_SPI_LOG_LEVEL);
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/spi.h>
 #include <zephyr/drivers/display.h>
-#include <zephyr/drivers/misc/ambiq_pwrctrl/ambiq_pwrctrl.h>
+#include <zephyr/pm/device.h>
+#include <zephyr/pm/device_runtime.h>
 #include <zephyr/display/mipi_display.h>
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/pinctrl.h>
@@ -303,6 +304,23 @@ static DEVICE_API(spi, spi_ambiq_driver_api) = {
 	.release = spi_ambiq_release,
 };
 
+static int spi_ambiq_pm_action(const struct device *dev, enum pm_device_action action)
+{
+	ARG_UNUSED(dev);
+
+	switch (action) {
+	case PM_DEVICE_ACTION_RESUME:
+	case PM_DEVICE_ACTION_SUSPEND:
+	case PM_DEVICE_ACTION_TURN_ON:
+	case PM_DEVICE_ACTION_TURN_OFF:
+		break;
+	default:
+		return -ENOTSUP;
+	}
+
+	return 0;
+}
+
 static int spi_ambiq_init(const struct device *dev)
 {
 	const struct spi_ambiq_config *config = dev->config;
@@ -315,44 +333,31 @@ static int spi_ambiq_init(const struct device *dev)
 		return ret;
 	}
 
-	/* Enable display peripheral power via the shared refcount so other
-	 * display drivers sharing the DISP rail aren't torn down on suspend.
-	 */
-	ret = ambiq_pwrctrl_acquire(AMBIQ_PWRCTRL_DISP);
-	if (ret) {
-		LOG_ERR("Failed to acquire display peripheral power: %d", ret);
-		return ret;
-	}
-
 	/* Configure display clock */
 #ifdef CONFIG_SOC_APOLLO510L
 	ret = nemadc_clock_control(DISP_CLOCK_ENABLE, DISPCLKSRC_HFRC_192MHz, 1);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("Failed to configure display clock: %d", ret);
-		ret = -EIO;
-		goto release_disp;
+		return -EIO;
 	}
 #else
 	ret = am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_DISPCLKSEL_HFRC192, NULL);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("Failed to configure display clock: %d", ret);
-		ret = -EIO;
-		goto release_disp;
+		return -EIO;
 	}
 
 	ret = am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_DCCLK_ENABLE, NULL);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("Failed to enable DC clock: %d", ret);
-		ret = -EIO;
-		goto release_disp;
+		return -EIO;
 	}
 #endif
 
 	/* Initialize NemaDC */
 	if (nemadc_init() != 0) {
 		LOG_ERR("NemaDC initialization failed");
-		ret = -EFAULT;
-		goto release_disp;
+		return -EFAULT;
 	}
 
 	/* Enable global interrupts */
@@ -361,11 +366,7 @@ static int spi_ambiq_init(const struct device *dev)
 	/* Configure interrupts */
 	config->irq_config_func(dev);
 
-	return ret;
-
-release_disp:
-	(void)ambiq_pwrctrl_release(AMBIQ_PWRCTRL_DISP);
-	return ret;
+	return pm_device_runtime_enable(dev);
 }
 
 /*
@@ -397,7 +398,9 @@ extern void am_disp_isr(void);
 			      .ui32BackPorchY = DT_INST_PROP_OR(id, vbp, 1),                       \
 			      .ui32BlankingY = DT_INST_PROP_OR(id, vsync, 1),                      \
 			      .ui32PixelFormat = DT_INST_ENUM_IDX(id, pixfmt)}};                   \
-	DEVICE_DT_INST_DEFINE(id, spi_ambiq_init, NULL, &spi_ambiq_data_##id, &spi_ambiq_cfg_##id, \
-			      POST_KERNEL, CONFIG_SPI_INIT_PRIORITY, &spi_ambiq_driver_api);
+	PM_DEVICE_DT_INST_DEFINE(id, spi_ambiq_pm_action);                                         \
+	DEVICE_DT_INST_DEFINE(id, spi_ambiq_init, PM_DEVICE_DT_INST_GET(id), &spi_ambiq_data_##id, \
+			      &spi_ambiq_cfg_##id, POST_KERNEL, CONFIG_SPI_INIT_PRIORITY,          \
+			      &spi_ambiq_driver_api);
 
 DT_INST_FOREACH_STATUS_OKAY(SPI_AMBIQ_DEFINE)
