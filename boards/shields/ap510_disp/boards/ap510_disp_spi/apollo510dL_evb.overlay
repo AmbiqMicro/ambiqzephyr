@@ -60,9 +60,13 @@
 			drive-strength = "0.5";
 		};
 
+		/*
+		 * P101: use DISP_QSPI_CS_N (pad func 0). On Apollo510 (non-L), CS is only
+		 * available via NCE209 + ambiq,nce-src = DC_QSPI_CS_N; Apollo510L also exposes
+		 * this dedicated DISP_QSPI_CS_N route on P101 so NCE mux programming is not required.
+		 */
 		group2 {
-			pinmux = <NCE101_P101>;
-			ambiq,nce-src = <0x33>;
+			pinmux = <DISP_QSPI_CS_N_P101>;
 			drive-strength = "0.5";
 		};
 	};
