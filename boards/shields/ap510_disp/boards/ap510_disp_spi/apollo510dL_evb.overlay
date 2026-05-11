@@ -8,20 +8,6 @@
 #include <zephyr/dt-bindings/display/panel.h>
 #include <zephyr/dt-bindings/i2c/i2c.h>
 
-/ {
-	/*
-	 * SPI shield does not probe MIPI; turn on the same 1.8 V load switch as the DSI
-	 * shield (&mipi_dsi vdd18-gpios on gpio96_119 pin 17).
-	 */
-	disp_panel_vdd18: disp-panel-vdd18 {
-		compatible = "regulator-fixed";
-		regulator-name = "disp-panel-vdd18";
-		enable-gpios = <&gpio96_119 17 GPIO_ACTIVE_HIGH>;
-		regulator-boot-on;
-		startup-delay-us = <5000>;
-	};
-};
-
 /*
  * Shield defaults use IOM2 for touch (apollo510_evb P25/P26). On apollo510dL_evb,
  * touch is on IOM1 (connector TOUCH_M1SCL / TOUCH_M1SDA = P8 / P9).
@@ -87,10 +73,8 @@
  * label co5300 under &dc_spi; a second co5300 label under MIPI causes a devicetree error.
  */
 &dc_spi {
-	disp-te;
-
 	co5300: co5300@0 {
-		reset-gpios = <&gpio32_63 9 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+		reset-gpios = <&gpio32_63 9 GPIO_PULL_UP>;
 	};
 };
 
