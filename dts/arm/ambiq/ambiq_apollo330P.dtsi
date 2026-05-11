@@ -194,6 +194,7 @@
 			compatible = "ambiq,crypto-aes";
 			reg = <0x400c0000 0x1f30>;
 			interrupts = <24 0>;
+			power-domains = <&crypto_pd>;
 			status = "disabled";
 		};
 
