@@ -14,7 +14,10 @@
 #include <zephyr/init.h>
 #include <zephyr/drivers/mbox.h>
 #include <zephyr/logging/log.h>
+#include <string.h>
+
 #include <am_mcu_apollo.h>
+#include <hal/am_hal_info.h>
 #include <am_rss_mgr.h>
 
 LOG_MODULE_REGISTER(rss_mgr);
@@ -120,6 +123,72 @@ struct net_buf *am_rss_mgr_opmode_config(am_rss_opmode_e opmode)
 	buf = net_buf_alloc(&ipc_tx_pool, K_FOREVER);
 	if (!buf) {
 		LOG_ERR("Unable to allocate a IPC TX buffer");
+		return NULL;
+	}
+
+	net_buf_add_mem(buf, &req, sizeof(req));
+	k_busy_wait(200);
+
+	return buf;
+}
+
+struct am_ipc_sys_set_rftrim_req {
+	struct am_ipc_packet_sys_common_hdr hdr;
+	uint32_t trim[4];
+} __packed;
+
+static int rss_rftrim_words_read(uint32_t trim[4])
+{
+	am_hal_status_e st;
+	bool otp_powered = false;
+
+	if (PWRCTRL->DEVPWRSTATUS_b.PWRSTOTP == 0) {
+		am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_OTP);
+		otp_powered = true;
+	}
+
+	st = am_hal_info1_read(AM_HAL_INFO_INFOSPACE_OTP_INFO1,
+			       AM_REG_OTP_INFO1_RFTRIM_TRIM_VER_O / 4, 4, trim);
+	if ((st != AM_HAL_STATUS_SUCCESS) || (trim[0] == 0)) {
+		st = am_hal_info1_read(AM_HAL_INFO_INFOSPACE_MRAM_INFO1,
+				       AM_REG_INFO1_RFTRIM_TRIM_VER_O / 4, 4, trim);
+	}
+
+	if (otp_powered) {
+		am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_OTP);
+	}
+
+	if (st != AM_HAL_STATUS_SUCCESS) {
+		return -EIO;
+	}
+	if (trim[0] == 0) {
+		return -ENOENT;
+	}
+
+	return 0;
+}
+
+struct net_buf *am_rss_mgr_rftrim_config(void)
+{
+	struct net_buf *buf;
+	struct am_ipc_sys_set_rftrim_req req;
+	uint32_t trim[4];
+	int ret;
+
+	ret = rss_rftrim_words_read(trim);
+	if (ret != 0) {
+		LOG_WRN("RF trim Info1 read failed (%d)", ret);
+		return NULL;
+	}
+
+	req.hdr.type = AM_IPC_PACKET_TYPE_SYS_REQ;
+	req.hdr.opcode = AM_IPC_SYS_OP_SET_RFTRIM;
+	req.hdr.size = sizeof(trim);
+	memcpy(req.trim, trim, sizeof(trim));
+
+	buf = net_buf_alloc(&ipc_tx_pool, K_FOREVER);
+	if (!buf) {
+		LOG_ERR("Unable to allocate IPC TX buffer for RF trim");
 		return NULL;
 	}
 

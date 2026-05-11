@@ -105,6 +105,14 @@ int am_rss_mgr_ipc_shm_config(void);
 struct net_buf *am_rss_mgr_opmode_config(am_rss_opmode_e opmode);
 
 /**
+ * @brief Build IPC SYS SET_RFTRIM request (0xE0 / AM_IPC_SYS_OP_SET_RFTRIM) using
+ *        Info1 OTP or MRAM trim words (same layout as am_hal_clkmgr RF XO init).
+ *
+ * @return IPC TX net_buf for bt_hci_send(), or NULL if trim is not programmed.
+ */
+struct net_buf *am_rss_mgr_rftrim_config(void);
+
+/**
  * @brief Enable/disable the radio subsystem of Apollo SoC.
  *
  * This function can be used to power on or off the radio subsystem.

@@ -5,6 +5,7 @@
  */
 
 #include <zephyr/init.h>
+#include <zephyr/sys/util.h>
 #include <zephyr/cache.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/mem_mgmt/mem_attr.h>
@@ -85,6 +86,74 @@ int apollo5x_set_performance_mode(uint32_t mode)
 
 #define SCRATCH0_OEM_RCV_RETRY_MAGIC 0xA86
 
+#if IS_ENABLED(CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP) &&                                                \
+	(defined(CONFIG_SOC_APOLLO330P) || defined(CONFIG_SOC_APOLLO510L))
+/*
+ * Mirrors AmbiqSuite boards/apollo330mP_evb/examples/power/ble_freertos_fit_lp
+ * after am_hal_pwrctrl_low_power_init(): MCU sleeps deeply between BLE events while
+ * RSS (NETAOL) and retained SRAM stay configured for IPC/stack.
+ */
+static void ambiq_apollo5x_ble_lp_fit_early_init(void)
+{
+	am_hal_pwrctrl_periph_e periph;
+
+	am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_RTC_SEL_LFRC, NULL);
+	am_hal_rtc_osc_select(AM_HAL_RTC_OSC_LFRC);
+	am_hal_pwrctrl_control(AM_HAL_PWRCTRL_CONTROL_XTAL_PWDN_DEEPSLEEP, NULL);
+	MCUCTRL->XTALCTRL = 0;
+	am_hal_rtc_osc_disable();
+
+	for (periph = AM_HAL_PWRCTRL_PERIPH_IOSFD0; periph < AM_HAL_PWRCTRL_PERIPH_MAX; periph++) {
+		if (periph == AM_HAL_PWRCTRL_PERIPH_NETAOL) {
+			break;
+		}
+		am_hal_pwrctrl_periph_disable(periph);
+	}
+
+	MCUCTRL->DBGCTRL = 0;
+
+	am_hal_pwrctrl_mcu_memory_config_t mcu_mem = {
+		.eROMMode = AM_HAL_PWRCTRL_ROM_AUTO,
+		.eDTCMCfg = AM_HAL_PWRCTRL_DTCM128K,
+		.eRetainDTCM = AM_HAL_PWRCTRL_MEMRETCFG_TCMPWDSLP_RETAIN,
+		.eNVMCfg = AM_HAL_PWRCTRL_NVM,
+		.bKeepNVMOnInDeepSleep = false,
+	};
+
+	am_hal_pwrctrl_mcu_memory_config(&mcu_mem);
+
+	MCUCTRL->MRAMCRYPTOPWRCTRL_b.MRAM0LPREN = 1;
+	MCUCTRL->MRAMCRYPTOPWRCTRL_b.MRAM0SLPEN = 0;
+	MCUCTRL->MRAMCRYPTOPWRCTRL_b.MRAM0PWRCTRL = 0;
+
+	am_hal_cachectrl_icache_disable();
+	am_hal_cachectrl_dcache_disable();
+
+	am_hal_pwrctrl_pwrmodctl_cpdlp_t cpdlp = {
+		.eRlpConfig = AM_HAL_PWRCTRL_RLP_OFF,
+		.eElpConfig = AM_HAL_PWRCTRL_ELP_OFF,
+		.eClpConfig = AM_HAL_PWRCTRL_CLP_OFF,
+	};
+
+	am_hal_pwrctrl_pwrmodctl_cpdlp_config(cpdlp);
+	am_hal_cachectrl_caches_power_control(false);
+
+	CLKGEN->OCTRL_b.SECURERTCOSEL = 1;
+	CLKGEN->OCTRL_b.RTCOSEL = 1;
+	CLKGEN->MISC_b.CM4DAXICLKGATEEN = 1;
+
+	am_hal_pwrctrl_sram_memcfg_t sram_mem = {
+		.eSRAMCfg = AM_HAL_PWRCTRL_SRAM_0P75M,
+		.eActiveWithMCU = AM_HAL_PWRCTRL_SRAM_NONE,
+		.eActiveWithGFX = AM_HAL_PWRCTRL_SRAM_NONE,
+		.eActiveWithDISP = AM_HAL_PWRCTRL_SRAM_NONE,
+		.eSRAMRetain = AM_HAL_PWRCTRL_SRAM_0P75M,
+	};
+
+	am_hal_pwrctrl_sram_config(&sram_mem);
+}
+#endif
+
 void soc_early_init_hook(void)
 {
 	/* Enable Loop and branch info cache */
@@ -115,17 +184,20 @@ void soc_early_init_hook(void)
 
 	am_hal_pwrctrl_temp_update(25.0f, &dummy);
 
+#if IS_ENABLED(CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP) &&                                                \
+	(defined(CONFIG_SOC_APOLLO330P) || defined(CONFIG_SOC_APOLLO510L))
+	ambiq_apollo5x_ble_lp_fit_early_init();
+#elif (CONFIG_COREMARK == 1)
 	/* Enable Icache*/
 	sys_cache_instr_enable();
 
 	/* Enable Dcache */
 	sys_cache_data_enable();
-#if (CONFIG_COREMARK == 1)
+
 	am_hal_pwrctrl_pwrmodctl_cpdlp_t sDefaultCpdlpConfig = {
 		.eRlpConfig = AM_HAL_PWRCTRL_RLP_ON,
 		.eElpConfig = AM_HAL_PWRCTRL_ELP_RET,
-		.eClpConfig = AM_HAL_PWRCTRL_CLP_ON
-	};
+		.eClpConfig = AM_HAL_PWRCTRL_CLP_ON};
 
 	am_hal_pwrctrl_pwrmodctl_cpdlp_config(sDefaultCpdlpConfig);
 
@@ -159,25 +231,24 @@ void soc_early_init_hook(void)
 	CLKGEN->MISC_b.CM4DAXICLKGATEEN = 1;
 #endif
 
-	am_hal_pwrctrl_sram_memcfg_t SRAMMemCfg = {
-		.eSRAMCfg = AM_HAL_PWRCTRL_SRAM_NONE,
-		.eActiveWithMCU = AM_HAL_PWRCTRL_SRAM_NONE,
-		.eActiveWithGFX = AM_HAL_PWRCTRL_SRAM_NONE,
-		.eActiveWithDISP = AM_HAL_PWRCTRL_SRAM_NONE,
-		.eSRAMRetain = AM_HAL_PWRCTRL_SRAM_NONE};
+	am_hal_pwrctrl_sram_memcfg_t SRAMMemCfg = {.eSRAMCfg = AM_HAL_PWRCTRL_SRAM_NONE,
+						   .eActiveWithMCU = AM_HAL_PWRCTRL_SRAM_NONE,
+						   .eActiveWithGFX = AM_HAL_PWRCTRL_SRAM_NONE,
+						   .eActiveWithDISP = AM_HAL_PWRCTRL_SRAM_NONE,
+						   .eSRAMRetain = AM_HAL_PWRCTRL_SRAM_NONE};
 
 	am_hal_pwrctrl_mcu_memory_config_t McuMemCfg = {
 		.eROMMode = AM_HAL_PWRCTRL_ROM_AUTO,
 #if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
-		.eDTCMCfg       = AM_HAL_PWRCTRL_DTCM128K,
+		.eDTCMCfg = AM_HAL_PWRCTRL_DTCM128K,
 #else
-		.eDTCMCfg       = AM_HAL_PWRCTRL_ITCM32K_DTCM128K,
+		.eDTCMCfg = AM_HAL_PWRCTRL_ITCM32K_DTCM128K,
 #endif
 		.eRetainDTCM = AM_HAL_PWRCTRL_MEMRETCFG_TCMPWDSLP_RETAIN,
 #if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
-		.eNVMCfg        = AM_HAL_PWRCTRL_NVM,
+		.eNVMCfg = AM_HAL_PWRCTRL_NVM,
 #else
-		.eNVMCfg        = AM_HAL_PWRCTRL_NVM0_ONLY,
+		.eNVMCfg = AM_HAL_PWRCTRL_NVM0_ONLY,
 #endif
 		.bKeepNVMOnInDeepSleep = false};
 
@@ -190,6 +261,9 @@ void soc_early_init_hook(void)
 	/* Disable SRAM */
 	am_hal_pwrctrl_sram_config(&SRAMMemCfg);
 #else
+	/* Default: caches on (see CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP for FIT-style BLE low power). */
+	sys_cache_instr_enable();
+	sys_cache_data_enable();
 #ifdef CONFIG_CORTEX_M_DWT
 	am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_DEBUG);
 #endif
@@ -215,8 +289,8 @@ bool buf_in_nocache(uintptr_t buf, size_t len_bytes)
 #endif /* CONFIG_NOCACHE_MEMORY */
 
 	/* Check if buffer is in nocache memory region defined in DT */
-	buf_within_nocache = mem_attr_check_buf((void *)buf, len_bytes,
-						DT_MEM_ARM(ATTR_MPU_RAM_NOCACHE)) == 0;
+	buf_within_nocache =
+		mem_attr_check_buf((void *)buf, len_bytes, DT_MEM_ARM(ATTR_MPU_RAM_NOCACHE)) == 0;
 
 	return buf_within_nocache;
 }
