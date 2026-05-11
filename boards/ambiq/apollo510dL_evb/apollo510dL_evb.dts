@@ -114,6 +114,10 @@
 	};
 };
 
+&cc312_aes {
+	status = "okay";
+};
+
 &trng {
 	status = "okay";
 };
