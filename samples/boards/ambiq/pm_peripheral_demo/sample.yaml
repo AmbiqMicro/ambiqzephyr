@@ -1,0 +1,15 @@
+sample:
+  name: PM Peripheral Demo
+
+tests:
+  sample.boards.ambiq.pm_peripheral_demo:
+    platform_allow:
+      - apollo330mP_evb
+    tags:
+      - pm
+      - bluetooth
+      - flash
+      - spi
+      - i2c
+      - crc
+      - crypto
