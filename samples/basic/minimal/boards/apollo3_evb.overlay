@@ -1,0 +1,26 @@
+&mspi0 {
+	pinctrl-0 = <&mspi0_default>;
+	pinctrl-1 = <&mspi0_sleep>;
+	pinctrl-names = "default", "sleep";
+	status = "disabled";
+
+	ce-gpios = <&gpio0_31 19 GPIO_ACTIVE_LOW>;
+
+	cmdq-buffer-location = ".mspi_buff";
+	cmdq-buffer-size = <256>;
+
+	mx25r64: mx25r6435f@0 {
+		compatible = "mxicy,mx25r", "jedec,mspi-nor";
+		status = "disabled";
+		reg = <0>;
+		size = <DT_SIZE_M(64)>; /* 64 Mbits */
+		jedec-id = [c2 28 17];
+
+		mspi-max-frequency = <DT_FREQ_M(8)>;
+		mspi-io-mode = "MSPI_IO_MODE_SINGLE";
+		mspi-data-rate = "MSPI_DATA_RATE_SINGLE";
+		mspi-cpp-mode = "MSPI_CPP_MODE_0";
+		mspi-endian = "MSPI_BIG_ENDIAN";
+		mspi-ce-polarity = "MSPI_CE_ACTIVE_LOW";
+	};
+};
