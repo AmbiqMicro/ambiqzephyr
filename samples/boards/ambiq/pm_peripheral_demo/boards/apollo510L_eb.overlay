@@ -4,18 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/*
- * PM power states for apollo330mP_evb.
- * Three suspend-to-idle states are defined, matching the CPU power-down
- * levels supported by the Apollo330P SoC.
- */
-
-/ {
-	zephyr,user {
-		k_idle_state_min_residency_time = <300>;
-	};
-};
-
 &cpu0 {
 	cpu-power-states = <&stop0 &stop1 &stop2>;
 };
@@ -46,24 +34,17 @@
 	};
 };
 
-/* SPI and I2C disabled for initial bringup */
-&spi0 {
-	status = "disabled";
-};
-
-&i2c1 {
-	status = "disabled";
-};
-
 /* Enable hardware CC312 AES accelerator */
 &cc312_aes {
 	status = "okay";
 };
 
+/* apollo510L_eb has spi5 enabled in board DTS; add alias for the demo.
+ * No IOM I2C is exposed on this board — the i2c demo is skipped.
+ */
 /* / {
  *	aliases {
- *		demo-spi = &spi0;
- *		demo-i2c = &i2c1;
+ *		demo-spi = &spi5;
  *	};
  * };
  */

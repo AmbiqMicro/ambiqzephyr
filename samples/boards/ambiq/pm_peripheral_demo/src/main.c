@@ -41,9 +41,15 @@
 LOG_MODULE_REGISTER(pm_demo, CONFIG_LOG_DEFAULT_LEVEL);
 
 /* ---- Device nodes ---- */
+#if DT_HAS_CHOSEN(zephyr_crc)
 #define CRC_NODE  DT_CHOSEN(zephyr_crc)
-#define SPI_NODE  DT_NODELABEL(spi0)
-#define I2C_NODE  DT_NODELABEL(i2c1)
+#endif
+#if DT_NODE_EXISTS(DT_ALIAS(demo_spi))
+#define SPI_NODE DT_ALIAS(demo_spi)
+#endif
+#if DT_NODE_EXISTS(DT_ALIAS(demo_i2c))
+#define I2C_NODE DT_ALIAS(demo_i2c)
+#endif
 
 /* Flash partition */
 #define STORAGE_PART_ID FIXED_PARTITION_ID(storage_partition)
@@ -98,8 +104,10 @@ static const uint8_t flash_write_buf[FLASH_DEMO_BUF_SIZE] = {
 static uint8_t flash_read_buf[FLASH_DEMO_BUF_SIZE];
 
 /* ---- SPI demo buffers ---- */
+#if DT_NODE_EXISTS(DT_ALIAS(demo_spi))
 static uint8_t spi_tx_buf[] = { 0xde, 0xad, 0xbe, 0xef };
 static uint8_t spi_rx_buf[sizeof(spi_tx_buf)];
+#endif
 
 /* ---- BLE advertising data ---- */
 static const struct bt_data ad[] = {
@@ -107,6 +115,31 @@ static const struct bt_data ad[] = {
 	BT_DATA(BT_DATA_NAME_COMPLETE,
 		CONFIG_BT_DEVICE_NAME,
 		sizeof(CONFIG_BT_DEVICE_NAME) - 1),
+};
+
+/* Deferred work so bt_conn is fully released before we re-advertise. */
+static void ble_adv_restart_work_handler(struct k_work *work)
+{
+	int ret;
+
+	ret = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad), NULL, 0);
+	if (ret) {
+		LOG_ERR("bt_le_adv_start (reconnect): %d", ret);
+	} else {
+		LOG_INF("BLE: advertising as \"%s\"", CONFIG_BT_DEVICE_NAME);
+	}
+}
+
+static K_WORK_DEFINE(ble_adv_restart_work, ble_adv_restart_work_handler);
+
+static void ble_disconnected(struct bt_conn *conn, uint8_t reason)
+{
+	LOG_INF("BLE: disconnected (reason 0x%02x)", reason);
+	k_work_submit(&ble_adv_restart_work);
+}
+
+BT_CONN_CB_DEFINE(conn_callbacks) = {
+	.disconnected = ble_disconnected,
 };
 
 /* ================================================================
@@ -185,6 +218,7 @@ out:
 	return ret;
 }
 
+#if DT_HAS_CHOSEN(zephyr_crc)
 /* ================================================================
  * CRC32 demo — hardware digest over flash read-back buffer
  * ================================================================
@@ -227,6 +261,7 @@ static int demo_thread_crc32(void)
 		(uint32_t)ctx.result, sizeof(flash_read_buf));
 	return 0;
 }
+#endif /* DT_HAS_CHOSEN(zephyr_crc) */
 
 /* ================================================================
  * AES demo — hardware AES-128-ECB via CC312 AES accelerator
@@ -325,8 +360,9 @@ static int demo_thread_aes(void)
 	return 0;
 }
 
+#if DT_NODE_EXISTS(DT_ALIAS(demo_spi))
 /* ================================================================
- * SPI demo — single transfer on spi0 (IOM0)
+ * SPI demo — single transfer via demo-spi alias
  * ================================================================
  */
 static int demo_thread_spi(void)
@@ -359,9 +395,11 @@ static int demo_thread_spi(void)
 
 	return 0;
 }
+#endif /* DT_NODE_EXISTS(DT_ALIAS(demo_spi)) */
 
+#if DT_NODE_EXISTS(DT_ALIAS(demo_i2c))
 /* ================================================================
- * I2C demo — bus scan on i2c1 (IOM1)
+ * I2C demo — bus scan via demo-i2c alias
  * ================================================================
  */
 static int demo_thread_i2c(void)
@@ -390,6 +428,7 @@ static int demo_thread_i2c(void)
 
 	return 0;
 }
+#endif /* DT_NODE_EXISTS(DT_ALIAS(demo_i2c)) */
 
 /* ================================================================
  * Thread: entropy
@@ -419,7 +458,9 @@ static void flash_crc_thread_fn(void *p1, void *p2, void *p3)
 	k_msleep(STAGGER_FLASH_CRC_MS);
 	while (true) {
 		demo_thread_flash();
+#if DT_HAS_CHOSEN(zephyr_crc)
 		demo_thread_crc32();
+#endif
 		k_msleep(DEMO_PERIOD_MS);
 	}
 }
@@ -439,6 +480,7 @@ static void aes_thread_fn(void *p1, void *p2, void *p3)
 	}
 }
 
+#if DT_NODE_EXISTS(DT_ALIAS(demo_spi))
 /* ================================================================
  * Thread: SPI
  * ================================================================
@@ -453,7 +495,9 @@ static void spi_thread_fn(void *p1, void *p2, void *p3)
 		k_msleep(DEMO_PERIOD_MS);
 	}
 }
+#endif /* DT_NODE_EXISTS(DT_ALIAS(demo_spi)) */
 
+#if DT_NODE_EXISTS(DT_ALIAS(demo_i2c))
 /* ================================================================
  * Thread: I2C
  * ================================================================
@@ -468,13 +512,18 @@ static void i2c_thread_fn(void *p1, void *p2, void *p3)
 		k_msleep(DEMO_PERIOD_MS);
 	}
 }
+#endif /* DT_NODE_EXISTS(DT_ALIAS(demo_i2c)) */
 
 /* Thread definitions — created at startup, run forever */
 K_THREAD_DEFINE(entropy_tid,   512,  entropy_thread_fn,   NULL, NULL, NULL, 7, 0, 0);
 K_THREAD_DEFINE(flash_crc_tid, 1024, flash_crc_thread_fn, NULL, NULL, NULL, 7, 0, 0);
 K_THREAD_DEFINE(aes_tid,       1536, aes_thread_fn,       NULL, NULL, NULL, 7, 0, 0);
+#if DT_NODE_EXISTS(DT_ALIAS(demo_spi))
 K_THREAD_DEFINE(spi_tid,        512, spi_thread_fn,       NULL, NULL, NULL, 7, 0, 0);
+#endif
+#if DT_NODE_EXISTS(DT_ALIAS(demo_i2c))
 K_THREAD_DEFINE(i2c_tid,        768, i2c_thread_fn,       NULL, NULL, NULL, 7, 0, 0);
+#endif
 
 /* ================================================================
  * Entry point — BLE init only; peripheral work runs in threads above
@@ -485,7 +534,7 @@ int main(void)
 	int ret;
 
 	LOG_INF("=== PM Peripheral Demo ===");
-	LOG_INF("Board: apollo330mP_evb  SoC: apollo330P");
+	LOG_INF("Board: %s", CONFIG_BOARD);
 
 	/* BLE — IPC transport, no board overlay required */
 	ret = bt_enable(NULL);
