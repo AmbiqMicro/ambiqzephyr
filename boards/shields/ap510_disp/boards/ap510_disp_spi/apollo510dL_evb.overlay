@@ -61,12 +61,16 @@
 		};
 
 		/*
-		 * P101: use DISP_QSPI_CS_N (pad func 0). On Apollo510 (non-L), CS is only
-		 * available via NCE209 + ambiq,nce-src = DC_QSPI_CS_N; Apollo510L also exposes
-		 * this dedicated DISP_QSPI_CS_N route on P101 so NCE mux programming is not required.
+		 * P101: route DC QSPI chip select via NCE (same pattern as apollo510_evb NCE209).
+		 * Apollo510 (non-L) uses ambiq,nce-src = <0x33> (= 51 =
+		 * DC_QSPI_CS_N in apollo510.h).
+		 * Apollo510L uses NCESRC value 27 for DC_QSPI_CS_N (see GPIO_PINCFG0_NCESRC0 in
+		 * apollo510L.h). A dedicated DISP_QSPI_CS_N mux with default nce-src 0 can leave
+		 * CS disconnected from the DC block on some silicon revs.
 		 */
 		group2 {
-			pinmux = <DISP_QSPI_CS_N_P101>;
+			pinmux = <NCE101_P101>;
+			ambiq,nce-src = <27>;
 			drive-strength = "0.5";
 		};
 	};
