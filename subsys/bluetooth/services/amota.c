@@ -33,8 +33,8 @@ LOG_MODULE_REGISTER(amota);
  * Clean the page buffer before programming. For read-back verify,
  * invalidate D-cache so memcpy from MRAM sees programmed data.
  */
-#if defined(CONFIG_SOC_APOLLO510) || defined(CONFIG_SOC_APOLLO510B) ||                         \
-	defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
+#if defined(CONFIG_SOC_APOLLO510B) || defined(CONFIG_SOC_APOLLO510L) ||                            \
+	defined(CONFIG_SOC_APOLLO330P)
 static void amotas_dcache_clean_mram_src(const void *buf, uint32_t len)
 {
 	am_hal_cachectrl_range_t r = {
@@ -50,8 +50,8 @@ static void amotas_dcache_clean_mram_src(const void *buf, uint32_t len)
  * define it based on the chip type
  */
 #ifndef AM_HAL_FLASH_PAGE_SIZE
-#if defined(AM_PART_APOLLO4P) || \
-	IS_ENABLED(CONFIG_SOC_APOLLO510) || IS_ENABLED(CONFIG_SOC_APOLLO510B)
+#if IS_ENABLED(CONFIG_SOC_SERIES_APOLLO4X) || IS_ENABLED(CONFIG_SOC_APOLLO510B) ||                 \
+	IS_ENABLED(CONFIG_SOC_APOLLO330P) || IS_ENABLED(CONFIG_SOC_APOLLO510L)
 #define AM_HAL_FLASH_PAGE_SIZE 1024 /* MRAM uses 1KB pages */
 #else
 #define AM_HAL_FLASH_PAGE_SIZE 8192 /* Default flash page size */
@@ -69,18 +69,19 @@ static void amotas_dcache_clean_mram_src(const void *buf, uint32_t len)
  * The app start address is corresponding to MCU_MRAM start address of app example
  * in linker_script file, which is:
  * - 0x00018000 for Apollo4P by default.
- * - 0x00410000 for Apollo510 and Apollo330P_510L by default.
+ * - 0x00410000 for Apollo510, Apollo330P, and Apollo510L by default.
  * ****************************************************************************
  */
 #define OTA_MAX_IMAGE_SIZE  (512 * 1024)
 #define OTA_DESCRIPTOR_SIZE AM_HAL_FLASH_PAGE_SIZE
-#if defined(AM_PART_APOLLO4P)
+#if IS_ENABLED(CONFIG_SOC_SERIES_APOLLO4X)
 #if defined(AM_HAL_MRAM_TOTAL_SIZE) && (OTA_MAX_IMAGE_SIZE > (AM_HAL_MRAM_TOTAL_SIZE - 0x18000) / 2)
 #error "OTA_MAX_IMAGE_SIZE is too large!"
 #endif
 #define OTA_POINTER_LOCATION        (0x00018000 + OTA_MAX_IMAGE_SIZE)
 #define AMOTA_INT_FLASH_OTA_ADDRESS (OTA_POINTER_LOCATION + OTA_DESCRIPTOR_SIZE)
-#elif IS_ENABLED(CONFIG_SOC_APOLLO510) || IS_ENABLED(CONFIG_SOC_APOLLO510B)
+#elif IS_ENABLED(CONFIG_SOC_APOLLO510B) || IS_ENABLED(CONFIG_SOC_APOLLO330P) ||                    \
+	IS_ENABLED(CONFIG_SOC_APOLLO510L)
 #if defined(AM_HAL_MRAM_TOTAL_SIZE) && (OTA_MAX_IMAGE_SIZE > (AM_HAL_MRAM_TOTAL_SIZE - 0x10000) / 2)
 #error "OTA_MAX_IMAGE_SIZE is too large!"
 #endif
@@ -266,8 +267,8 @@ static int verify_flash_content(uint32_t flashAddr, uint32_t *pSram, uint32_t le
 	uint32_t offset = 0;
 	uint32_t remaining = len;
 	int ret = 0;
-#if defined(CONFIG_SOC_APOLLO510) || defined(CONFIG_SOC_APOLLO510B) ||                         \
-	defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
+#if defined(CONFIG_SOC_APOLLO510B) || defined(CONFIG_SOC_APOLLO510L) ||                            \
+	defined(CONFIG_SOC_APOLLO330P)
 	/* Invalidate (and clean) D$ before reading MRAM for verify */
 	(void)am_hal_cachectrl_dcache_invalidate(NULL, true);
 #endif
@@ -330,8 +331,8 @@ static bool amotas_write2flash(uint16_t len, uint8_t *buf, uint32_t addr, bool l
 		 */
 		if (lastPktFlag || (amotasFlash.bufferIndex == g_pFlash->flashPageSize)) {
 			ui32TargetAddress = (addr + ui8PageCount * g_pFlash->flashPageSize);
-#if defined(CONFIG_SOC_APOLLO510) || defined(CONFIG_SOC_APOLLO510B) ||                         \
-	defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
+#if defined(CONFIG_SOC_APOLLO510B) || defined(CONFIG_SOC_APOLLO510L) ||                            \
+	defined(CONFIG_SOC_APOLLO330P)
 			amotas_dcache_clean_mram_src(amotasFlash.writeBuffer,
 						     g_pFlash->flashPageSize);
 #endif
@@ -429,7 +430,7 @@ void amotas_packet_handler(eAmotaCommand cmd, uint16_t len, uint8_t *buf)
 		amota.data.fwHeader.storageType = sys_get_le32(buf + 40);
 		amota.data.fwHeader.imageId = sys_get_le32(buf + 44);
 
-#if defined(AM_PART_APOLLO4B) || defined(AM_PART_APOLLO4P) || defined(AM_PART_APOLLO4L)
+#if IS_ENABLED(CONFIG_SOC_SERIES_APOLLO4X)
 		/* get the SBL OTA storage address if the image is for SBL
 		 * the address can be 0x8000 or 0x10000 based on current SBL running address
 		 */

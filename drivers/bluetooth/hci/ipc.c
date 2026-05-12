@@ -16,6 +16,10 @@
 #include <zephyr/device.h>
 #include <zephyr/ipc/ipc_service.h>
 
+#if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
+#include <am_rss_mgr.h>
+#endif
+
 #define LOG_LEVEL CONFIG_BT_HCI_DRIVER_LOG_LEVEL
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(bt_hci_driver);
@@ -31,7 +35,8 @@ BUILD_ASSERT(!IS_ENABLED(CONFIG_BT_CONN) || IS_ENABLED(CONFIG_BT_HCI_ACL_FLOW_CO
  * In order to ensure proper delay k_usleep is used when the system clock is
  * precise enough and available (CONFIG_SYS_CLOCK_TICKS_PER_SEC different than 0).
  */
-#define USE_SLEEP_BETWEEN_IPC_RETRIES COND_CODE_0(CONFIG_SYS_CLOCK_TICKS_PER_SEC, \
+#define USE_SLEEP_BETWEEN_IPC_RETRIES                                                              \
+	COND_CODE_0(CONFIG_SYS_CLOCK_TICKS_PER_SEC, \
 	(false), \
 	((USEC_PER_SEC / CONFIG_SYS_CLOCK_TICKS_PER_SEC) > CONFIG_BT_HCI_IPC_SEND_RETRY_DELAY_US))
 
@@ -60,14 +65,13 @@ static bool is_hci_event_discardable(const uint8_t *evt_data)
 		case BT_HCI_EVT_LE_ADVERTISING_REPORT:
 			return true;
 #if defined(CONFIG_BT_EXT_ADV)
-		case BT_HCI_EVT_LE_EXT_ADVERTISING_REPORT:
-		{
+		case BT_HCI_EVT_LE_EXT_ADVERTISING_REPORT: {
 			const struct bt_hci_evt_le_ext_advertising_report *ext_adv =
 				(void *)&evt_data[3];
 
 			return (ext_adv->num_reports == 1) &&
-				   ((ext_adv->adv_info[0].evt_type &
-					 BT_HCI_LE_ADV_EVT_TYPE_LEGACY) != 0);
+			       ((ext_adv->adv_info[0].evt_type & BT_HCI_LE_ADV_EVT_TYPE_LEGACY) !=
+				0);
 		}
 #endif
 		default:
@@ -222,6 +226,15 @@ static struct net_buf *bt_ipc_iso_recv(const uint8_t *data, size_t remaining)
 	return buf;
 }
 
+#if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
+static bool bt_ipc_is_ambiq_sys_packet(uint8_t pkt_indicator)
+{
+	return pkt_indicator == AM_IPC_PACKET_TYPE_SYS_REQ ||
+	       pkt_indicator == AM_IPC_PACKET_TYPE_SYS_RSP ||
+	       pkt_indicator == AM_IPC_PACKET_TYPE_SYS_NTF;
+}
+#endif
+
 static void bt_ipc_rx(const struct device *dev, const uint8_t *data, size_t len)
 {
 	struct ipc_data *ipc = dev->data;
@@ -248,6 +261,12 @@ static void bt_ipc_rx(const struct device *dev, const uint8_t *data, size_t len)
 		break;
 
 	default:
+#if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
+		if (bt_ipc_is_ambiq_sys_packet(pkt_indicator)) {
+			LOG_DBG("Ignoring Ambiq IPC system packet type %u", pkt_indicator);
+			return;
+		}
+#endif
 		LOG_ERR("Unknown HCI type %u", pkt_indicator);
 		return;
 	}
@@ -391,28 +410,30 @@ int __weak bt_ipc_setup(const struct device *dev, const struct bt_hci_setup_para
 #endif /* defined(CONFIG_BT_HCI_SETUP) */
 
 static DEVICE_API(bt_hci, drv) = {
-	.open		= bt_ipc_open,
-	.close		= bt_ipc_close,
-	.send		= bt_ipc_send,
+	.open = bt_ipc_open,
+	.close = bt_ipc_close,
+	.send = bt_ipc_send,
 #if defined(CONFIG_BT_HCI_SETUP)
-	.setup      = bt_ipc_setup,
+	.setup = bt_ipc_setup,
 #endif /* defined(CONFIG_BT_HCI_SETUP) */
 };
 
-#define IPC_DEVICE_INIT(inst) \
-	static struct ipc_data ipc_data_##inst = { \
-		.bound_sem = Z_SEM_INITIALIZER(ipc_data_##inst.bound_sem, 0, 1), \
-		.hci_ept_cfg = { \
-			.name = DT_INST_PROP(inst, bt_hci_ipc_name), \
-			.cb = { \
-				.bound    = hci_ept_bound, \
-				.received = hci_ept_recv, \
-			}, \
-			.priv = (void *)DEVICE_DT_INST_GET(inst), \
-		}, \
-		.ipc = DEVICE_DT_GET(DT_INST_PARENT(inst)), \
-	}; \
-	DEVICE_DT_INST_DEFINE(inst, NULL, NULL, &ipc_data_##inst, NULL, \
-			      POST_KERNEL, CONFIG_KERNEL_INIT_PRIORITY_DEVICE, &drv)
+#define IPC_DEVICE_INIT(inst)                                                                      \
+	static struct ipc_data ipc_data_##inst = {                                                 \
+		.bound_sem = Z_SEM_INITIALIZER(ipc_data_##inst.bound_sem, 0, 1),                   \
+		.hci_ept_cfg =                                                                     \
+			{                                                                          \
+				.name = DT_INST_PROP(inst, bt_hci_ipc_name),                       \
+				.cb =                                                              \
+					{                                                          \
+						.bound = hci_ept_bound,                            \
+						.received = hci_ept_recv,                          \
+					},                                                         \
+				.priv = (void *)DEVICE_DT_INST_GET(inst),                          \
+			},                                                                         \
+		.ipc = DEVICE_DT_GET(DT_INST_PARENT(inst)),                                        \
+	};                                                                                         \
+	DEVICE_DT_INST_DEFINE(inst, NULL, NULL, &ipc_data_##inst, NULL, POST_KERNEL,               \
+			      CONFIG_KERNEL_INIT_PRIORITY_DEVICE, &drv)
 
 DT_INST_FOREACH_STATUS_OKAY(IPC_DEVICE_INIT)
