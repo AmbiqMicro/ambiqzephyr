@@ -7,6 +7,8 @@ tests:
     platform_allow:
       - apollo4p_blue_kxr_evb
       - apollo510b_evb
+      - apollo510dL_evb
+      - apollo330mP_evb
     tags: bluetooth
   sample.bluetooth.peripheral_amota.console:
     harness: console
@@ -20,4 +22,6 @@ tests:
     platform_allow:
       - apollo4p_blue_kxr_evb
       - apollo510b_evb
+      - apollo510dL_evb
+      - apollo330mP_evb
     tags: bluetooth

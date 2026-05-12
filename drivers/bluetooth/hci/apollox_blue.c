@@ -75,6 +75,7 @@ extern void bt_packet_irq_isr(const struct device *unused1, struct gpio_callback
 static bool irq_pin_state(void)
 {
 	int pin_state = gpio_pin_get_dt(&irq_gpio);
+
 	return pin_state > 0;
 }
 
@@ -85,7 +86,9 @@ static void bt_em9305_set_reset(bool state)
 
 static bool bt_em9305_get_reset(void)
 {
-	return gpio_pin_get_dt(&rst_gpio);
+	int pin_state = gpio_pin_get_dt(&rst_gpio);
+
+	return pin_state > 0;
 }
 
 static void bt_em9305_cs_set(void)
@@ -240,7 +243,7 @@ int bt_apollo_spi_rcv(uint8_t *data, uint16_t *len, bt_spi_transceive_fun transc
 {
 #if (CONFIG_SOC_SERIES_APOLLO5X)
 	{
-		uint8_t sCommand[2] = {0x81, 0x0}; /* EM9305_SPI_HEADER_RX */
+		uint8_t sCommand[2] = {EM9305_SPI_HEADER_RX, 0x0};
 		uint8_t sStas[2];
 		uint8_t ui8RxBytes = 0;
 		uint8_t ret = 0;
@@ -260,7 +263,7 @@ int bt_apollo_spi_rcv(uint8_t *data, uint16_t *len, bt_spi_transceive_fun transc
 		}
 
 		do {
-			for (uint32_t i = 0; i < 10; i++) { /* EM9305_STS_CHK_CNT_MAX */
+			for (uint32_t i = 0; i < EM9305_STS_CHK_CNT_MAX; i++) {
 				/* Select the EM9305 */
 				bt_em9305_cs_set();
 				ret = transceive(sCommand, 2, sStas, 2);
@@ -270,16 +273,14 @@ int bt_apollo_spi_rcv(uint8_t *data, uint16_t *len, bt_spi_transceive_fun transc
 				}
 
 				/* Check if the EM9305 is ready and the tx data size. */
-				if ((sStas[0] == 0xC0) &&
-				    (sStas[1] != 0x00)) { /* EM9305_STS1_READY_VALUE */
+				if ((sStas[0] == EM9305_STS1_READY_VALUE) && (sStas[1] != 0x00)) {
 					break;
 				}
 				bt_em9305_cs_release();
 			}
 
 			/* Check that the EM9305 is ready or the receive FIFO is not full. */
-			if ((sStas[0] != 0xC0) ||
-			    (sStas[1] == 0x00)) { /* EM9305_STS1_READY_VALUE */
+			if ((sStas[0] != EM9305_STS1_READY_VALUE) || (sStas[1] == 0x00)) {
 				bt_em9305_cs_release();
 				LOG_ERR("EM9305 Not Ready sStas.byte0 = 0x%02x, sStas.byte1 = "
 					"0x%02x\n",
@@ -291,7 +292,7 @@ int bt_apollo_spi_rcv(uint8_t *data, uint16_t *len, bt_spi_transceive_fun transc
 			ui8RxBytes = sStas[1];
 
 			if (irq_pin_state() && (ui8RxBytes != 0)) {
-				if ((*len + ui8RxBytes) > 259) { /* EM9305_BUFFER_SIZE */
+				if ((*len + ui8RxBytes) > EM9305_BUFFER_SIZE) {
 					/* Error. Packet too large. */
 					LOG_ERR("HCI RX Error (STATUS ERROR) Packet Too Large %d, "
 						"%d\n",
