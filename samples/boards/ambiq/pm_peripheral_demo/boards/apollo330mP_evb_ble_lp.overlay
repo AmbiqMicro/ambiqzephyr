@@ -1,0 +1,137 @@
+/*
+ * Copyright (c) 2026 Ambiq Micro Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * pm_peripheral_demo BLE low-power overlay for apollo330mP_evb.
+ *
+ * Apply with prj_ble_lp.conf for BLE-only low-power builds:
+ *
+ *   west build -b apollo330mP_evb samples/boards/ambiq/pm_peripheral_demo \\
+ *     -- -DCONF_FILE=prj_ble_lp.conf \\
+ *        -DDTC_OVERLAY_FILE=boards/apollo330mP_evb_ble_lp.overlay
+ *
+ * - SRAM at 0x20184000 (0x74000), DTCM 128 KiB; IPC shared SRAM starts at 0x20180000.
+ * - CPU PM: idle, suspend_to_ram, suspend_to_disk (validate BLE IPC/RSS/HCI after wake).
+ * - stimer0 clk-source 6 (LFRC) for tickless-friendly timekeeping.
+ * - Disables UART console, GPIO banks, ITM/SWO, and other unused blocks; keep IPC/stimer for BLE.
+ *
+ * Active during advertising (sample needs): flash/MRAM, stimer, IPC+mbox (HCI), TRNG (entropy),
+ * CC312 AES, CRC32, kernel tick/timer — not LEDs/buttons, UART, USB, SDIO, MSPI/PSRAM,
+ * SPI, I2C, WDT, or GPIO blocks.
+ * SoC: enable CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP (prj_ble_lp.conf) to align with AmbiqSuite
+ * ble_freertos_fit_lp (LFRC RTC, XTAL pwdn in sleep, SRAM 0.75M retain, caches off, NETAOL kept).
+ * SoC also powers down IOM/UART/MSPI/USB/SDIO/etc. so pads are not held active by those blocks
+ * (BTDM RXEN/TXEN are still driven by the radio after bt_enable).
+ */
+&dtcm {
+	reg = <0x20000000 0x20000>;
+};
+
+&cpu0 {
+	cpu-power-states = <&idle &suspend_to_ram &suspend_to_disk>;
+};
+
+&stimer0 {
+	clk-source = <6>;
+};
+
+/* SWO is unused with CONFIG_CONSOLE=n; drop pinmux so the trace pin can stay low-leakage. */
+&itm {
+	status = "disabled";
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-names;
+};
+
+/delete-node/ &sram0;
+
+/ {
+	sram: sram0: memory@20184000 {
+		compatible = "mmio-sram";
+		reg = <0x20184000 0x74000>;
+	};
+};
+
+&sram_no_cache {
+	/* Reserve 16 KiB at SRAM base for nocache/IPC shared memory. */
+	reg = <0x20180000 0x4000>;
+};
+
+&sram_ipc {
+	/* Keep 12 KiB IPC buffer inside the reserved nocache shared window. */
+	reg = <0x20180000 0x3000>;
+};
+
+/ {
+	chosen {
+		/delete-property/ zephyr,console;
+		/delete-property/ zephyr,uart-mcumgr;
+		/delete-property/ zephyr,shell-uart;
+		/delete-property/ zephyr,uart-pipe;
+	};
+
+	leds {
+		status = "disabled";
+	};
+
+	buttons {
+		status = "disabled";
+	};
+};
+
+/* Enable hardware accelerators needed by demo threads. */
+&cc312_aes {
+	status = "okay";
+};
+
+&crc32 {
+	status = "okay";
+};
+
+&uart0 {
+	status = "disabled";
+};
+
+&wdt0 {
+	status = "disabled";
+};
+
+&mspi0 {
+	status = "disabled";
+};
+
+&aps25616ba {
+	status = "disabled";
+};
+
+&usb {
+	status = "disabled";
+};
+
+&sdio0 {
+	status = "disabled";
+
+	mmc {
+		status = "disabled";
+	};
+};
+
+&sdio1 {
+	status = "disabled";
+};
+
+&gpio0_31 {
+	status = "disabled";
+};
+
+&gpio32_63 {
+	status = "disabled";
+};
+
+&gpio64_95 {
+	status = "disabled";
+};
+
+&gpio96_119 {
+	status = "disabled";
+};
