@@ -1,0 +1,23 @@
+/*
+ * Copyright (c) 2025, Ambiq Micro Inc. <www.ambiq.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * apollo510dL_evb: spi0 on IOM0 already defined; add mikrobus_spi label,
+ * set 24 MHz, and enable. CS=P17 (matches board DTS spi0 cs-gpios).
+ */
+
+/ {
+	mikrobus_header: mikrobus-connector {
+		compatible = "mikro-bus";
+		#gpio-cells = <2>;
+		gpio-map-mask = <0xffffffff 0xffffffc0>;
+		gpio-map-pass-thru = <0 0x3f>;
+		gpio-map = <2 0 &gpio0_31 17 0>;   /* CS -> P17 */
+	};
+};
+
+mikrobus_spi: &spi0 {
+	clock-frequency = <DT_FREQ_M(24)>;
+	status = "okay";
+};
