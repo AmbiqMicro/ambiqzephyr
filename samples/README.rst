@@ -84,6 +84,7 @@ Peripheral Samples
    west build -b your_board_here samples/drivers/mspi/mspi_timing_scan -T sample.drivers.mspi.timing_scan.memc -p always
    west build -b your_board_here samples/drivers/mspi/mspi_timing_scan -T sample.drivers.mspi.timing_scan.flash -p always
    west build -b your_board_here samples/boards/ambiq/spi_serial_flash -p always
+   west build -b your_board_here samples/boards/ambiq/dram_click -p always -- "-DSHIELD=ambiq_mikrobus_spi;mikroe_dram_click"
 
 Display and UI
 **************

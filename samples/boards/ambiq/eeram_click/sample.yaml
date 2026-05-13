@@ -1,0 +1,18 @@
+sample:
+  name: EERAM 3.3V Click Sample
+tests:
+  sample.boards.ambiq.eeram_click:
+    tags:
+      - drivers
+      - eeprom
+    platform_allow:
+      - apollo510_evb
+    extra_args: SHIELD="ambiq_mikrobus_i2c mikroe_eeram_33v_click"
+    depends_on:
+      - i2c
+    filter: dt_alias_exists("eeprom-0")
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "EEPROM driver test PASSED"
