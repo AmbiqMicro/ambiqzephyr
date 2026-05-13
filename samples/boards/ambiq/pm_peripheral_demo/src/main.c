@@ -12,8 +12,8 @@
  *   - BLE: advertising as a connectable peripheral (IPC-based, no overlay)
  *   - Flash: erase / write / read on storage_partition
  *   - CRC32: hardware digest over flash read-back (ambiq,hw-crc32)
- *   - AES-128-ECB: hardware encrypt/decrypt via CC312 AES accelerator
- *     (ambiq,crypto-aes driver, cc312_aes@400c0000)
+ *   - AES-128-ECB: hardware encrypt/decrypt via ARM CC312 AES accelerator
+ *     (cc312_aes DT node, uses Ambiq HAL CC312 driver)
  *   - SPI: bus transfer on spi0 (IOM0)
  *   - I2C: bus scan on i2c1 (IOM1)
  *
@@ -264,8 +264,8 @@ static int demo_thread_crc32(void)
 #endif /* DT_HAS_CHOSEN(zephyr_crc) */
 
 /* ================================================================
- * AES demo — hardware AES-128-ECB via CC312 AES accelerator
- *            (ambiq,crypto-aes driver, cc312_aes DT node)
+ * AES demo — hardware AES-128-ECB via ARM CC312 AES accelerator
+ *            (cc312_aes DT node, Ambiq HAL CC312 crypto driver)
  * ================================================================
  */
 static int demo_thread_aes(void)
@@ -319,9 +319,9 @@ static int demo_thread_aes(void)
 	}
 
 	if (memcmp(encrypted, aes_expected_ct, sizeof(aes_expected_ct)) == 0) {
-		LOG_INF("AES-128-ECB (sw): encrypt matches FIPS-197 vector");
+		LOG_INF("AES-128-ECB (hw CC312): encrypt matches FIPS-197 vector");
 	} else {
-		LOG_WRN("AES-128-ECB (sw): ciphertext mismatch vs FIPS-197");
+		LOG_WRN("AES-128-ECB (hw CC312): ciphertext mismatch vs FIPS-197");
 	}
 
 	/* Decrypt */
@@ -352,9 +352,9 @@ static int demo_thread_aes(void)
 	}
 
 	if (memcmp(decrypted, aes_plaintext, sizeof(aes_plaintext)) == 0) {
-		LOG_INF("AES-128-ECB (sw): decrypt round-trip verified");
+		LOG_INF("AES-128-ECB (hw CC312): decrypt round-trip verified");
 	} else {
-		LOG_ERR("AES-128-ECB (sw): decrypt mismatch");
+		LOG_ERR("AES-128-ECB (hw CC312): decrypt mismatch");
 	}
 
 	return 0;

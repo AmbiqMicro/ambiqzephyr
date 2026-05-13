@@ -32,8 +32,8 @@ Peripherals demonstrated
 | CRC32    | crc32 | Hardware CRC32-IEEE digest (ambiq,hw-crc32) computed     |
 |          |       | over the flash read-back buffer.                         |
 +----------+-------+----------------------------------------------------------+
-| AES      | sw    | AES-128-ECB encrypt + decrypt via mbedTLS shim.          |
-|          |       | The Apollo330P SoC has no hardware AES accelerator.      |
+| AES      |cc312  | Hardware AES-128-ECB encrypt + decrypt via ARM CC312     |
+|          |_aes   | AES accelerator (Ambiq HAL CC312 crypto driver).         |
 +----------+-------+----------------------------------------------------------+
 | SPI      | spi0  | Single ``spi_transceive`` on IOM0.                       |
 +----------+-------+----------------------------------------------------------+
@@ -67,11 +67,22 @@ Requirements
 Building and Flashing
 *********************
 
+Default build (with console and logging):
+
 .. zephyr-app-commands::
    :zephyr-app: samples/boards/ambiq/pm_peripheral_demo
    :board: apollo330mP_evb
    :goals: build flash
    :compact:
+
+BLE low-power build (no console, minimal power consumption):
+
+.. code-block:: console
+
+   west build -b apollo330mP_evb samples/boards/ambiq/pm_peripheral_demo \
+     -- -DCONF_FILE=prj_ble_lp.conf \
+        -DDTC_OVERLAY_FILE=boards/apollo330mP_evb_ble_lp.overlay
+   west flash
 
 Sample Output
 *************
@@ -85,8 +96,8 @@ Sample Output
    [00:00:00.801,000] <inf> pm_demo: --- Iteration 1 ---
    [00:00:00.820,000] <inf> pm_demo: Flash: write/read verified OK (64 bytes)
    [00:00:00.821,000] <inf> pm_demo: CRC32 (hardware): result=0x???????? over 64 bytes
-   [00:00:00.822,000] <inf> pm_demo: AES-128-ECB (sw): encrypt matches FIPS-197 vector
-   [00:00:00.822,000] <inf> pm_demo: AES-128-ECB (sw): decrypt round-trip verified
+   [00:00:00.822,000] <inf> pm_demo: AES-128-ECB (hw CC312): encrypt matches FIPS-197 vector
+   [00:00:00.822,000] <inf> pm_demo: AES-128-ECB (hw CC312): decrypt round-trip verified
    [00:00:00.823,000] <wrn> pm_demo: SPI transceive: -5 (no loopback device connected)
    [00:00:00.980,000] <inf> pm_demo: I2C: no devices found (expected without external hardware)
    [00:00:00.980,000] <inf> pm_demo: Sleeping 5 s — PM may enter suspend-to-idle
