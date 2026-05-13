@@ -163,7 +163,7 @@ manifest:
       path: modules/hal/afbr
       groups:
         - hal
-    - name: hal_ambiq_internal
+    - name: hal-zephyr-alpha
       remote: github_ambiqmicro
       path: modules/hal/ambiq
       revision: e7fc1e6cacefc0d7d81f9c5dbfdf377c9ee6219e
