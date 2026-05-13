@@ -1,0 +1,18 @@
+sample:
+  name: DRAM Click PSRAM Sample
+tests:
+  sample.boards.ambiq.dram_click:
+    tags:
+      - drivers
+      - psram
+    platform_allow:
+      - apollo510_evb
+    extra_args: SHIELD="ambiq_mikrobus_spi mikroe_dram_click"
+    depends_on:
+      - spi
+    filter: dt_alias_exists("spi-psram")
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "APS6404L Read PASSED"
