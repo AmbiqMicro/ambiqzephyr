@@ -451,20 +451,28 @@ static int bt_apollo_open(const struct device *dev, bt_hci_recv_t recv)
 		return ret;
 	}
 
+	/* Initialize the controller before the RX thread so EM9305 init-time
+	 * vendor commands do not race spi_receive_packet() on the same IRQ line.
+	 */
+#if (CONFIG_SOC_SERIES_APOLLO5X)
+	ret = bt_apollo_controller_init(spi_send_packet, bt_spi_transceive);
+#else
+	ret = bt_apollo_controller_init(spi_send_packet, NULL);
+#endif
+	if (ret != 0) {
+		LOG_ERR("BT controller initialization failed: %d", ret);
+		return ret;
+	}
+
 	/* Start RX thread */
 	k_thread_create(&spi_rx_thread_data, spi_rx_stack, K_KERNEL_STACK_SIZEOF(spi_rx_stack),
 			(k_thread_entry_t)bt_spi_rx_thread, (void *)dev, NULL, NULL,
 			K_PRIO_COOP(CONFIG_BT_DRIVER_RX_HIGH_PRIO), 0, K_NO_WAIT);
 
-	ret = bt_apollo_controller_init(spi_send_packet);
-	if (ret == 0) {
-		hci->recv = recv;
-		LOG_INF("BT controller initialized successfully");
-	} else {
-		LOG_ERR("BT controller initialization failed: %d", ret);
-	}
+	hci->recv = recv;
+	LOG_INF("BT controller initialized successfully");
 
-	return ret;
+	return 0;
 }
 
 static int bt_apollo_close(const struct device *dev)

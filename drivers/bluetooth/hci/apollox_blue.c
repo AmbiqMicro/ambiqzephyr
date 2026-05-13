@@ -11,6 +11,7 @@
 #define DT_DRV_COMPAT ambiq_bt_hci_spi
 
 #include <zephyr/init.h>
+#include <zephyr/sys/util.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/pinctrl.h>
@@ -95,6 +96,11 @@ static void bt_em9305_cs_set(void)
 static void bt_em9305_cs_release(void)
 {
 	gpio_pin_set_dt(&cs_gpio, 0);
+}
+
+static void bt_em9305_set_cm(bool state)
+{
+	gpio_pin_set_dt(&cm_gpio, state ? 1 : 0);
 }
 
 int bt_apollo_spi_send(uint8_t *pui8Values, uint16_t ui32NumBytes, bt_spi_transceive_fun transceive)
@@ -395,9 +401,16 @@ int bt_hci_transport_setup(const struct device *dev)
 	/* Register GPIO operations for EM9305 device driver */
 	am_devices_em9305_register_gpio_ops(bt_em9305_set_reset, bt_em9305_get_reset, irq_pin_state,
 					    bt_em9305_cs_set, bt_em9305_cs_release);
+	am_devices_em9305_register_cm_gpio(bt_em9305_set_cm);
 
 	/* Configure RST pin and hold BLE in Reset */
 	ret = gpio_pin_configure_dt(&rst_gpio, GPIO_OUTPUT_ACTIVE);
+	if (ret) {
+		return ret;
+	}
+
+	/* Configure CM pin as output, default inactive (low) */
+	ret = gpio_pin_configure_dt(&cm_gpio, GPIO_OUTPUT_INACTIVE);
 	if (ret) {
 		return ret;
 	}
@@ -476,7 +489,7 @@ int bt_hci_transport_setup(const struct device *dev)
 	return ret;
 }
 
-int bt_apollo_controller_init(spi_transmit_fun transmit)
+int bt_apollo_controller_init(spi_transmit_fun transmit, bt_spi_transceive_fun transceive)
 {
 	int ret = 0;
 
@@ -484,6 +497,7 @@ int bt_apollo_controller_init(spi_transmit_fun transmit)
 	am_devices_em9305_callback_t cb = {
 		.write = transmit,
 		.reset = am_devices_em9305_controller_reset,
+		.transceive = transceive,
 	};
 
 	/* Initialize the BLE controller */
@@ -495,6 +509,8 @@ int bt_apollo_controller_init(spi_transmit_fun transmit)
 		LOG_DBG("bt controller initialization fail\r\n");
 	}
 #elif (CONFIG_SOC_SERIES_APOLLO4X)
+	ARG_UNUSED(transceive);
+
 	am_devices_cooper_callback_t cb = {
 		.write = transmit,
 		.reset = bt_apollo_controller_reset,
@@ -519,6 +535,8 @@ int bt_apollo_controller_init(spi_transmit_fun transmit)
 		LOG_ERR("BT controller initialization fail");
 	}
 #elif (CONFIG_SOC_SERIES_APOLLO3X)
+	ARG_UNUSED(transceive);
+
 	ret = am_apollo3_bt_controller_init();
 	if (ret == AM_HAL_STATUS_SUCCESS) {
 		LOG_INF("BT controller initialized");
