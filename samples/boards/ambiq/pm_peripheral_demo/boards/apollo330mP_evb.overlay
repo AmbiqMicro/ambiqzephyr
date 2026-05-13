@@ -1,69 +1,130 @@
 /*
- * Copyright (c) 2026, Ambiq Micro Inc. <www.ambiq.com>
+ * Copyright (c) 2026 Ambiq Micro Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * pm_peripheral_demo low-power devicetree overlay for apollo330mP_evb with BLE.
+ *
+ * Applied automatically when building for apollo330mP_evb:
+ *
+ *   west build -b apollo330mP_evb samples/boards/ambiq/pm_peripheral_demo
+ *
+ * - SRAM at 0x20184000 (0x74000), DTCM 128 KiB; IPC shared SRAM starts at 0x20180000.
+ * - CPU PM: idle, suspend_to_ram, suspend_to_disk (validate BLE IPC/RSS/HCI after wake).
+ * - stimer0 clk-source 6 (LFRC) for tickless-friendly timekeeping.
+ * - Disables UART console, GPIO banks, ITM/SWO, and other unused blocks; keep IPC/stimer for BLE.
+ *
+ * Active during advertising (sample needs): flash/MRAM, stimer, IPC+mbox (HCI), TRNG (entropy),
+ * kernel tick/timer — not LEDs/buttons, UART, USB, SDIO, MSPI/PSRAM, CRC, WDT, or GPIO blocks.
+ * SoC: enable CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP (proj.conf) to align with AmbiqSuite
+ * ble_freertos_fit_lp (LFRC RTC, XTAL pwdn in sleep, SRAM 0.75M retain, caches off, NETAOL kept).
+ * SoC also powers down IOM/UART/MSPI/USB/SDIO/etc. so pads are not held active by those blocks
+ * (BTDM RXEN/TXEN are still driven by the radio after bt_enable).
  */
-
-/*
- * PM power states for apollo330mP_evb.
- * Three suspend-to-idle states are defined, matching the CPU power-down
- * levels supported by the Apollo330P SoC.
- */
-
-/ {
-	zephyr,user {
-		k_idle_state_min_residency_time = <300>;
-	};
+&dtcm {
+	reg = <0x20000000 0x20000>;
 };
 
 &cpu0 {
-	cpu-power-states = <&stop0 &stop1 &stop2>;
+	cpu-power-states = <&idle &suspend_to_ram &suspend_to_disk>;
 };
 
-&{/cpus/power-states} {
-	stop0: stop0 {
-		compatible = "zephyr,power-state";
-		power-state-name = "suspend-to-idle";
-		substate-id = <1>;
-		min-residency-us = <300>;
-		exit-latency-us = <50>;
-	};
+&stimer0 {
+	clk-source = <6>;
+};
 
-	stop1: stop1 {
-		compatible = "zephyr,power-state";
-		power-state-name = "suspend-to-idle";
-		substate-id = <2>;
-		min-residency-us = <700>;
-		exit-latency-us = <300>;
-	};
+/* SWO is unused with CONFIG_CONSOLE=n; drop pinmux so the trace pin can stay low-leakage. */
+&itm {
+	status = "disabled";
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-names;
+};
 
-	stop2: stop2 {
-		compatible = "zephyr,power-state";
-		power-state-name = "suspend-to-idle";
-		substate-id = <3>;
-		min-residency-us = <1000>;
-		exit-latency-us = <400>;
+/delete-node/ &sram0;
+
+/ {
+	sram: sram0: memory@20184000 {
+		compatible = "mmio-sram";
+		reg = <0x20184000 0x74000>;
 	};
 };
 
-/* SPI and I2C disabled for initial bringup */
-&spi0 {
+&sram_no_cache {
+	/* Reserve 16 KiB at SRAM base for nocache/IPC shared memory. */
+	reg = <0x20180000 0x4000>;
+};
+
+&sram_ipc {
+	/* Keep 12 KiB IPC buffer inside the reserved nocache shared window. */
+	reg = <0x20180000 0x3000>;
+};
+
+/ {
+	chosen {
+		/delete-property/ zephyr,console;
+		/delete-property/ zephyr,uart-mcumgr;
+		/delete-property/ zephyr,shell-uart;
+		/delete-property/ zephyr,uart-pipe;
+		/delete-property/ zephyr,crc;
+	};
+
+	leds {
+		status = "disabled";
+	};
+
+	buttons {
+		status = "disabled";
+	};
+};
+
+&crc32 {
 	status = "disabled";
 };
 
-&i2c1 {
+&uart0 {
 	status = "disabled";
 };
 
-/* Enable hardware CC312 AES accelerator */
-&cc312_aes {
-	status = "okay";
+&wdt0 {
+	status = "disabled";
 };
 
-/* / {
- *	aliases {
- *		demo-spi = &spi0;
- *		demo-i2c = &i2c1;
- *	};
- * };
- */
+&mspi0 {
+	status = "disabled";
+};
+
+&aps25616ba {
+	status = "disabled";
+};
+
+&usb {
+	status = "disabled";
+};
+
+&sdio0 {
+	status = "disabled";
+
+	mmc {
+		status = "disabled";
+	};
+};
+
+&sdio1 {
+	status = "disabled";
+};
+
+&gpio0_31 {
+	status = "disabled";
+};
+
+&gpio32_63 {
+	status = "disabled";
+};
+
+&gpio64_95 {
+	status = "disabled";
+};
+
+&gpio96_119 {
+	status = "disabled";
+};
