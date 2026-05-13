@@ -11,14 +11,14 @@
 / {
 	chosen {
 		zephyr,display = &co5300;
-			   zephyr,touch = &chsc6540;
+		zephyr,touch = &chsc5x;
 		ambiq,gpu = &gpu;
 	};
 
-	       lvgl_pointer {
-		       compatible = "zephyr,lvgl-pointer-input";
-		       input = <&chsc6540>;
-	       };
+	lvgl_pointer {
+		compatible = "zephyr,lvgl-pointer-input";
+		input = <&chsc5x>;
+	};
 };
 
 &iom2 {
@@ -34,10 +34,10 @@
 		sda-gpios = <&gpio0_31 26 (GPIO_OPEN_DRAIN | GPIO_PULL_UP)>;
 		status = "okay";
 
-		       chsc6540: chsc6540@2e {
-			       compatible = "chipsemi,chsc6540";
-			       reg = <0x2e>;
-		       };
+		chsc5x: chsc5x@2e {
+			compatible = "chipsemi,chsc5x";
+			reg = <0x2e>;
+		};
 	};
 };
 

@@ -173,12 +173,6 @@
 		zephyr,pm-device-runtime-auto;
 	};
 
-	disp_pd: disp-pd {
-		compatible = "ambiq,disp-power-domain";
-		#power-domain-cells = <0>;
-		status = "okay";
-	};
-
 	soc {
 		compatible = "ambiq,apollo510L", "ambiq,apollo5x", "simple-bus";
 
@@ -759,7 +753,6 @@
 			#size-cells = <0>;
 			reg = <DC_REG_BASE DC_REG_SIZE>;
 			interrupts = <29 0>;/* DC interrupt */
-			power-domains = <&disp_pd>;
 			status = "disabled";
 		};
 
@@ -769,7 +762,6 @@
 			#size-cells = <0>;
 			reg = <DC_REG_BASE DC_REG_SIZE>;
 			interrupts = <29 0>;/* DC interrupt */
-			power-domains = <&disp_pd>;
 			status = "disabled";
 			hactive = <468>;/*Its value should be an integer multiple of 4.*/
 			hfp = <1>;
@@ -789,9 +781,7 @@
 			dbi-width = <16>;
 			phy-clock = <384000000>;
 			interrupts = <29 0>;/* DC interrupt */
-			power-domains = <&disp_pd>;
 			status = "disabled";
-			zephyr,pm-device-runtime-auto;
 		};
 
 		pdm0: pdm@PDM0_BASE_NAME {

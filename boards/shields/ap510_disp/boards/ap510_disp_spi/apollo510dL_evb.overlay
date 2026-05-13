@@ -18,7 +18,7 @@
 
 	i2c2: i2c {
 		status = "disabled";
-		/delete-node/ chsc6540@2e;
+		/delete-node/ chsc5x@2e;
 	};
 };
 
@@ -35,14 +35,14 @@
 		sda-gpios = <&gpio0_31 9 (GPIO_OPEN_DRAIN | GPIO_PULL_UP)>;
 		status = "okay";
 
-		chsc6540: chsc6540@2e {
-			compatible = "chipsemi,chsc6540";
+		chsc5x: chsc5x@2e {
+			compatible = "chipsemi,chsc5x";
 			reg = <0x2e>;
 		};
 	};
 };
 
-&chsc6540 {
+&chsc5x {
 	int-gpios = <&gpio32_63 25 GPIO_ACTIVE_LOW>;
 	reset-gpios = <&gpio32_63 21 GPIO_ACTIVE_LOW>;
 };

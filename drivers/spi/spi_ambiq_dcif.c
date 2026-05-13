@@ -16,8 +16,6 @@ LOG_MODULE_REGISTER(spi_ambiq_dcif, CONFIG_SPI_LOG_LEVEL);
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/spi.h>
 #include <zephyr/drivers/display.h>
-#include <zephyr/pm/device.h>
-#include <zephyr/pm/device_runtime.h>
 #include <zephyr/display/mipi_display.h>
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/pinctrl.h>
@@ -304,23 +302,6 @@ static DEVICE_API(spi, spi_ambiq_driver_api) = {
 	.release = spi_ambiq_release,
 };
 
-static int spi_ambiq_pm_action(const struct device *dev, enum pm_device_action action)
-{
-	ARG_UNUSED(dev);
-
-	switch (action) {
-	case PM_DEVICE_ACTION_RESUME:
-	case PM_DEVICE_ACTION_SUSPEND:
-	case PM_DEVICE_ACTION_TURN_ON:
-	case PM_DEVICE_ACTION_TURN_OFF:
-		break;
-	default:
-		return -ENOTSUP;
-	}
-
-	return 0;
-}
-
 static int spi_ambiq_init(const struct device *dev)
 {
 	const struct spi_ambiq_config *config = dev->config;
@@ -331,6 +312,13 @@ static int spi_ambiq_init(const struct device *dev)
 	if (ret < 0) {
 		LOG_ERR("Failed to apply pinctrl state: %d", ret);
 		return ret;
+	}
+
+	/* Enable display peripheral power */
+	ret = am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_DISP);
+	if (ret != AM_HAL_STATUS_SUCCESS) {
+		LOG_ERR("Failed to enable display peripheral power: %d", ret);
+		return -EIO;
 	}
 
 	/* Configure display clock */
@@ -366,7 +354,7 @@ static int spi_ambiq_init(const struct device *dev)
 	/* Configure interrupts */
 	config->irq_config_func(dev);
 
-	return pm_device_runtime_enable(dev);
+	return ret;
 }
 
 /*
@@ -398,9 +386,7 @@ extern void am_disp_isr(void);
 			      .ui32BackPorchY = DT_INST_PROP_OR(id, vbp, 1),                       \
 			      .ui32BlankingY = DT_INST_PROP_OR(id, vsync, 1),                      \
 			      .ui32PixelFormat = DT_INST_ENUM_IDX(id, pixfmt)}};                   \
-	PM_DEVICE_DT_INST_DEFINE(id, spi_ambiq_pm_action);                                         \
-	DEVICE_DT_INST_DEFINE(id, spi_ambiq_init, PM_DEVICE_DT_INST_GET(id), &spi_ambiq_data_##id, \
-			      &spi_ambiq_cfg_##id, POST_KERNEL, CONFIG_SPI_INIT_PRIORITY,          \
-			      &spi_ambiq_driver_api);
+	DEVICE_DT_INST_DEFINE(id, spi_ambiq_init, NULL, &spi_ambiq_data_##id, &spi_ambiq_cfg_##id, \
+			      POST_KERNEL, CONFIG_SPI_INIT_PRIORITY, &spi_ambiq_driver_api);
 
 DT_INST_FOREACH_STATUS_OKAY(SPI_AMBIQ_DEFINE)
