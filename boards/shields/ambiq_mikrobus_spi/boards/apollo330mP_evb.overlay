@@ -1,0 +1,23 @@
+/*
+ * Copyright (c) 2025, Ambiq Micro Inc. <www.ambiq.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * apollo330mP_evb: Click Board SPI socket is wired to IOM4.
+ * SCK=GP32 (M4SCK), MOSI=GP33 (M4MOSI), MISO=GP34 (M4MISO), CS=GP106
+ */
+
+/ {
+	mikrobus_header: mikrobus-connector {
+		compatible = "mikro-bus";
+		#gpio-cells = <2>;
+		gpio-map-mask = <0xffffffff 0xffffffc0>;
+		gpio-map-pass-thru = <0 0x3f>;
+		gpio-map = <2 0 &gpio96_119 10 0>;   /* CS -> GP106 */
+	};
+};
+
+mikrobus_spi: &spi4 {
+	clock-frequency = <DT_FREQ_M(24)>;
+	status = "okay";
+};

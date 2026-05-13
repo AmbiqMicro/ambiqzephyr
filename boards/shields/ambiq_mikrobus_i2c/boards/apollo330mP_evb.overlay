@@ -1,0 +1,12 @@
+/*
+ * Copyright (c) 2025, Ambiq Micro Inc. <www.ambiq.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * apollo330mP_evb: Click Board I2C socket is wired to IOM2.
+ * SCL=GP25 (M2SCL), SDA=GP26 (M2SDA).
+ */
+
+mikrobus_i2c: &i2c2 {
+	status = "okay";
+};

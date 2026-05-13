@@ -132,7 +132,8 @@ static void i2c_ambiq_callback(void *callback_ctxt, uint32_t status)
 	if (data->callback) {
 		data->callback(dev, status, data->callback_data);
 	}
-	data->transfer_status = status;
+	/* Convert HAL status to errno for consistent error handling */
+	data->transfer_status = i2c_ambiq_hal_status_to_errno(status);
 }
 
 static void i2c_ambiq_isr(const struct device *dev)
@@ -173,6 +174,12 @@ static int i2c_ambiq_read(const struct device *dev, struct i2c_msg *hdr_msg,
 	}
 
 	if (data->dma_mode) {
+#if CONFIG_I2C_AMBIQ_HANDLE_CACHE
+		if (!buf_in_nocache((uintptr_t)trans.pui32RxBuffer, trans.ui32NumBytes)) {
+			/* Flush Dcache before DMA read to ensure coherency */
+			sys_cache_data_flush_range((void *)trans.pui32RxBuffer, trans.ui32NumBytes);
+		}
+#endif /* CONFIG_I2C_AMBIQ_HANDLE_CACHE */
 		data->transfer_status = -EFAULT;
 		ret = am_hal_iom_nonblocking_transfer(data->iom_handler, &trans, i2c_ambiq_callback,
 						      (void *)dev);

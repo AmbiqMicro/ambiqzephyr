@@ -1,0 +1,30 @@
+/*
+ * Copyright (c) 2025, Ambiq Micro Inc. <www.ambiq.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * apollo510b_evb: IOM0 SPI -> mikroBUS, CS=P17
+ */
+
+/ {
+	mikrobus_header: mikrobus-connector {
+		compatible = "mikro-bus";
+		#gpio-cells = <2>;
+		gpio-map-mask = <0xffffffff 0xffffffc0>;
+		gpio-map-pass-thru = <0 0x3f>;
+		gpio-map = <2 0 &gpio0_31 17 0>;   /* CS -> P17 */
+	};
+};
+
+&iom0 {
+	status = "okay";
+	cmdq-buffer-location = "SRAM_NO_CACHE";
+	cmdq-buffer-size = <256>;
+
+	mikrobus_spi: spi {
+		pinctrl-0 = <&spi0_default>;
+		pinctrl-names = "default";
+		clock-frequency = <DT_FREQ_M(24)>;
+		status = "okay";
+	};
+};
