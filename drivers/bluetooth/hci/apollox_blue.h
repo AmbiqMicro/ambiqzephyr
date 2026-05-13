@@ -76,10 +76,11 @@ int bt_apollo_spi_rcv(uint8_t *data, uint16_t *len, bt_spi_transceive_fun transc
  *
  * This step may do the necessary handshaking with the controller before
  * @param transmit SPI transmit function
+ * @param transceive SPI transceive function (Apollo5 EM9305); may be NULL on other SoCs
  *
  * @return 0 on success or negative error number on failure.
  */
-int bt_apollo_controller_init(spi_transmit_fun transmit);
+int bt_apollo_controller_init(spi_transmit_fun transmit, bt_spi_transceive_fun transceive);
 
 /**
  * @brief Deinitialize the BLE controller.
