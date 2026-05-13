@@ -1,0 +1,23 @@
+/*
+ * Copyright (c) 2025, Ambiq Micro Inc. <www.ambiq.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+	aliases {
+		spi-psram = &psram;
+	};
+};
+
+&mikrobus_spi {
+	status = "okay";
+	cs-gpios = <&mikrobus_header 2 GPIO_ACTIVE_LOW>;
+
+	psram: aps6404l@0 {
+		compatible = "apm,aps6404l";
+		reg = <0>;
+		spi-max-frequency = <48000000>;
+		status = "okay";
+	};
+};

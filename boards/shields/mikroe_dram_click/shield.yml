@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright (c) 2025, Ambiq Micro Inc. <www.ambiq.com>
+
+shields:
+  - name: mikroe_dram_click
+    full_name: DRAM Click
+    vendor: mikroe
+    supported_features:
+      - sram
