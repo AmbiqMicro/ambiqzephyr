@@ -177,12 +177,6 @@
 		zephyr,pm-device-runtime-auto;
 	};
 
-	disp_pd: disp-pd {
-		compatible = "ambiq,disp-power-domain";
-		#power-domain-cells = <0>;
-		status = "okay";
-	};
-
 	soc {
 		compatible = "ambiq,apollo510b", "ambiq,apollo5x", "simple-bus";
 
@@ -851,7 +845,6 @@
 			dbi-width = <16>;
 			phy-clock = <384000000>;
 			interrupts = <29 0>;/* DC interrupt */
-			power-domains = <&disp_pd>;
 			status = "disabled";
 		};
 
