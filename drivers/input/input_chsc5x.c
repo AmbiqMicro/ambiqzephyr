@@ -37,7 +37,7 @@ enum {
 	CHSC5X_IC_TYPE_CHSC5460 = 0x03,
 	CHSC5X_IC_TYPE_CHSC5468 = 0x04,
 	CHSC5X_IC_TYPE_CHSC5432 = 0x05,
-	CHSC5X_IC_TYPE_CHSC5816 = 0x10,
+	CHSC5X_IC_TYPE_CHSC5816 = 0x16,
 	CHSC5X_IC_TYPE_CHSC1716 = 0x11,
 };
 
@@ -116,6 +116,12 @@ static int chsc5x_chip_init(const struct device *dev)
 		LOG_ERR("I2C bus %s not ready", cfg->i2c.bus->name);
 		return -ENODEV;
 	}
+
+	/*
+	 * Let I2C bus settle after reset / display-related rail activity
+	 * (e.g. Apollo5 + CO5300).
+	 */
+	k_msleep(20);
 
 	for (int attempt = 0; attempt < 4; attempt++) {
 		ret = i2c_write_read_dt(&cfg->i2c, write_buffer, sizeof(write_buffer), &ic_type, 1);
