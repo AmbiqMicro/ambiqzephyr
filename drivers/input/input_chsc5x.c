@@ -6,6 +6,8 @@
 
 #define DT_DRV_COMPAT chipsemi_chsc5x
 
+#include <errno.h>
+
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/input/input.h>
@@ -115,8 +117,19 @@ static int chsc5x_chip_init(const struct device *dev)
 		return -ENODEV;
 	}
 
-	ret = i2c_write_read_dt(&cfg->i2c, write_buffer, sizeof(write_buffer), &ic_type, 1);
-	if (ret < 0) {
+	for (int attempt = 0; attempt < 4; attempt++) {
+		ret = i2c_write_read_dt(&cfg->i2c, write_buffer, sizeof(write_buffer), &ic_type, 1);
+		if (ret == 0) {
+			break;
+		}
+		/*
+		 * Touch may see transient I2C arbitration / bus errors right
+		 * after display/DISP init.
+		 */
+		if ((ret == -EAGAIN || ret == -EBUSY) && attempt < 3) {
+			k_msleep(10);
+			continue;
+		}
 		LOG_ERR("Could not read data: %i", ret);
 		return ret;
 	}
