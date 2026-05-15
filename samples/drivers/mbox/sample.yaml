@@ -13,6 +13,8 @@ tests:
       - nrf54l15dk/nrf54l15/cpuapp
       - nrf54lm20dk/nrf54lm20a/cpuapp
       - apollo510L_eb
+      - apollo330mP_evb
+      - apollo510dL_evb
     integration_platforms:
       - nrf5340bsim/nrf5340/cpuapp
     harness: console
