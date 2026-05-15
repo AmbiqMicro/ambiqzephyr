@@ -3,7 +3,17 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  *
- * peripheral_hr low-power overlay: apollo510dL_evb / apollo330mP_evb.
+ * peripheral_hr low-power devicetree overlay for Apollo5 BLE LP builds
+ * (apollo510dL_evb / apollo330mP_evb).
+ *
+ * Apply only with prj_330mP.conf (or equivalent), not with default prj.conf or
+ * console harness builds. Example:
+ *
+ *   west build -b apollo510dL_evb samples/bluetooth/peripheral_hr \\
+ *     -- -DCONF_FILE=prj_330mP.conf \\
+ *        -DDTC_OVERLAY_FILE=boards/apollo510L_330P_ble_lp.overlay
+ *
+ * Twister: sample.bluetooth.peripheral_hr.ble_lp
  *
  * - SRAM at 0x20184000 (0x74000), DTCM 128 KiB; IPC shared SRAM starts at 0x20180000.
  * - CPU PM: idle, suspend_to_ram, suspend_to_disk (validate BLE IPC/RSS/HCI after wake).
@@ -16,9 +26,6 @@
  * ble_freertos_fit_lp (LFRC RTC, XTAL pwdn in sleep, SRAM 0.75M retain, caches off, NETAOL kept).
  * SoC also powers down IOM/UART/MSPI/USB/SDIO/etc. so pads are not held active by those blocks
  * (BTDM RXEN/TXEN are still driven by the radio after bt_enable).
- *
- * Build: board apollo330mP_evb or apollo510dL_evb (see apollo510dL_evb.overlay — same DT).
- * Use prj_330mP.conf or equivalent: CONFIG_PM, CONFIG_PM_DEVICE, CONFIG_PM_DEVICE_RUNTIME.
  */
 &dtcm {
 	reg = <0x20000000 0x20000>;

@@ -121,3 +121,13 @@ tests:
       - apollo510L_eb
       - apollo510dL_evb
       - apollo330mP_evb
+  sample.bluetooth.peripheral_hr.ble_lp:
+    tags: bluetooth
+    build_only: true
+    harness: bluetooth
+    platform_allow:
+      - apollo510dL_evb
+      - apollo330mP_evb
+    extra_args:
+      - CONF_FILE=prj_330mP.conf
+      - DTC_OVERLAY_FILE=boards/apollo510L_330P_ble_lp.overlay
