@@ -341,7 +341,12 @@ static int i2c_ambiq_transfer(const struct device *dev, struct i2c_msg *msgs, ui
 		}
 
 		if (ret != 0) {
-			LOG_ERR("i2c transfer failed: %d", ret);
+			if (ret == -EAGAIN) {
+				/* AM_HAL_IOM_ERR_I2C_ARB: often transient; callers may retry */
+				LOG_DBG("i2c transfer: %d (retryable)", ret);
+			} else {
+				LOG_ERR("i2c transfer failed: %d", ret);
+			}
 			break;
 		}
 	}
