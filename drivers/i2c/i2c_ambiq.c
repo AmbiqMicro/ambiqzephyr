@@ -7,7 +7,6 @@
 #define DT_DRV_COMPAT ambiq_i2c
 
 #include <errno.h>
-#include <stdio.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/kernel.h>
 #include <zephyr/pm/device.h>
@@ -74,6 +73,10 @@ static int i2c_ambiq_hal_status_to_errno(uint32_t hal_status)
 		return 0;
 	case AM_HAL_STATUS_FAIL:
 		return -EIO;
+	case AM_HAL_STATUS_INVALID_HANDLE:
+		return -EINVAL;
+	case AM_HAL_STATUS_IN_USE:
+		return -EBUSY;
 	case AM_HAL_STATUS_INVALID_ARG:
 		return -EINVAL;
 	case AM_HAL_STATUS_INVALID_OPERATION:
@@ -82,8 +85,17 @@ static int i2c_ambiq_hal_status_to_errno(uint32_t hal_status)
 		return -ERANGE;
 	case AM_HAL_STATUS_TIMEOUT:
 		return -ETIMEDOUT;
+	case AM_HAL_STATUS_MEM_ERR:
+	case AM_HAL_STATUS_HW_ERR:
+		return -EIO;
+	case AM_HAL_IOM_ERR_INVALID_OPER:
+		return -EPERM;
+	case AM_HAL_IOM_ERR_I2C_ARB:
+		/* Transient on Apollo5 I2C after display/DISP rail activity; caller may retry */
+		return -EAGAIN;
+	case AM_HAL_IOM_ERR_I2C_NAK:
+		return -ENXIO;
 	default:
-		/* Unknown HAL error - report to help debugging */
 		LOG_ERR("Unknown Ambiq HAL error code: 0x%x", hal_status);
 		return -EIO;
 	}
@@ -272,12 +284,7 @@ static int i2c_ambiq_configure(const struct device *dev, uint32_t dev_config)
 	}
 
 	/* Lock device for configuration - use mutex for priority inheritance */
-	if (k_mutex_lock(&data->dev_lock, K_MSEC(100)) == 0) {
-		/* mutex successfully locked */
-	} else {
-		printf("Cannot lock I2C device\n");
-		return -EBUSY;
-	}
+	k_mutex_lock(&data->dev_lock, K_SECONDS(1));
 
 	switch (I2C_SPEED_GET(dev_config)) {
 	case I2C_SPEED_STANDARD:
@@ -317,17 +324,7 @@ static int i2c_ambiq_transfer(const struct device *dev, struct i2c_msg *msgs, ui
 
 	i2c_ambiq_pm_policy_state_lock_get(dev, msgs, num_msgs);
 
-	/* Lock device for transfer operations - use mutex for priority inheritance */
-	bool lock_acquired = false;
-
-	if (k_mutex_lock(&data->dev_lock, K_MSEC(100)) == 0) {
-		/* mutex successfully locked */
-		lock_acquired = true;
-	} else {
-		printf("Cannot lock I2C device\n");
-		ret = -EBUSY;
-		goto transfer_end;
-	}
+	k_mutex_lock(&data->dev_lock, K_SECONDS(1));
 
 	for (int i = 0; i < num_msgs; i++) {
 		if (msgs[i].flags & I2C_MSG_READ) {
@@ -349,11 +346,8 @@ static int i2c_ambiq_transfer(const struct device *dev, struct i2c_msg *msgs, ui
 		}
 	}
 
-	if (lock_acquired) {
-		k_mutex_unlock(&data->dev_lock);
-	}
+	k_mutex_unlock(&data->dev_lock);
 
-transfer_end:
 	i2c_ambiq_pm_policy_state_lock_put(dev);
 
 	(void)pm_device_runtime_put(dev);
@@ -409,12 +403,7 @@ static int i2c_ambiq_recover_bus(const struct device *dev)
 	}
 
 	/* Lock device for bus recovery - use mutex for priority inheritance */
-	if (k_mutex_lock(&data->dev_lock, K_MSEC(100)) == 0) {
-		/* mutex successfully locked */
-	} else {
-		printf("Cannot lock I2C device\n");
-		return -EBUSY;
-	}
+	k_mutex_lock(&data->dev_lock, K_SECONDS(1));
 
 	error = gpio_pin_configure_dt(&config->scl, GPIO_OUTPUT_HIGH);
 	if (error != 0) {
@@ -525,11 +514,6 @@ static int i2c_ambiq_pm_action(const struct device *dev, enum pm_device_action a
 	struct i2c_ambiq_data *data = dev->data;
 	int ret;
 	am_hal_sysctrl_power_state_e status;
-
-	/* Check if transfer is in progress - don't lock mutex to keep PM fast */
-	if (k_sem_count_get(&data->transfer_sem) == 0) {
-		return -EBUSY;
-	}
 
 	switch (action) {
 	case PM_DEVICE_ACTION_RESUME:
