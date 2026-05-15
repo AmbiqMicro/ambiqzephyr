@@ -6,6 +6,6 @@
 
 / {
 	aliases {
-		psram0 = &aps25616n;
+		psram0 = &aps25616ba;
 	};
 };
