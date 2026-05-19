@@ -4,10 +4,20 @@
 
 config AMBIQ_STIMER_TIMER
 	bool "Ambiq STIMER system clock driver"
-	default y
+	default n
 	depends on DT_HAS_AMBIQ_STIMER_ENABLED
 	select AMBIQ_HAL
 	select TICKLESS_CAPABLE
 	select AMBIQ_HAL_USE_STIMER
 	help
 	  Ambiq Apollo stimer driver
+
+config AMBIQ_CTIMER_TIMER
+	bool "Ambiq CTIMER system clock driver"
+	default y
+	depends on DT_HAS_AMBIQ_CTIMER_ENABLED
+	select AMBIQ_HAL
+	select TICKLESS_CAPABLE
+	select AMBIQ_HAL_USE_CTIMER
+	help
+	  Ambiq Apollo ctimer driver
