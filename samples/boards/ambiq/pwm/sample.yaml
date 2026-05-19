@@ -1,0 +1,26 @@
+sample:
+  name: Ambiq CTimer PWM Output
+  description: |
+    Demonstrates 3-channel PWM output using the Ambiq CTimer PWM driver,
+    following the Ambiq SDK ctimer_pwm_output.c example.
+tests:
+  sample.boards.ambiq.pwm:
+    tags:
+      - drivers
+      - pwm
+    depends_on: pwm
+    platform_allow:
+      - apollo3p_evb
+    harness: console
+    harness_config:
+      type: multi_line
+      ordered: true
+      regex:
+        - "Ambiq CTimer PWM Output Example"
+        - "PWM_A.*Timer0.*ready"
+        - "PWM_B.*Timer2.*ready"
+        - "PWM_C.*Timer7.*ready"
+        - "PWM_A.*period=327.*duty=32"
+        - "PWM_B.*period=327.*duty=163"
+        - "PWM_C.*period=327.*duty=228"
+        - "All 3 PWM outputs are now running"

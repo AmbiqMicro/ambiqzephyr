@@ -190,13 +190,34 @@
 	counter0: counter {
 		status = "disabled";
 	};
+
+	pwm0: pwm {
+		label = "pwm0";
+		timer-segment = "SEGMENT_B";
+		pwm-type = "PWM_REPEAT";
+		pinctrl-0 = <&pwm0_default>;
+		pinctrl-names = "default";
+		status = "disabled";
+	};
 };
 
 &timer2 {
 	pwm2: pwm {
-		timer-segment = "SEGMENT_B";
+		label = "pwm2";
+		timer-segment = "SEGMENT_A";
 		pwm-type = "PWM_REPEAT";
 		pinctrl-0 = <&pwm2_default>;
+		pinctrl-names = "default";
+		status = "disabled";
+	};
+};
+
+&timer7 {
+	pwm7: pwm {
+		label = "pwm7";
+		timer-segment = "SEGMENT_B";
+		pwm-type = "PWM_REPEAT";
+		pinctrl-0 = <&pwm7_default>;
 		pinctrl-names = "default";
 		status = "disabled";
 	};

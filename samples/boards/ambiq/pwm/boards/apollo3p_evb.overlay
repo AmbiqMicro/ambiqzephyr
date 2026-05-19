@@ -1,0 +1,27 @@
+/*
+ * Copyright (c) 2025 Ambiq Micro Inc. <www.ambiq.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * This overlay configures 3 PWM outputs matching the Ambiq SDK
+ * ctimer_pwm_output.c example:
+ *
+ *   PWM A: Timer 0, Segment B, GPIO 13 (CTIM2) - 10% duty cycle
+ *   PWM B: Timer 2, Segment A, GPIO 29 (CTIM9) - 50% duty cycle
+ *   PWM C: Timer 7, Segment B, GPIO 11 (CTIM31) - 70% duty cycle
+ */
+
+/* Enable PWM0: Timer 0, Segment B, GPIO 13 */
+&pwm0 {
+	status = "okay";
+};
+
+/* Enable PWM2: Timer 2, Segment A, GPIO 29 */
+&pwm2 {
+	status = "okay";
+};
+
+/* Enable PWM7: Timer 7, Segment B, GPIO 11 */
+&pwm7 {
+	status = "okay";
+};
