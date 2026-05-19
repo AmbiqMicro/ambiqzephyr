@@ -143,7 +143,7 @@
 // };
 
 &ctimer0 {
-	clk-source = <6>;
+	clk-source = "CLK_SELECT_XT_32_768KHZ";
 };
 
 &bleif {

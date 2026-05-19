@@ -95,17 +95,18 @@
 			};
 		};
 
-		// stimer0: stimer@40008140 {
-		//	compatible = "ambiq,stimer";
-		//	reg = <0x40008140 0x80>;
-		//	interrupts = <23 0>;
-		//	status = "okay";
-		// };
+		stimer0: stimer@40008140 {
+			compatible = "ambiq,stimer";
+			reg = <0x40008140 0x80>;
+			interrupts = <23 0>;
+			status = "disabled";
+		};
 
 		ctimer0: ctimer@40008000 {
 			compatible = "ambiq,ctimer";
 			reg = <0x40008000 0x20>;
 			interrupts = <14 0>;
+			clk-source = "CLK_SELECT_XT_32_768KHZ";
 			status = "okay";
 		};
 

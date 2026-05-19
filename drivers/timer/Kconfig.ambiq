@@ -4,7 +4,7 @@
 
 config AMBIQ_STIMER_TIMER
 	bool "Ambiq STIMER system clock driver"
-	default n
+	default y if DT_HAS_AMBIQ_STIMER_ENABLED && !DT_HAS_AMBIQ_CTIMER_ENABLED
 	depends on DT_HAS_AMBIQ_STIMER_ENABLED
 	select AMBIQ_HAL
 	select TICKLESS_CAPABLE

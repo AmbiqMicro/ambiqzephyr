@@ -30,7 +30,7 @@
 
 #define MIN_DELAY 1
 
-#define TIMER_CLKSRC (DT_INST_PROP(0, clk_source))
+#define TIMER_CLKSRC_IDX DT_INST_ENUM_IDX(0, clk_source)
 
 #if defined(CONFIG_TEST)
 const int32_t z_sys_timer_irq_for_test = CTIMER_IRQn;
@@ -42,7 +42,7 @@ am_hal_ctimer_config_t s_continuous_timer = {
 	.ui32Link = 1,
 	/* Set up TimerA. */
 	.ui32TimerAConfig = (AM_HAL_CTIMER_FN_CONTINUOUS | AM_HAL_CTIMER_INT_ENABLE |
-			     AM_HAL_CTIMER_XT_32_768KHZ),
+			     _VAL2FLD(CTIMER_CTRL0_TMRA0CLK, TIMER_CLKSRC_IDX)),
 	/* Set up TimerB. */
 	/* TimerB should be 0 when running in 32-bit 'linked' mode */
 	.ui32TimerBConfig = 0,
@@ -189,8 +189,34 @@ uint32_t sys_clock_cycle_get_32(void)
 
 int ctimer_init(void)
 {
-	am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_SYSCLK_MAX, 0);
-	am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_XTAL_START, 0);
+	/* Start the appropriate oscillator for the configured clock source */
+	switch (TIMER_CLKSRC_IDX) {
+	case 1:
+	case 2:
+	case 3:
+	case 4:
+	case 5:
+		am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_SYSCLK_MAX, 0);
+		break;
+	case 6:
+	case 7:
+	case 8:
+	case 9:
+	case 14: /* RTC assumes XTAL since LFRC is less accurate */
+	case 16:
+	case 17:
+	case 18:
+		am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_XTAL_START, 0);
+		break;
+	case 10:
+	case 11:
+	case 12:
+	case 13:
+		am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_LFRC_START, 0);
+		break;
+	default:
+		break;
+	}
 
 	am_hal_ctimer_stop(0, AM_HAL_CTIMER_BOTH);
 	am_hal_ctimer_clear(0, AM_HAL_CTIMER_BOTH);
