@@ -54,7 +54,7 @@ LOG_MODULE_REGISTER(bt_hci_driver);
 
 static uint8_t __noinit rxmsg[SPI_MAX_RX_MSG_LEN];
 
-#if (CONFIG_SOC_SERIES_APOLLO5X)
+#if (CONFIG_SOC_APOLLO510B)
 static struct spi_dt_spec spi_bus =
 	SPI_DT_SPEC_INST_GET(0,
 			     SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB | SPI_WORD_SET(8));
@@ -111,7 +111,7 @@ static int spi_send_packet(uint8_t *data, uint16_t len)
 {
 	int ret = 0;
 
-#if (CONFIG_SOC_SERIES_APOLLO5X)
+#if (CONFIG_SOC_APOLLO510B)
 	/* Wait for SPI bus to be available */
 	k_sem_take(&sem_spi_available, K_FOREVER);
 	/* Send the SPI packet to controller */
@@ -451,7 +451,7 @@ static int bt_apollo_open(const struct device *dev, bt_hci_recv_t recv)
 		return ret;
 	}
 
-#if (CONFIG_SOC_SERIES_APOLLO5X)
+#if (CONFIG_SOC_APOLLO510B)
 	/* Initialize the controller before the RX thread so EM9305 init-time
 	 * vendor commands do not race spi_receive_packet() on the same IRQ line.
 	 */
@@ -468,14 +468,14 @@ static int bt_apollo_open(const struct device *dev, bt_hci_recv_t recv)
 #endif
 	if (ret != 0) {
 		LOG_ERR("BT controller initialization failed: %d", ret);
-#if !(CONFIG_SOC_SERIES_APOLLO5X)
+#if !(CONFIG_SOC_APOLLO510B)
 		k_thread_abort(&spi_rx_thread_data);
 #endif
 		return ret;
 	}
 
 	/* Start RX thread */
-#if (CONFIG_SOC_SERIES_APOLLO5X)
+#if (CONFIG_SOC_APOLLO510B)
 	k_thread_create(&spi_rx_thread_data, spi_rx_stack, K_KERNEL_STACK_SIZEOF(spi_rx_stack),
 			(k_thread_entry_t)bt_spi_rx_thread, (void *)dev, NULL, NULL,
 			K_PRIO_COOP(CONFIG_BT_DRIVER_RX_HIGH_PRIO), 0, K_NO_WAIT);

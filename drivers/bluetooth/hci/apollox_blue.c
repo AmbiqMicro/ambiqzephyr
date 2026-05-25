@@ -35,20 +35,20 @@ LOG_MODULE_REGISTER(bt_apollox_driver);
 #include "am_devices_cooper.h"
 #elif (CONFIG_SOC_SERIES_APOLLO3X)
 #include "am_apollo3_bt_support.h"
-#elif (CONFIG_SOC_SERIES_APOLLO5X)
+#elif (CONFIG_SOC_APOLLO510B)
 #include "am_devices_em9305.h"
 #endif /* CONFIG_SOC_SERIES_APOLLO4X */
 
 #define HCI_SPI_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(ambiq_bt_hci_spi)
 #define SPI_DEV_NODE DT_BUS(HCI_SPI_NODE)
 
-#if (CONFIG_SOC_SERIES_APOLLO5X)
+#if (CONFIG_SOC_APOLLO510B)
 #define CLK_32M_NODE DT_NODELABEL(xo32m_xtal)
 #define CLK_32K_NODE DT_NODELABEL(xo32k_xtal)
 #else
 #define CLK_32M_NODE DT_NODELABEL(xo32m)
 #define CLK_32K_NODE DT_NODELABEL(xo32k)
-#endif /* CONFIG_SOC_SERIES_APOLLO5X */
+#endif /* CONFIG_SOC_APOLLO510B */
 /* Command/response for SPI operation */
 #define SPI_WRITE   0x80
 #define SPI_READ    0x04
@@ -60,7 +60,7 @@ LOG_MODULE_REGISTER(bt_apollox_driver);
 
 #define SPI_MAX_RX_MSG_LEN 258
 
-#if (CONFIG_SOC_SERIES_APOLLO5X)
+#if (CONFIG_SOC_APOLLO510B)
 static const struct gpio_dt_spec irq_gpio = GPIO_DT_SPEC_GET(HCI_SPI_NODE, irq_gpios);
 static const struct gpio_dt_spec rst_gpio = GPIO_DT_SPEC_GET(HCI_SPI_NODE, reset_gpios);
 static const struct gpio_dt_spec cs_gpio = GPIO_DT_SPEC_GET(SPI_DEV_NODE, cs_gpios);
@@ -110,7 +110,7 @@ int bt_apollo_spi_send(uint8_t *pui8Values, uint16_t ui32NumBytes, bt_spi_transc
 {
 	return am_devices_em9305_blocking_write(pui8Values, ui32NumBytes, transceive);
 }
-#endif /* CONFIG_SOC_SERIES_APOLLO5X */
+#endif /* CONFIG_SOC_APOLLO510B */
 
 #if (CONFIG_SOC_SERIES_APOLLO4X)
 static const struct gpio_dt_spec irq_gpio = GPIO_DT_SPEC_GET(HCI_SPI_NODE, irq_gpios);
@@ -197,7 +197,7 @@ static void bt_apollo_controller_reset(void)
 }
 #endif /* CONFIG_SOC_SERIES_APOLLO4X */
 
-#if !(CONFIG_SOC_SERIES_APOLLO5X)
+#if !(CONFIG_SOC_APOLLO510B)
 int bt_apollo_spi_send(uint8_t *data, uint16_t len, bt_spi_transceive_fun transceive)
 {
 	int ret = -ENOTSUP;
@@ -237,11 +237,11 @@ int bt_apollo_spi_send(uint8_t *data, uint16_t len, bt_spi_transceive_fun transc
 
 	return ret;
 }
-#endif /* CONFIG_SOC_SERIES_APOLLO5X */
+#endif /* CONFIG_SOC_APOLLO510B */
 
 int bt_apollo_spi_rcv(uint8_t *data, uint16_t *len, bt_spi_transceive_fun transceive)
 {
-#if (CONFIG_SOC_SERIES_APOLLO5X)
+#if (CONFIG_SOC_APOLLO510B)
 	{
 		uint8_t sCommand[2] = {EM9305_SPI_HEADER_RX, 0x0};
 		uint8_t sStas[2];
@@ -386,7 +386,7 @@ bool bt_apollo_vnd_rcv_ongoing(uint8_t *data, uint16_t len)
 	} else {
 		return false;
 	}
-#elif (CONFIG_SOC_SERIES_APOLLO5X)
+#elif (CONFIG_SOC_APOLLO510B)
 	return am_devices_em9305_check_active_state_event(data, len);
 #else
 	return false;
@@ -398,7 +398,7 @@ int bt_hci_transport_setup(const struct device *dev)
 	ARG_UNUSED(dev);
 	int ret = 0;
 
-#if (CONFIG_SOC_SERIES_APOLLO5X)
+#if (CONFIG_SOC_APOLLO510B)
 	/* Register GPIO operations for EM9305 device driver */
 	am_devices_em9305_register_gpio_ops(bt_em9305_set_reset, bt_em9305_get_reset, irq_pin_state,
 					    bt_em9305_cs_set, bt_em9305_cs_release);
@@ -485,7 +485,7 @@ int bt_hci_transport_setup(const struct device *dev)
 	gpio_pin_interrupt_configure_dt(&irq_gpio, GPIO_INT_EDGE_RISING);
 #elif (CONFIG_SOC_SERIES_APOLLO3X)
 	IRQ_CONNECT(DT_IRQN(SPI_DEV_NODE), DT_IRQ(SPI_DEV_NODE, priority), bt_packet_irq_isr, 0, 0);
-#endif /* CONFIG_SOC_SERIES_APOLLO5X */
+#endif /* CONFIG_SOC_APOLLO510B */
 
 	return ret;
 }
@@ -494,7 +494,7 @@ int bt_apollo_controller_init(spi_transmit_fun transmit, bt_spi_transceive_fun t
 {
 	int ret = 0;
 
-#if (CONFIG_SOC_SERIES_APOLLO5X)
+#if (CONFIG_SOC_APOLLO510B)
 	am_devices_em9305_callback_t cb = {
 		.write = transmit,
 		.reset = am_devices_em9305_controller_reset,
@@ -546,7 +546,7 @@ int bt_apollo_controller_init(spi_transmit_fun transmit, bt_spi_transceive_fun t
 	}
 
 	irq_enable(DT_IRQN(SPI_DEV_NODE));
-#endif /* CONFIG_SOC_SERIES_APOLLO5X */
+#endif /* CONFIG_SOC_APOLLO510B */
 
 	return ret;
 }
@@ -555,7 +555,7 @@ int bt_apollo_controller_deinit(void)
 {
 	int ret = 0;
 
-#if (CONFIG_SOC_SERIES_APOLLO5X)
+#if (CONFIG_SOC_APOLLO510B)
 	/* Deinitialize the BLE controller driver */
 	ret = am_devices_em9305_deinit();
 	if (ret == AM_DEVICES_EM9305_STATUS_SUCCESS) {
@@ -594,7 +594,7 @@ int bt_apollo_controller_deinit(void)
 	}
 #else
 	ret = -ENOTSUP;
-#endif /* CONFIG_SOC_SERIES_APOLLO5X */
+#endif /* CONFIG_SOC_APOLLO510B */
 
 	return ret;
 }
@@ -683,7 +683,7 @@ int bt_apollo_dev_init(void)
 		LOG_ERR("CLKREQ GPIO device not ready");
 		return -ENODEV;
 	}
-#elif (CONFIG_SOC_SERIES_APOLLO5X)
+#elif (CONFIG_SOC_APOLLO510B)
 	if (!gpio_is_ready_dt(&irq_gpio)) {
 		LOG_ERR("IRQ GPIO device not ready");
 		return -ENODEV;
