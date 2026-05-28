@@ -85,10 +85,10 @@ int am_rss_mgr_ipc_shm_config(void)
 {
 	int ret = 0;
 	struct mbox_msg rsp_msg = {0};
-	uint32_t config[] = {AM_HAL_IPC_MBOX_SIGNAL_MSG_IPC_SHM_CONFIG_REQ, 2,
-			     DT_REG_ADDR(DT_NODELABEL(sram_ipc)),
-			     DT_REG_SIZE(DT_NODELABEL(sram_ipc))};
-
+	uint32_t config[] = {AM_HAL_IPC_MBOX_SIGNAL_MSG_IPC_SHM_CONFIG_REQ, 3,
+				 DT_REG_ADDR(DT_NODELABEL(sram_ipc)),
+				 DT_REG_SIZE(DT_NODELABEL(sram_ipc)),
+				 DT_PROP(DT_NODELABEL(ipc0), zephyr_buffer_size)};
 	/* Skip if the IPC share memory has been already configured */
 	if (ipc_shm_configured) {
 		return 0;
