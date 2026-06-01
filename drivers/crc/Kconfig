@@ -27,6 +27,7 @@ source "drivers/crc/Kconfig.sf32lb"
 source "drivers/crc/Kconfig.silabs"
 source "drivers/crc/Kconfig.stm32"
 # zephyr-keep-sorted-stop
+source "drivers/crc/Kconfig.ambiq"
 
 config CRC_DRIVER_HAS_CRC4
 	bool
