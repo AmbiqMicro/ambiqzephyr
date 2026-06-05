@@ -1,4 +1,4 @@
-sample:
+﻿sample:
   name: EERAM 3.3V Click Sample
 tests:
   sample.shields.mikroe_eeram_33v_click:
@@ -8,6 +8,9 @@ tests:
       - shield
     depends_on:
       - i2c
+    platform_allow:
+      - apollo510_evb
+    extra_args: SHIELD="ambiq_mikrobus_i2c;mikroe_eeram_33v_click"
     filter: dt_alias_exists("eeprom-0")
     harness: console
     harness_config:
