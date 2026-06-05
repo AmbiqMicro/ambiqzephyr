@@ -1,0 +1,16 @@
+sample:
+  name: EERAM 3.3V Click Sample
+tests:
+  sample.shields.mikroe_eeram_33v_click:
+    tags:
+      - drivers
+      - eeprom
+      - shield
+    depends_on:
+      - i2c
+    filter: dt_alias_exists("eeprom-0")
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "EEPROM driver test PASSED"
