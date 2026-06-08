@@ -7,6 +7,7 @@
 /dts-v1/;
 #include <ambiq/ambiq_apollo510L.dtsi>
 #include <zephyr/dt-bindings/input/input-event-codes.h>
+#include <zephyr/dt-bindings/memory-attr/memory-attr-arm.h>
 
 #include "apollo510dL_evb-pinctrl.dtsi"
 
@@ -30,6 +31,11 @@
 		ambiq,xo48m = &xo48m_xtal;
 		ambiq,xo32k = &xo32k_xtal;
 		ambiq,extrefclk = &extrefclk;
+		/* Required for DT_CHOSEN(ambiq_psram) / DT_CHOSEN(ambiq_external_ram_region):
+		 * board.c, linker.ld, and runtime PSRAM bring-up. Do not use aliases for these.
+		 */
+		ambiq,psram = &aps25616ba;
+		ambiq,external-ram-region = &xip0;
 		zephyr,crc = &crc32;
 	};
 
@@ -42,9 +48,6 @@
 		sw0 = &button0;
 		sw1 = &button1;
 		pwm-led0 = &pwm_led0;
-		ambiq-psram = &aps25616ba;
-		ambiq-external-ram-region = &xip0;
-		crc0 = &crc32;
 	};
 
 	leds {
@@ -424,4 +427,13 @@ zephyr_udc0: &usb {
 		ambiq,timing-config = <5 5 1 0 0 3 8>;
 		zephyr,pm-device-runtime-auto;
 	};
+};
+
+/*
+ * MSPI PSRAM (MSPI0 XIP aperture): CPU and MPU must allow R/W, and this memory is
+ * not inner-SRAM. Use NOCACHE so Cortex-M7 does not use write-back to a backend
+ * that is not snooped like tightly-coupled RAM (matches external PSRAM usage).
+ */
+&xip0 {
+	zephyr,memory-attr = <DT_MEM_ARM(ATTR_MPU_RAM_NOCACHE)>;
 };

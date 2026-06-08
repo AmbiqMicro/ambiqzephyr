@@ -6,6 +6,8 @@
 
 #include <zephyr/init.h>
 #include <zephyr/kernel.h>
+#include <zephyr/cache.h>
+#include <zephyr/device.h>
 #include <am_mcu_apollo.h>
 #if defined(CONFIG_SOC_AMBIQ_RSS_MGR)
 #include <am_rss_mgr.h>
@@ -61,3 +63,18 @@ void board_early_init_hook(void)
 	am_rss_mgr_rss_enable(true);
 #endif /* CONFIG_SOC_AMBIQ_RSS_MGR */
 }
+
+#if defined(CONFIG_BOARD_ENABLE_GPU_ASSET_RELOCATION)
+
+/* Symbols defined in the board-level linker.ld */
+extern char __gfx_assets_start[];
+extern char __gfx_assets_load_start[];
+extern char __gfx_assets_size[];
+
+void board_late_init_hook(void)
+{
+	memcpy(__gfx_assets_start, __gfx_assets_load_start, (size_t)&__gfx_assets_size);
+
+	sys_cache_data_flush_range(__gfx_assets_start, (size_t)&__gfx_assets_size);
+}
+#endif /* CONFIG_BOARD_ENABLE_GPU_ASSET_RELOCATION */

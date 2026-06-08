@@ -2,5 +2,25 @@
 # SPDX-License-Identifier: Apache-2.0
 
 if SHIELD_AP510_DISP
+if MIPI_DSI
+
+config MIPI_DSI_INIT_PRIORITY
+	default 79
+
+endif # MIPI_DSI
+
+if DISPLAY
+
+config DISPLAY_INIT_PRIORITY
+	default 80
+
+endif # DISPLAY
+
+if INPUT
+
+config INPUT_INIT_PRIORITY
+	default 95
+
+endif # INPUT
 
 endif # SHIELD_AP510_DISP

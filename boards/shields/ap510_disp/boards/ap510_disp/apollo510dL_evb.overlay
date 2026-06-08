@@ -9,8 +9,8 @@
 #include <zephyr/dt-bindings/i2c/i2c.h>
 
 /*
- * Shield defaults use IOM2 for touch (apollo510_evb). On apollo510dL_evb, touch is on
- * IOM1 (TOUCH_M1SCL / TOUCH_M1SDA = P8 / P9).
+ * Apollo510dL EVB: touch controller I2C is routed to IOM1 (M1SCL/M1SDA on P8/P9).
+ * ap510_disp.overlay attaches chsc5x to IOM2 by default; move it here and idle IOM2 I2C.
  */
 &iom2 {
 	/delete-property/ cmdq-buffer-location;
@@ -42,6 +42,31 @@
 	};
 };
 
+&i2c2 {
+	/delete-node/ chsc5x@2e;
+	status = "disabled";
+};
+
+&iom1 {
+	cmdq-buffer-location = "SRAM_NO_CACHE";
+	cmdq-buffer-size = <256>;
+
+	i2c1: i2c {
+		pinctrl-0 = <&i2c1_default>;
+		pinctrl-1 = <&i2c1_sleep>;
+		pinctrl-names = "default", "sleep";
+		clock-frequency = <I2C_BITRATE_FAST>;
+		scl-gpios = <&gpio0_31 8 (GPIO_OPEN_DRAIN | GPIO_PULL_UP)>;
+		sda-gpios = <&gpio0_31 9 (GPIO_OPEN_DRAIN | GPIO_PULL_UP)>;
+		status = "okay";
+
+		chsc5x: chsc5x@2e {
+			compatible = "chipsemi,chsc5x";
+			reg = <0x2e>;
+		};
+	};
+};
+
 &chsc5x {
 	int-gpios = <&gpio32_63 25 GPIO_ACTIVE_LOW>;
 	reset-gpios = <&gpio32_63 21 GPIO_ACTIVE_LOW>;
@@ -50,7 +75,6 @@
 &mipi_dsi {
 	vdd18-gpios = <&gpio96_119 17 GPIO_PULL_DOWN>;
 
-	/* Optional: override co5300 properties if needed */
 	co5300: co5300@0 {
 		reset-gpios = <&gpio32_63 9 GPIO_PULL_UP>;
 	};
