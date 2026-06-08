@@ -160,4 +160,30 @@ config LV_Z_BUFFER_ALLOC_DYNAMIC
 
 endchoice
 
+config LV_Z_DRAW_BUF_ZEPHYR_REGION
+	bool "Place lv_draw_buf_create() display buffers in a Zephyr memory-region"
+	depends on LV_Z_BUFFER_ALLOC_DYNAMIC
+	help
+	  Allocate buffers created in lvgl_display.c via lv_draw_buf_create()
+	  from a dedicated sys_heap placed in a zephyr,memory-region (for example
+	  MSPI PSRAM / XIP0 on Ambiq Apollo510dL). Use this when large frame and
+	  draw buffers do not fit the NemaGFX render heap or on-chip SRAM.
+
+config LV_Z_DRAW_BUF_ZEPHYR_REGION_NAME
+	string "Zephyr memory-region name for draw buffers"
+	depends on LV_Z_DRAW_BUF_ZEPHYR_REGION
+	default "XIP0"
+	help
+	  Linker section name for the draw-buffer heap (must match
+	  zephyr,memory-region in devicetree, e.g. XIP0).
+
+config LV_Z_DRAW_BUF_HEAP_SIZE
+	int "Draw-buffer heap size in bytes"
+	depends on LV_Z_DRAW_BUF_ZEPHYR_REGION
+	default 2097152
+	help
+	  Size of the sys_heap backing lv_draw_buf_create() for display and
+	  draw buffers in lvgl_display.c. Size for two full-screen buffers at
+	  468x468 RGB565 is about 880 KiB; use a larger value for ARGB8888.
+
 endmenu

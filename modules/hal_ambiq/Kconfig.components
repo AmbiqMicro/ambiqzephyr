@@ -42,9 +42,23 @@ config NEMAGFX_HEAP_SIZE_RENDER
 	int "NemaGFX render heap size, unit: KB"
 	default 1280
 
+config NEMAGFX_RENDER_HEAP_IN_PSRAM
+	bool "Locate NemaGFX render (framebuffer/CL) heap in PSRAM"
+	depends on MEMC
+	depends on $(dt_chosen_enabled,$(DT_CHOSEN_AMBIQ_PSRAM))
+	help
+	  Places the render heap (NEMA_MEM_POOL_FB / NEMA_MEM_POOL_CL), including
+	  LVGL draw buffers from lv_draw_ambiq_buffer_malloc(), in the external RAM
+	  region (typically MSPI PSRAM / XIP). Mutually exclusive with
+	  NEMAGFX_RENDER_HEAP_IN_NONCACHE_SRAM.
+
 config NEMAGFX_RENDER_HEAP_IN_NONCACHE_SRAM
 	bool "Locate NemaGFX render heap in non-cache SSRAM"
 	default y
+	depends on !NEMAGFX_RENDER_HEAP_IN_PSRAM
+	help
+	  On-chip non-cached SRAM for GPU framebuffers. Disable if using PSRAM for
+	  the render heap instead.
 
 config NEMAGFX_HEAP_SIZE_CPU_ONLY
 	int "NemaGFX CPU only heap size, unit: KB"

@@ -10,6 +10,9 @@
 
 #include "lvgl_display.h"
 #include "lvgl_zephyr.h"
+#ifdef CONFIG_LV_Z_DRAW_BUF_ZEPHYR_REGION
+#include "lvgl_draw_buf.h"
+#endif
 #include "draw/ambiq/lv_draw_ambiq_private.h"
 
 static lv_display_t *lv_displays[DT_ZEPHYR_DISPLAYS_COUNT];
@@ -122,7 +125,14 @@ static int lvgl_allocate_rendering_buffers(lv_display_t *display)
 		return -ENOTSUP;
 	}
 
+#ifdef CONFIG_LV_Z_DRAW_BUF_ZEPHYR_REGION
+	const lv_draw_buf_handlers_t *draw_buf_handlers = lvgl_draw_buf_get_handlers();
+
+	data->display_buffer =
+		lv_draw_buf_create_ex(draw_buf_handlers, hor_res, ver_res, display_format, 0);
+#else
 	data->display_buffer = lv_draw_buf_create(hor_res, ver_res, display_format, 0);
+#endif
 	if (data->display_buffer == NULL) {
 		return -ENOMEM;
 	}
@@ -132,8 +142,18 @@ static int lvgl_allocate_rendering_buffers(lv_display_t *display)
 					      ? MAX((CONFIG_LV_Z_VDB_SIZE * ver_res) / 100, 1)
 					      : ver_res;
 
+#ifdef CONFIG_LV_Z_DRAW_BUF_ZEPHYR_REGION
+	lv_draw_buf_t *draw_buffer =
+		lv_draw_buf_create_ex(draw_buf_handlers, draw_buffer_width, draw_buffer_height,
+				      draw_buffer_format, 0);
+#else
 	lv_draw_buf_t *draw_buffer =
 		lv_draw_buf_create(draw_buffer_width, draw_buffer_height, draw_buffer_format, 0);
+#endif
+	if (draw_buffer == NULL) {
+		lv_draw_buf_destroy(data->display_buffer);
+		return -ENOMEM;
+	}
 
 	/* Set draw buffer */
 	lv_display_set_draw_buffers(display, draw_buffer, NULL);

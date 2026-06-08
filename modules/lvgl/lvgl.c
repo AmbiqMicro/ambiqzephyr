@@ -17,6 +17,9 @@
 #ifdef CONFIG_LV_Z_MEM_POOL_SYS_HEAP
 #include "lvgl_mem.h"
 #endif
+#ifdef CONFIG_LV_Z_DRAW_BUF_ZEPHYR_REGION
+#include "lvgl_draw_buf.h"
+#endif
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(lvgl, CONFIG_LV_Z_LOG_LEVEL);
@@ -134,6 +137,10 @@ int lvgl_init(void)
 
 	lv_init();
 	lv_tick_set_cb(k_uptime_get_32);
+
+#ifdef CONFIG_LV_Z_DRAW_BUF_ZEPHYR_REGION
+	lvgl_draw_buf_init();
+#endif
 
 #if CONFIG_LV_Z_LOG_LEVEL != 0
 	lv_log_register_print_cb(lvgl_log);

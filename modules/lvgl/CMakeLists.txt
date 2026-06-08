@@ -393,6 +393,7 @@ zephyr_library_sources(
 
 zephyr_library_sources_ifdef(CONFIG_LV_Z_USE_FILESYSTEM lvgl_fs.c)
 zephyr_library_sources_ifdef(CONFIG_LV_Z_MEM_POOL_SYS_HEAP lvgl_mem.c)
+zephyr_library_sources_ifdef(CONFIG_LV_Z_DRAW_BUF_ZEPHYR_REGION lvgl_draw_buf.c)
 zephyr_library_sources_ifdef(CONFIG_LV_Z_SHELL      lvgl_shell.c)
 
 zephyr_library_sources(input/lvgl_common_input.c)
