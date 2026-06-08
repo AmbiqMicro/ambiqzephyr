@@ -14,6 +14,7 @@ common:
     - platform:mimxrt700_evk/mimxrt798s/cm33_cpu0:SHIELD=g1120b0mipi
     - platform:apollo510_evb/apollo510:SHIELD=ap510_disp
     - platform:apollo510b_evb/apollo510b:SHIELD=ap510_disp
+    - platform:apollo510dL_evb/apollo510L:SHIELD=ap510_disp
   tags:
     - samples
     - display
