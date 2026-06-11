@@ -18,6 +18,18 @@ config CRYPTO_AMBIQ_AES
 		- GCM
 		- XTS
 
+config CRYPTO_AMBIQ_CHACHA
+	bool "Ambiq CryptoCell ChaCha20 driver"
+	default y
+	depends on DT_HAS_AMBIQ_CRYPTO_CHACHA_ENABLED
+	select AMBIQ_HAL
+	select POWER_DOMAIN
+	help
+		Enable the Ambiq CryptoCell-312 ChaCha20 stream cipher driver.
+
+		Supported cipher modes:
+		- ChaCha20 (stream cipher, encrypt/decrypt)
+
 config CRYPTO_AMBIQ_SHA
 	bool "Ambiq CryptoCell SHA driver"
 	default y

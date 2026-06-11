@@ -27,6 +27,7 @@
 /** Cipher Algorithm */
 enum cipher_algo {
 	CRYPTO_CIPHER_ALGO_AES = 1,
+	CRYPTO_CIPHER_ALGO_CHACHA20 = 2,
 };
 
 /** Cipher Operation */
@@ -49,6 +50,7 @@ enum cipher_mode {
 	CRYPTO_CIPHER_MODE_CFB = 6,
 	CRYPTO_CIPHER_MODE_OFB = 7,
 	CRYPTO_CIPHER_MODE_XTS = 8,
+	CRYPTO_CIPHER_MODE_CHACHA20 = 9,
 };
 
 /* Forward declarations */
@@ -75,6 +77,8 @@ typedef int (*ofb_op_t)(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint8_t 
 
 typedef int (*xts_op_t)(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint8_t *data_unit);
 
+typedef int (*chacha20_op_t)(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint8_t *nonce);
+
 struct cipher_ops {
 
 	enum cipher_mode cipher_mode;
@@ -88,6 +92,7 @@ struct cipher_ops {
 		cfb_op_t cfb_crypt_hndlr;
 		ofb_op_t ofb_crypt_hndlr;
 		xts_op_t xts_crypt_hndlr;
+		chacha20_op_t chacha20_crypt_hndlr;
 	};
 };
 

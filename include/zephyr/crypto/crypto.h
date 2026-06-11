@@ -379,6 +379,25 @@ static inline int cipher_gcm_op(struct cipher_ctx *ctx, struct cipher_aead_pkt *
 }
 
 /**
+ * @brief Perform a ChaCha20 stream cipher operation.
+ *
+ * @param ctx    Pointer to the cipher context from cipher_begin_session().
+ * @param pkt    Pointer to the cipher packet (in_buf, in_len, out_buf).
+ * @param nonce  Pointer to the 96-bit (12-byte) nonce.
+ *
+ * @return 0 on success, negative errno code on fail.
+ */
+static inline int cipher_chacha20_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt,
+				     uint8_t *nonce)
+{
+	__ASSERT(ctx->ops.cipher_mode == CRYPTO_CIPHER_MODE_CHACHA20,
+		 "ChaCha20 mode "
+		 "session invoking a different mode handler");
+	pkt->ctx = ctx;
+	return ctx->ops.chacha20_crypt_hndlr(ctx, pkt, nonce);
+}
+
+/**
  * @}
  */
 

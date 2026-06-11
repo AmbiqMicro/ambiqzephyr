@@ -1,0 +1,15 @@
+# Copyright (c) 2026, Ambiq Micro, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: Ambiq Micro CryptoCell-312 ChaCha20 Stream Cipher Accelerator
+
+compatible: "ambiq,crypto-chacha"
+
+include: base.yaml
+
+properties:
+  reg:
+    required: true
+
+  interrupts:
+    required: true

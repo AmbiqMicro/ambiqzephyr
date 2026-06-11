@@ -1,0 +1,22 @@
+# Copyright (c) 2026 Ambiq Micro, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "Ambiq ChaCha HAL example"
+
+source "Kconfig.zephyr"
+
+menu "Ambiq ChaCha HAL example options"
+
+config CHACHA_HAL_EXAMPLE_TEST_ENCRYPT_KAT
+	bool "Run ChaCha20 RFC 8439 encrypt KAT test"
+
+config CHACHA_HAL_EXAMPLE_TEST_DECRYPT_ROUNDTRIP
+	bool "Run ChaCha20 decrypt round-trip test"
+
+config CHACHA_HAL_EXAMPLE_TEST_SPLIT_STREAMING
+	bool "Run ChaCha20 split/streaming test"
+
+config CHACHA_HAL_EXAMPLE_USE_INPLACE_BUFFERS
+	bool "Use in-place (single) buffers for ChaCha HAL tests"
+
+endmenu

@@ -1,0 +1,13 @@
+/*
+ * Copyright (c) 2026 Ambiq Micro, Inc.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* Disable AES to avoid IRQ 24 conflict with ChaCha on the same CC312 peripheral */
+&cc312_aes {
+	status = "disabled";
+};
+
+&cc312_chacha {
+	status = "okay";
+};

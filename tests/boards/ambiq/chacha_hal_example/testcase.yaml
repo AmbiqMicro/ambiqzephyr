@@ -1,0 +1,17 @@
+# Copyright (c) 2026 Ambiq Micro, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+tests:
+  boards.ambiq.chacha_hal_example:
+    tags:
+      - ambiq
+      - crypto
+      - chacha
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "All driver checks passed"
+    platform_allow:
+      - apollo510_evb
+      - apollo510b_evb
