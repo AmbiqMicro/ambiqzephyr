@@ -1,0 +1,19 @@
+/*
+ * Copyright (c) 2026 Ambiq
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+/ {
+	aliases {
+		i2s-node0 = &i2s0;
+		i2s-node1 = &i2s1;
+	};
+};
+
+&i2s0 {
+	status = "okay";
+};
+
+&i2s1 {
+	status = "okay";
+};
