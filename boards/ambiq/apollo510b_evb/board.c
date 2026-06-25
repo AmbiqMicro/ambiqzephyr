@@ -135,11 +135,6 @@ static int em9305_spi_transceive(void *tx, uint32_t tx_len, void *rx, uint32_t r
 	return spi_transceive_dt(&em9305_spi, &em9305_spi_tx, &em9305_spi_rx);
 }
 
-static int em9305_spi_write(uint8_t *data, uint16_t len)
-{
-	return am_devices_em9305_blocking_write(data, len, em9305_spi_transceive);
-}
-
 static int em9305_enable_sleep(void)
 {
 	uint8_t cmd[5];
@@ -157,7 +152,10 @@ static int em9305_enable_sleep(void)
 
 static int board_em9305_extref_init(void)
 {
-	am_devices_em9305_callback_t cb;
+	am_devices_em9305_callback_t cb = {
+		.reset = am_devices_em9305_controller_reset,
+		.transceive = em9305_spi_transceive,
+	};
 	uint32_t st;
 
 	if (!device_is_ready(em9305_spi.bus)) {
@@ -179,10 +177,6 @@ static int board_em9305_extref_init(void)
 	if (gpio_pin_configure_dt(&em9305_irq_gpio, GPIO_INPUT) != 0) {
 		return -EIO;
 	}
-
-	cb.write = em9305_spi_write;
-	cb.reset = am_devices_em9305_controller_reset;
-	cb.transceive = em9305_spi_transceive;
 
 	st = am_devices_em9305_init(&cb);
 	if (st != AM_DEVICES_EM9305_STATUS_SUCCESS) {
