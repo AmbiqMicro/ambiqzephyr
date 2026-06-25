@@ -66,4 +66,13 @@ endif # FLASH
 config ROM_START_OFFSET
 	default 0x400 if BOOTLOADER_MCUBOOT
 
+if UDC_AMBIQ
+
+# Apollo510 D-cache sits in front of USB DMA. Place UDC buffers in nocache SRAM
+# so bulk/control transfers are coherent (CDC ACM and MSC fail otherwise).
+config NOCACHE_MEMORY
+	default y
+
+endif # UDC_AMBIQ
+
 endif # BOARD_APOLLO510B_EVB
