@@ -21,6 +21,9 @@
 LOG_MODULE_REGISTER(bt_hci_driver);
 
 #include "apollox_blue.h"
+#if (CONFIG_SOC_APOLLO510B)
+#include "am_devices_em9305.h"
+#endif
 
 /* Offset of special item */
 #define PACKET_TYPE         0
@@ -39,30 +42,34 @@ LOG_MODULE_REGISTER(bt_hci_driver);
 #define BT_FEAT_SET_LE(feat)              BT_FEAT_SET_BIT(feat, 4, 6)
 
 /* Max SPI buffer length for transceive operations.
- * The maximum TX packet number is 512 bytes data + 12 bytes header.
- * The maximum RX packet number is 255 bytes data + 3 header.
  */
+#if (CONFIG_SOC_APOLLO510B)
+#define SPI_MAX_TX_MSG_LEN 259
+#define SPI_MAX_RX_MSG_LEN 258
+#else
 #define SPI_MAX_TX_MSG_LEN 524
 #define SPI_MAX_RX_MSG_LEN 258
+#endif
 
-/* The controller may be unavailable to receive packets because it is busy
- * on processing something or have packets to send to host. Need to free the
- * SPI bus and wait some moment to try again.
- */
 #define SPI_BUSY_WAIT_INTERVAL_MS 25
 #define SPI_BUSY_TX_ATTEMPTS      200
 
+#if (CONFIG_SOC_APOLLO510B)
+#define SPI_BUSY_RX_DRAIN_WAIT_MS    10
+#define SPI_BACKPRESSURE_TX_ATTEMPTS 200
+#endif
+
 static uint8_t __noinit rxmsg[SPI_MAX_RX_MSG_LEN];
+static uint8_t __noinit rx_pending[SPI_MAX_RX_MSG_LEN * 2];
+static size_t rx_pending_len;
 
 #if (CONFIG_SOC_APOLLO510B)
 static struct spi_dt_spec spi_bus =
-	SPI_DT_SPEC_INST_GET(0,
-			     SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB | SPI_WORD_SET(8));
+	SPI_DT_SPEC_INST_GET(0, SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB | SPI_WORD_SET(8));
 #else
 static struct spi_dt_spec spi_bus =
-	SPI_DT_SPEC_INST_GET(0,
-			     SPI_OP_MODE_MASTER | SPI_HALF_DUPLEX | SPI_TRANSFER_MSB |
-			     SPI_MODE_CPOL | SPI_MODE_CPHA | SPI_WORD_SET(8));
+	SPI_DT_SPEC_INST_GET(0, SPI_OP_MODE_MASTER | SPI_HALF_DUPLEX | SPI_TRANSFER_MSB |
+					SPI_MODE_CPOL | SPI_MODE_CPHA | SPI_WORD_SET(8));
 #endif
 static K_KERNEL_STACK_DEFINE(spi_rx_stack, CONFIG_BT_DRV_RX_STACK_SIZE);
 static struct k_thread spi_rx_thread_data;
@@ -74,6 +81,9 @@ static const struct spi_buf_set spi_rx = {.buffers = &spi_rx_buf, .count = 1};
 
 static K_SEM_DEFINE(sem_irq, 0, 1);
 static K_SEM_DEFINE(sem_spi_available, 1, 1);
+#if (CONFIG_SOC_APOLLO510B)
+static K_SEM_DEFINE(sem_rx_drained, 0, 1);
+#endif
 
 struct bt_apollo_data {
 	bt_hci_recv_t recv;
@@ -86,6 +96,28 @@ void bt_packet_irq_isr(const struct device *unused1, struct gpio_callback *unuse
 	k_sem_give(&sem_irq);
 }
 
+#if (CONFIG_SOC_APOLLO510B)
+static bool spi_ret_retryable(int ret)
+{
+	return (ret == AM_DEVICES_EM9305_RX_FULL) || (ret == AM_DEVICES_EM9305_TX_BUSY) ||
+	       (ret == AM_DEVICES_EM9305_NOT_READY);
+}
+#endif
+
+#if (CONFIG_SOC_APOLLO510B)
+static inline bool spi_ret_fatal(int ret)
+{
+	return (ret == AM_DEVICES_EM9305_DATA_LENGTH_ERROR) ||
+	       (ret == AM_DEVICES_EM9305_TX_PARTIAL);
+}
+#else
+static inline bool spi_ret_fatal(int ret)
+{
+	ARG_UNUSED(ret);
+	return false;
+}
+#endif
+
 static inline int bt_spi_transceive(void *tx, uint32_t tx_len, void *rx, uint32_t rx_len)
 {
 	spi_tx_buf.buf = tx;
@@ -93,12 +125,6 @@ static inline int bt_spi_transceive(void *tx, uint32_t tx_len, void *rx, uint32_
 	spi_rx_buf.buf = rx;
 	spi_rx_buf.len = (size_t)rx_len;
 
-	/* Before sending packet to controller the host needs to poll the status of
-	 * controller to know it's ready, or before reading packets from controller
-	 * the host needs to get the payload size of coming packets by sending specific
-	 * command and putting the status or size to the rx buffer, the CS should be
-	 * held at this moment to continue to send or receive packets.
-	 */
 	if (tx_len && rx_len) {
 		spi_bus.config.operation |= SPI_HOLD_ON_CS;
 	} else {
@@ -110,19 +136,12 @@ static inline int bt_spi_transceive(void *tx, uint32_t tx_len, void *rx, uint32_
 static int spi_send_packet(uint8_t *data, uint16_t len)
 {
 	int ret = 0;
-
-#if (CONFIG_SOC_APOLLO510B)
-	/* Wait for SPI bus to be available */
-	k_sem_take(&sem_spi_available, K_FOREVER);
-	/* Send the SPI packet to controller */
-	ret = bt_apollo_spi_send(data, len, bt_spi_transceive);
-
-	/* Free the SPI bus */
-	k_sem_give(&sem_spi_available);
-#else
 	uint16_t fail_count = 0;
+#if (CONFIG_SOC_APOLLO510B)
+	uint16_t backpressure_count = 0;
+#endif
 
-	do {
+	while (true) {
 		/* Wait for SPI bus to be available */
 		k_sem_take(&sem_spi_available, K_FOREVER);
 
@@ -133,15 +152,45 @@ static int spi_send_packet(uint8_t *data, uint16_t len)
 		k_sem_give(&sem_spi_available);
 
 		if (ret) {
+			if (spi_ret_fatal(ret)) {
+				LOG_ERR("SPI TX fatal error %d (len=%u), aborting", ret, len);
+#if (CONFIG_SOC_APOLLO510B)
+				if (ret == AM_DEVICES_EM9305_TX_PARTIAL) {
+					bt_apollo_schedule_radio_recovery();
+				}
+#endif
+				break;
+			}
+#if (CONFIG_SOC_APOLLO510B)
+			if (spi_ret_retryable(ret)) {
+				if (backpressure_count++ >= SPI_BACKPRESSURE_TX_ATTEMPTS) {
+					break;
+				}
+				k_sem_reset(&sem_rx_drained);
+				k_sem_give(&sem_irq);
+				k_sem_take(&sem_rx_drained, K_MSEC(SPI_BUSY_RX_DRAIN_WAIT_MS));
+				continue;
+			}
+#endif
+			if (fail_count++ >= SPI_BUSY_TX_ATTEMPTS) {
+				break;
+			}
+
 			/* Give some chance to controller to complete the processing or
 			 * packets sending.
 			 */
 			k_sleep(K_MSEC(SPI_BUSY_WAIT_INTERVAL_MS));
 		} else {
+			/* TX succeeded — restart heartbeat countdown so the
+			 * ping is only sent after a full interval of silence.
+			 */
+#if (CONFIG_SOC_APOLLO510B)
+			bt_apollo_heartbeat_restart();
+#endif
 			break;
 		}
-	} while (fail_count++ < SPI_BUSY_TX_ATTEMPTS);
-#endif
+	}
+
 	return ret;
 }
 
@@ -166,11 +215,27 @@ static int hci_event_filter(const uint8_t *evt_data)
 	uint8_t evt_type = evt_data[EVT_HEADER_TYPE];
 
 	switch (evt_type) {
+#if (CONFIG_SOC_APOLLO510B)
+	case BT_HCI_EVT_HARDWARE_ERROR: {
+		uint8_t hw_code = evt_data[sizeof(struct bt_hci_evt_hdr)];
+
+		LOG_ERR("EM9305 hardware error 0x%02x; scheduling radio recovery", hw_code);
+		bt_apollo_schedule_radio_recovery();
+		return EVT_NOP;
+	}
+#endif /* CONFIG_SOC_APOLLO510B */
 	case BT_HCI_EVT_LE_META_EVENT: {
 		uint8_t subevt_type = evt_data[sizeof(struct bt_hci_evt_hdr)];
 
 		switch (subevt_type) {
-		case BT_HCI_EVT_LE_ADVERTISING_REPORT:
+		/* Bluetooth 4.2+ */
+		case BT_HCI_EVT_LE_DIRECT_ADV_REPORT:
+		case BT_HCI_EVT_LE_SCAN_REQ_RECEIVED:
+		/* Bluetooth 5.0+ */
+		case BT_HCI_EVT_LE_EXT_ADVERTISING_REPORT:
+		case BT_HCI_EVT_LE_PER_ADVERTISING_REPORT:
+		/* Bluetooth 5.4+ */
+		case BT_HCI_EVT_LE_PER_ADVERTISING_REPORT_V2:
 			return EVT_DISCARD;
 		default:
 			return EVT_OK;
@@ -179,16 +244,12 @@ static int hci_event_filter(const uint8_t *evt_data)
 	case BT_HCI_EVT_CMD_COMPLETE: {
 		uint16_t opcode = (uint16_t)(evt_data[EVT_CMD_COMP_OP_LSB] +
 					     (evt_data[EVT_CMD_COMP_OP_MSB] << 8));
+		bt_apollo_vsc_cc_observe(opcode, evt_data[EVT_CMD_COMP_DATA]);
 
 		switch (opcode) {
 		case BT_OP_NOP:
 			return EVT_NOP;
 		case BT_HCI_OP_READ_LOCAL_FEATURES: {
-			/* The BLE controller of some Ambiq Apollox Blue SOC may have issue to
-			 * report the expected supported features bitmask successfully, thought the
-			 * features are actually supportive. Need to correct them before going to
-			 * the host stack.
-			 */
 			struct bt_hci_rp_read_local_features *rp =
 				(void *)&evt_data[EVT_CMD_COMP_DATA];
 			if (rp->status == 0) {
@@ -221,10 +282,6 @@ static struct net_buf *bt_hci_evt_recv(uint8_t *data, size_t len)
 
 	evt_filter = hci_event_filter(data);
 	if (evt_filter == EVT_NOP) {
-		/* The controller sends NOP event when wakes up based on
-		 * hardware specific requirement, do not post this event to
-		 * host stack.
-		 */
 		return NULL;
 	} else if (evt_filter == EVT_DISCARD) {
 		discardable = true;
@@ -343,26 +400,146 @@ static struct net_buf *bt_hci_iso_recv(uint8_t *data, size_t len)
 	return buf;
 }
 
+static int bt_hci_get_frame_len(const uint8_t *data, size_t len, size_t *frame_len)
+{
+	if (len < PACKET_TYPE_SIZE) {
+		return -EAGAIN;
+	}
+
+	switch (data[PACKET_TYPE]) {
+	case BT_HCI_H4_EVT: {
+		struct bt_hci_evt_hdr hdr;
+
+		if (len < PACKET_TYPE_SIZE + sizeof(hdr)) {
+			return -EAGAIN;
+		}
+
+		memcpy(&hdr, &data[PACKET_TYPE_SIZE], sizeof(hdr));
+		*frame_len = PACKET_TYPE_SIZE + sizeof(hdr) + hdr.len;
+		break;
+	}
+	case BT_HCI_H4_ACL: {
+		struct bt_hci_acl_hdr hdr;
+
+		if (len < PACKET_TYPE_SIZE + sizeof(hdr)) {
+			return -EAGAIN;
+		}
+
+		memcpy(&hdr, &data[PACKET_TYPE_SIZE], sizeof(hdr));
+		*frame_len = PACKET_TYPE_SIZE + sizeof(hdr) + sys_le16_to_cpu(hdr.len);
+		break;
+	}
+	case BT_HCI_H4_ISO: {
+		struct bt_hci_iso_hdr hdr;
+
+		if (len < PACKET_TYPE_SIZE + sizeof(hdr)) {
+			return -EAGAIN;
+		}
+
+		memcpy(&hdr, &data[PACKET_TYPE_SIZE], sizeof(hdr));
+		*frame_len =
+			PACKET_TYPE_SIZE + sizeof(hdr) + bt_iso_hdr_len(sys_le16_to_cpu(hdr.len));
+		break;
+	}
+	default:
+		LOG_WRN("Unknown BT buf type %d", data[PACKET_TYPE]);
+		return -EINVAL;
+	}
+
+	if (*frame_len > len) {
+		return -EAGAIN;
+	}
+
+	return 0;
+}
+
+static void bt_hci_recv_frames(const struct device *dev, uint8_t *data, size_t len)
+{
+	struct bt_apollo_data *hci = dev->data;
+	size_t offset = 0;
+
+	if ((rx_pending_len + len) > sizeof(rx_pending)) {
+		LOG_ERR("H4 RX reassembly buffer overflow %zu/%zu", rx_pending_len + len,
+			sizeof(rx_pending));
+		rx_pending_len = 0;
+	}
+
+	memcpy(&rx_pending[rx_pending_len], data, len);
+	rx_pending_len += len;
+
+	while (offset < rx_pending_len) {
+		struct net_buf *buf = NULL;
+		size_t frame_len;
+		int err;
+
+		err = bt_hci_get_frame_len(&rx_pending[offset], rx_pending_len - offset,
+					   &frame_len);
+		if (err == -EAGAIN) {
+			break;
+		} else if (err) {
+			offset++;
+			continue;
+		}
+
+		switch (rx_pending[offset + PACKET_TYPE]) {
+		case BT_HCI_H4_EVT:
+			buf = bt_hci_evt_recv(&rx_pending[offset + PACKET_TYPE_SIZE],
+					      frame_len - PACKET_TYPE_SIZE);
+			break;
+		case BT_HCI_H4_ACL:
+			buf = bt_hci_acl_recv(&rx_pending[offset + PACKET_TYPE_SIZE],
+					      frame_len - PACKET_TYPE_SIZE);
+			break;
+		case BT_HCI_H4_ISO:
+			buf = bt_hci_iso_recv(&rx_pending[offset + PACKET_TYPE_SIZE],
+					      frame_len - PACKET_TYPE_SIZE);
+			break;
+		default:
+			/* Already checked by bt_hci_get_frame_len(). */
+			break;
+		}
+
+		if (buf) {
+			hci->recv(dev, buf);
+		}
+
+		offset += frame_len;
+	}
+
+	if (offset != 0) {
+		rx_pending_len -= offset;
+		if (rx_pending_len != 0) {
+			memmove(rx_pending, &rx_pending[offset], rx_pending_len);
+		}
+	}
+}
+
 static void bt_spi_rx_thread(void *p1, void *p2, void *p3)
 {
 	const struct device *dev = p1;
-	struct bt_apollo_data *hci = dev->data;
 
 	ARG_UNUSED(p2);
 	ARG_UNUSED(p3);
 
-	struct net_buf *buf;
 	int ret;
 	uint16_t len = 0;
 
 	while (true) {
 		/* Wait for controller interrupt */
 		k_sem_take(&sem_irq, K_FOREVER);
-
 		do {
 			/* Receive the HCI packet via SPI */
 			ret = spi_receive_packet(&rxmsg[0], &len);
 			if (ret) {
+#if (CONFIG_SOC_APOLLO510B)
+				if (ret != AM_DEVICES_EM9305_NO_DATA_TX) {
+					k_sleep(K_MSEC(SPI_BUSY_RX_DRAIN_WAIT_MS));
+					k_sem_give(&sem_irq);
+				}
+#endif
+				break;
+			}
+			if (len == 0) {
 				break;
 			}
 
@@ -370,33 +547,26 @@ static void bt_spi_rx_thread(void *p1, void *p2, void *p3)
 			 * incompatible with the standard Bluetooth HCI format.
 			 */
 			if (bt_apollo_vnd_rcv_ongoing(&rxmsg[0], len)) {
+#if (CONFIG_SOC_APOLLO510B)
+				k_sem_give(&sem_rx_drained);
+#endif
 				break;
 			}
 
-			switch (rxmsg[PACKET_TYPE]) {
-			case BT_HCI_H4_EVT:
-				buf = bt_hci_evt_recv(&rxmsg[PACKET_TYPE + PACKET_TYPE_SIZE],
-						      (len - PACKET_TYPE_SIZE));
-				break;
-			case BT_HCI_H4_ACL:
-				buf = bt_hci_acl_recv(&rxmsg[PACKET_TYPE + PACKET_TYPE_SIZE],
-						      (len - PACKET_TYPE_SIZE));
-				break;
-			case BT_HCI_H4_ISO:
-				buf = bt_hci_iso_recv(&rxmsg[PACKET_TYPE + PACKET_TYPE_SIZE],
-						      (len - PACKET_TYPE_SIZE));
-				break;
-			default:
-				buf = NULL;
-				LOG_WRN("Unknown BT buf type %d", rxmsg[PACKET_TYPE]);
-				break;
-			}
+			bt_hci_recv_frames(dev, &rxmsg[0], len);
 
-			/* Post the RX message to host stack to process */
-			if (buf) {
-				hci->recv(dev, buf);
-			}
+#if (CONFIG_SOC_APOLLO510B)
+			k_sem_give(&sem_rx_drained);
+			/* RX succeeded — restart heartbeat countdown. */
+			bt_apollo_heartbeat_restart();
+#endif
 		} while (0);
+
+#if (CONFIG_SOC_APOLLO510B)
+		if (!ret && len > 0 && bt_apollo_irq_pending()) {
+			k_sem_give(&sem_irq);
+		}
+#endif
 	}
 }
 
@@ -406,6 +576,7 @@ static int bt_apollo_send(const struct device *dev, struct net_buf *buf)
 
 	if (buf->len > SPI_MAX_TX_MSG_LEN) {
 		LOG_ERR("Message too long");
+		net_buf_unref(buf);
 		return -EINVAL;
 	}
 
@@ -433,6 +604,7 @@ static int bt_apollo_send(const struct device *dev, struct net_buf *buf)
 	ret = spi_send_packet(buf->data, buf->len);
 	if (ret != 0) {
 		LOG_ERR("SPI send failed: %d", ret);
+		net_buf_unref(buf);
 		return ret;
 	}
 
@@ -446,15 +618,26 @@ static int bt_apollo_open(const struct device *dev, bt_hci_recv_t recv)
 	struct bt_apollo_data *hci = dev->data;
 	int ret;
 
+	/* Discard any H4 reassembly state left from a previous open/close
+	 * cycle.
+	 */
+	rx_pending_len = 0;
+
+#if (CONFIG_SOC_APOLLO510B)
+	k_sem_reset(&sem_spi_available);
+	k_sem_give(&sem_spi_available); /* restore count to 1 (bus free) */
+	k_sem_reset(&sem_irq);          /* no pending IRQ from previous session */
+	k_sem_reset(&sem_rx_drained);   /* no stale drain signal */
+#endif
+
 	ret = bt_hci_transport_setup(spi_bus.bus);
 	if (ret) {
 		return ret;
 	}
 
+	hci->recv = recv;
+
 #if (CONFIG_SOC_APOLLO510B)
-	/* Initialize the controller before the RX thread so EM9305 init-time
-	 * vendor commands do not race spi_receive_packet() on the same IRQ line.
-	 */
 	ret = bt_apollo_controller_init(spi_send_packet, bt_spi_transceive);
 #else
 	/* Apollo3/Apollo4 controller init needs the RX thread to process
@@ -481,7 +664,6 @@ static int bt_apollo_open(const struct device *dev, bt_hci_recv_t recv)
 			K_PRIO_COOP(CONFIG_BT_DRIVER_RX_HIGH_PRIO), 0, K_NO_WAIT);
 #endif
 
-	hci->recv = recv;
 	LOG_INF("BT controller initialized successfully");
 
 	return 0;
@@ -507,9 +689,18 @@ static int bt_apollo_close(const struct device *dev)
 
 static int bt_apollo_setup(const struct device *dev, const struct bt_hci_setup_params *params)
 {
-	ARG_UNUSED(params);
-
 	int ret;
+
+#if (CONFIG_SOC_APOLLO510B)
+	if ((params != NULL) && !bt_addr_eq(&params->public_addr, BT_ADDR_ANY)) {
+		ret = bt_apollo_set_public_addr(params->public_addr.val);
+		if (ret) {
+			return ret;
+		}
+	}
+#else
+	ARG_UNUSED(params);
+#endif /* CONFIG_SOC_APOLLO510B */
 
 	ret = bt_apollo_vnd_setup();
 

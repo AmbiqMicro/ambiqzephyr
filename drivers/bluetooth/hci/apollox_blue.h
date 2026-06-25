@@ -98,6 +98,52 @@ int bt_apollo_controller_deinit(void);
 int bt_apollo_vnd_setup(void);
 
 /**
+ * @brief Set the controller public BD address via a vendor-specific HCI
+ * command.
+ *
+ * The address bytes follow HCI / Zephyr ``bt_addr_t`` convention: little
+ * endian, byte[0] is the least-significant octet.
+ *
+ * Currently implemented for the EM9305-over-SPI path (SOC_APOLLO510B,
+ * VSC opcode 0xFC43); other Apollo SoCs return -ENOTSUP.
+ *
+ * @param addr Pointer to a 6-byte BD address (LE order).
+ *
+ * @return 0 on success or negative error number on failure.
+ */
+int bt_apollo_set_public_addr(const uint8_t addr[6]);
+
+/**
+ * @brief Set the advertising TX power level via a vendor-specific HCI command.
+ *
+ * Applies to all advertising sets on the controller. Implemented for the
+ * EM9305-over-SPI path (SOC_APOLLO510B, VSC opcode 0xFFF5); other Apollo SoCs
+ * return -ENOTSUP.
+ *
+ * @param txpower_dbm Requested TX power in dBm. Valid range is greater than
+ *                    -20 up to +6 inclusive; out-of-range values return
+ *                    -EINVAL.
+ *
+ * @return 0 on success or negative error number on failure.
+ */
+int bt_apollo_set_adv_tx_power(int8_t txpower_dbm);
+
+/**
+ * @brief Set a connection's TX power level via a vendor-specific HCI command.
+ *
+ * Implemented for the EM9305-over-SPI path (SOC_APOLLO510B, VSC opcode
+ * 0xFFF6); other Apollo SoCs return -ENOTSUP.
+ *
+ * @param conn_handle Controller connection handle.
+ * @param txpower_dbm Requested TX power in dBm. Valid range is greater than
+ *                    -20 up to +6 inclusive; out-of-range values return
+ *                    -EINVAL.
+ *
+ * @return 0 on success or negative error number on failure.
+ */
+int bt_apollo_set_conn_tx_power(uint16_t conn_handle, int8_t txpower_dbm);
+
+/**
  * @brief Check if vendor specific receiving handling is ongoing.
  *
  * @param data Pointer of received packet.
@@ -105,6 +151,62 @@ int bt_apollo_vnd_setup(void);
  * @return true indicates if vendor specific receiving handling is ongoing.
  */
 bool bt_apollo_vnd_rcv_ongoing(uint8_t *data, uint16_t len);
+
+/**
+ * @brief Report a received HCI ``Command Complete`` event to the driver.
+ *
+ * Called by the HCI driver from the RX path when a ``BT_HCI_EVT_CMD_COMPLETE``
+ * is parsed. In ``CONFIG_BT_HCI_RAW`` builds on EM9305 (SOC_APOLLO510B) this
+ * unblocks the driver's internal command pacing for vendor-specific commands
+ * sent from ``.setup`` (e.g. set-public-addr / LL-features / TX-power), which
+ * otherwise have no host-stack wait facility available.
+ *
+ * In all other configurations this function is a no-op.
+ *
+ * @param opcode HCI opcode contained in the Command Complete event (host
+ *               byte order).
+ * @param status Status byte from the Command Complete payload (0 = success).
+ */
+void bt_apollo_vsc_cc_observe(uint16_t opcode, uint8_t status);
+
+/**
+ * @brief Schedule a radio-level recovery without a full MCU reboot.
+ *
+ * Submits a system-workqueue item that calls bt_disable() + bt_enable(),
+ * cleanly tearing down the BT host stack and re-initializing the EM9305
+ * controller.  Safe to call from any context including ISR.
+ *
+ * Matches AmbiqSuite's ERROR_RECOVER pattern:
+ * HciDrvRadioShutdown() + HciDrvRadioBoot() + DmDevReset().
+ *
+ * No-op on SoCs other than Apollo510B.
+ */
+void bt_apollo_schedule_radio_recovery(void);
+
+/**
+ * @brief Restart the EM9305 heartbeat countdown.
+ *
+ * Call this on every successful SPI TX or RX to defer the next heartbeat
+ * ping by a full interval from the most recent activity.  The ping is only
+ * sent after EM9305_HEARTBEAT_INTERVAL_MS of complete HCI silence, matching
+ * AmbiqSuite's BLE_HEARTBEAT_RESTART() pattern.
+ *
+ * No-op on SoCs other than Apollo510B.
+ */
+void bt_apollo_heartbeat_restart(void);
+
+/**
+ * @brief Check if the EM9305 IRQ (RDY) pin is still asserted after a
+ * receive burst, indicating that more data is pending.
+ *
+ * Used by the RX thread to re-arm the IRQ semaphore when
+ * bt_apollo_spi_rcv() returned early due to the per-burst packet limit
+ * (GAP5 / AmbiqSuite HCI_DRV_MAX_READ_PACKET), so the thread does not
+ * miss residual data without waiting for a new hardware edge.
+ *
+ * @return true if the IRQ pin is high (data pending), false otherwise.
+ */
+bool bt_apollo_irq_pending(void);
 
 /**
  * @brief Do the specific preprocessing in HCI packet receiving ISR if needed,

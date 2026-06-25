@@ -278,9 +278,30 @@ config BT_AMBIQ_HCI
 	select BT_HCI_SETUP
 	select AMBIQ_COMPONENT_USE_BT
 	select AMBIQ_HAL_USE_TIMER if SOC_APOLLO510B
+	select CRC if SOC_APOLLO510B
 	help
 	  Supports Ambiq Bluetooth SoC using SPI as the communication protocol.
 	  HCI packets are sent and received as single Byte transfers.
+
+config BT_AMBIQ_EM9305_HF_CRYSTAL_CUSTOM_TRIM
+	bool "Program a custom EM9305 HF crystal trim"
+	depends on BT_AMBIQ_HCI && SOC_APOLLO510B
+	help
+	  Program a board-specific high-frequency crystal trim value into the
+	  EM9305 NVM info page 2 during controller initialization.  Enable this
+	  when the board's HF crystal requires a non-default trim for correct
+	  carrier frequency / RF performance.  When disabled the EM9305 uses its
+	  factory trim from NVM info page 3.
+
+config BT_AMBIQ_EM9305_HF_CRYSTAL_TRIM_VALUE
+	int "EM9305 HF crystal trim value"
+	depends on BT_AMBIQ_EM9305_HF_CRYSTAL_CUSTOM_TRIM
+	range 0 63
+	default 37
+	help
+	  6-bit HF crystal trim value (bits 12:7 of REG_RF_XO_SEQ_DIG) written to
+	  the EM9305 NVM info page 2.  The default is configured to (37 / 0x25);
+	  it is tuned per board characterization.
 
 config BT_AMBIQ_HCI_IPC
 	bool
