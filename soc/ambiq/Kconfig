@@ -36,6 +36,14 @@ config SOC_AMBIQ_DMA_BUFF_ALIGNMENT
 	help
 	  This option specifies the DMA buffers' alignment.
 
+config SOC_AMBIQ_CACHE_BUFF_LOCATION
+	hex "Byte offset to SRAM_BASE_ADDRESS"
+	default 0x10000
+	help
+	  This option specifies the start address of buffers that stay cacheable
+	  while being used as DMA source or destination. Must not overlap the
+	  region selected by SOC_AMBIQ_DMA_BUFF_LOCATION.
+
 config SOC_AMBIQ_DCACHE_SIZE
 	int
 	help
