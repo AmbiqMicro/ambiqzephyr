@@ -11,7 +11,7 @@
  * - board_early_init_hook() runs next (see kernel/init.c): programs CLKMGR board
  *   info (including EXTREF frequency), HFRC/HFRC2 defaults, SIP GPIO 136, and
  *   optional USB PHY tuning.
- * - When CONFIG_BOARD_APOLLO510B_EVB_EM9305_EXTREF_INIT is enabled, POST_KERNEL
+ * - When CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT is enabled, POST_KERNEL
  *   SYS_INIT wakes the SIP EM9305 over SPI and sends HCI VSC 0xFD09 (sleep on)
  *   so CLKMGR can use the ~12 MHz EXTREF without CONFIG_BT.
  */
@@ -25,7 +25,7 @@
 #include <zephyr/sys/byteorder.h>
 #include <am_mcu_apollo.h>
 
-#if IS_ENABLED(CONFIG_BOARD_APOLLO510B_EVB_EM9305_EXTREF_INIT)
+#if IS_ENABLED(CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT)
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/spi.h>
 #include <zephyr/logging/log.h>
@@ -35,6 +35,7 @@ LOG_MODULE_REGISTER(apollo510b_evb, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define EM9305_HCI_CMD_PKT       0x01U
 #define EM9305_HCI_VSC_SET_SLEEP 0xFD09U
+#define EM9305_ACTIVE_TIMEOUT_MS 2000U
 #endif
 
 #if defined(CONFIG_AMBIQ_HAL_USE_USB)
@@ -71,16 +72,17 @@ LOG_MODULE_REGISTER(apollo510b_evb, CONFIG_LOG_DEFAULT_LEVEL);
 #define EXTREFCLK_FREQ 0
 #endif
 
-#if IS_ENABLED(CONFIG_BOARD_APOLLO510B_EVB_EM9305_EXTREF_INIT)
+#if IS_ENABLED(CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT)
 
-#define BT_HCI_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(ambiq_bt_hci_spi)
+#define AP5_EM9305_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(ambiq_bt_hci_spi)
 
-static const struct gpio_dt_spec em9305_irq_gpio = GPIO_DT_SPEC_GET(BT_HCI_NODE, irq_gpios);
-static const struct gpio_dt_spec em9305_rst_gpio = GPIO_DT_SPEC_GET(BT_HCI_NODE, reset_gpios);
-static const struct gpio_dt_spec em9305_cm_gpio = GPIO_DT_SPEC_GET(BT_HCI_NODE, cm_gpios);
-static const struct gpio_dt_spec em9305_cs_gpio = GPIO_DT_SPEC_GET(DT_BUS(BT_HCI_NODE), cs_gpios);
+static const struct gpio_dt_spec em9305_irq_gpio = GPIO_DT_SPEC_GET(AP5_EM9305_NODE, irq_gpios);
+static const struct gpio_dt_spec em9305_rst_gpio = GPIO_DT_SPEC_GET(AP5_EM9305_NODE, reset_gpios);
+static const struct gpio_dt_spec em9305_cm_gpio = GPIO_DT_SPEC_GET(AP5_EM9305_NODE, cm_gpios);
+static const struct gpio_dt_spec em9305_cs_gpio =
+	GPIO_DT_SPEC_GET(DT_BUS(AP5_EM9305_NODE), cs_gpios);
 
-static struct spi_dt_spec em9305_spi = SPI_DT_SPEC_GET(BT_HCI_NODE,
+static struct spi_dt_spec em9305_spi = SPI_DT_SPEC_GET(AP5_EM9305_NODE,
 						       SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB |
 							       SPI_WORD_SET(8));
 
@@ -114,11 +116,6 @@ static void em9305_cs_release(void)
 	(void)gpio_pin_set_dt(&em9305_cs_gpio, 0);
 }
 
-static void em9305_set_cm(bool state)
-{
-	(void)gpio_pin_set_dt(&em9305_cm_gpio, state ? 1 : 0);
-}
-
 static int em9305_spi_transceive(void *tx, uint32_t tx_len, void *rx, uint32_t rx_len)
 {
 	em9305_spi_tx_buf.buf = tx;
@@ -133,6 +130,97 @@ static int em9305_spi_transceive(void *tx, uint32_t tx_len, void *rx, uint32_t r
 	}
 
 	return spi_transceive_dt(&em9305_spi, &em9305_spi_tx, &em9305_spi_rx);
+}
+
+/*
+ * Receive one or more EM9305 SPI packets. Mirrors the APOLLO5X receive
+ * handshake used by the BT HCI driver (bt_apollo_spi_rcv): assert CS, send the
+ * RX header, read the ready/length status, then clock in the payload. Kept
+ * local to the board so the standalone EXTREF bring-up does not depend on the
+ * BT HCI IRQ-driven receive path.
+ */
+static int em9305_spi_rcv(uint8_t *data, uint16_t size_max, uint16_t *len)
+{
+	uint8_t cmd[2] = {EM9305_SPI_HEADER_RX, 0x00};
+	uint8_t sts[2];
+	uint8_t rx_bytes;
+	int ret;
+
+	*len = 0;
+
+	if (am_devices_em9305_get_spi_tx_status()) {
+		return -EBUSY;
+	}
+	if (!em9305_irq_pin_state()) {
+		return -ENODATA;
+	}
+
+	do {
+		for (uint32_t i = 0; i < EM9305_STS_CHK_CNT_MAX; i++) {
+			em9305_cs_set();
+			ret = em9305_spi_transceive(cmd, 2, sts, 2);
+			if (ret) {
+				em9305_cs_release();
+				return -EIO;
+			}
+			if ((sts[0] == EM9305_STS1_READY_VALUE) && (sts[1] != 0x00)) {
+				break;
+			}
+			em9305_cs_release();
+		}
+
+		if ((sts[0] != EM9305_STS1_READY_VALUE) || (sts[1] == 0x00)) {
+			em9305_cs_release();
+			return (*len != 0) ? 0 : -EAGAIN;
+		}
+
+		rx_bytes = sts[1];
+		if (em9305_irq_pin_state() && (rx_bytes != 0)) {
+			if ((*len + rx_bytes) > size_max) {
+				em9305_cs_release();
+				return -EMSGSIZE;
+			}
+			ret = em9305_spi_transceive(NULL, 0, data + *len, rx_bytes);
+			if (ret) {
+				em9305_cs_release();
+				return -EIO;
+			}
+			*len += rx_bytes;
+		}
+		em9305_cs_release();
+	} while (em9305_irq_pin_state());
+
+	return 0;
+}
+
+/*
+ * Reset the EM9305 and block until it posts the vendor "active state entered"
+ * event ({0x04,0xFF,0x01,0x01}) or the timeout elapses. Replaces the public
+ * HAL's am_devices_em9305_init(), whose completion depends on the BT HCI
+ * IRQ-driven receive path that is not present in this standalone bring-up.
+ */
+static int em9305_wait_active(void)
+{
+	uint8_t buf[EM9305_BUFFER_SIZE];
+	uint16_t plen;
+	uint32_t t0;
+
+	am_devices_em9305_controller_reset();
+
+	t0 = k_uptime_get_32();
+	while ((k_uptime_get_32() - t0) < EM9305_ACTIVE_TIMEOUT_MS) {
+		if (em9305_irq_pin_state()) {
+			plen = 0;
+			if ((em9305_spi_rcv(buf, sizeof(buf), &plen) == 0) && (plen > 0)) {
+				if (am_devices_em9305_check_active_state_event(buf, plen)) {
+					return 0;
+				}
+			}
+		}
+		k_msleep(1);
+	}
+
+	return -ETIMEDOUT;
 }
 
 static int em9305_enable_sleep(void)
@@ -152,12 +240,6 @@ static int em9305_enable_sleep(void)
 
 static int board_em9305_extref_init(void)
 {
-	am_devices_em9305_callback_t cb = {
-		.reset = am_devices_em9305_controller_reset,
-		.transceive = em9305_spi_transceive,
-	};
-	uint32_t st;
-
 	if (!device_is_ready(em9305_spi.bus)) {
 		LOG_ERR("EM9305 EXTREF init: SPI bus not ready");
 		return -ENODEV;
@@ -166,7 +248,6 @@ static int board_em9305_extref_init(void)
 	am_devices_em9305_register_gpio_ops(em9305_set_reset, em9305_get_reset,
 					    em9305_irq_pin_state, em9305_cs_set,
 					    em9305_cs_release);
-	am_devices_em9305_register_cm_gpio(em9305_set_cm);
 
 	if (gpio_pin_configure_dt(&em9305_rst_gpio, GPIO_OUTPUT_ACTIVE) != 0) {
 		return -EIO;
@@ -178,9 +259,8 @@ static int board_em9305_extref_init(void)
 		return -EIO;
 	}
 
-	st = am_devices_em9305_init(&cb);
-	if (st != AM_DEVICES_EM9305_STATUS_SUCCESS) {
-		LOG_ERR("EM9305 init failed (%u)", st);
+	if (em9305_wait_active() != 0) {
+		LOG_ERR("EM9305 init failed: no active-state event");
 		return -EIO;
 	}
 
@@ -193,23 +273,26 @@ static int board_em9305_extref_init(void)
 	return 0;
 }
 
-#endif /* CONFIG_BOARD_APOLLO510B_EVB_EM9305_EXTREF_INIT */
+#endif /* CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT */
 
 void board_early_init_hook(void)
 {
-	/* Set board related info into clock manager */
 	am_hal_clkmgr_board_info_t sClkmgrBoardInfo = {
 		.sXtalHs = {.eXtalHsMode = XTAL_HS_MODE, .ui32XtalHsFreq = XTAL_HS_FREQ},
 		.sXtalLs = {.eXtalLsMode = XTAL_LS_MODE, .ui32XtalLsFreq = XTAL_LS_FREQ},
 		.ui32ExtRefClkFreq = EXTREFCLK_FREQ,
+#if IS_ENABLED(CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT)
 		.bIsSipEnabled = true,
+#endif
 	};
 
 	am_hal_clkmgr_board_info_set(&sClkmgrBoardInfo);
 
+#if IS_ENABLED(CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT)
 	/* SIP EXTREF path: enable EM9305 clock output via GPIO 136 */
 	am_hal_gpio_pinconfig(136, am_hal_gpio_pincfg_output);
 	am_hal_gpio_output_set(136);
+#endif
 
 	/* Default HFRC and HFRC2 to Free Running clocks */
 	am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_HFRC,
@@ -231,8 +314,9 @@ void board_early_init_hook(void)
 #endif /* CONFIG_AMBIQ_HAL_USE_USB */
 }
 
-#if IS_ENABLED(CONFIG_BOARD_APOLLO510B_EVB_EM9305_EXTREF_INIT)
-SYS_INIT(board_em9305_extref_init, POST_KERNEL, CONFIG_EXTREF_INIT_PRIORITY);
+#if IS_ENABLED(CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT)
+SYS_INIT(board_em9305_extref_init, POST_KERNEL,
+	 CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT_PRIORITY);
 #endif
 
 #if defined(CONFIG_BOARD_ENABLE_GPU_ASSET_RELOCATION)

@@ -21,9 +21,28 @@ config SOC_SERIES_APOLLO5X
 	select REQUIRES_FULL_LIBC
 	select SOC_AMBIQ_HAS_PUF
 	select SOC_AMBIQ_HAS_CLKMGR
+	select MEM_ATTR if CACHE_MANAGEMENT
 
 config SOC_APOLLO510B
 	select SOC_AMBIQ_BT_SUPPORTED
+
+config SOC_APOLLO510B_EM9305_EXTREF_INIT
+	bool "Wake SIP EM9305 for EXTREF clock"
+	depends on SOC_APOLLO510B
+	depends on DT_HAS_AMBIQ_BT_HCI_SPI_ENABLED
+	select GPIO
+	select SPI
+	select AMBIQ_COMPONENT_USE_BT
+	select AMBIQ_HAL_USE_TIMER
+	help
+	  Wake the SIP EM9305 over SPI and enable sleep so CLKMGR can use EXTREF
+	  (~12 MHz). Uses ambiq,bt-hci-spi in devicetree; CONFIG_BT is not
+	  required.
+
+config SOC_APOLLO510B_EM9305_EXTREF_INIT_PRIORITY
+	int "Apollo510B EM9305 EXTREF clock init priority"
+	default 51
+	depends on SOC_APOLLO510B_EM9305_EXTREF_INIT
 
 if SOC_SERIES_APOLLO5X
 
