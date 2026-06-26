@@ -11,7 +11,7 @@
  * - board_early_init_hook() runs next (see kernel/init.c): programs CLKMGR board
  *   info (including EXTREF frequency), HFRC/HFRC2 defaults, SIP GPIO 136, and
  *   optional USB PHY tuning.
- * - When CONFIG_BOARD_APOLLO510B_EVB_EM9305_EXTREF_INIT is enabled, POST_KERNEL
+ * - When CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT is enabled, POST_KERNEL
  *   SYS_INIT wakes the SIP EM9305 over SPI and sends HCI VSC 0xFD09 (sleep on)
  *   so CLKMGR can use the ~12 MHz EXTREF without CONFIG_BT.
  */
@@ -25,7 +25,7 @@
 #include <zephyr/sys/byteorder.h>
 #include <am_mcu_apollo.h>
 
-#if IS_ENABLED(CONFIG_BOARD_APOLLO510B_EVB_EM9305_EXTREF_INIT)
+#if IS_ENABLED(CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT)
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/spi.h>
 #include <zephyr/logging/log.h>
@@ -71,16 +71,17 @@ LOG_MODULE_REGISTER(apollo510b_evb, CONFIG_LOG_DEFAULT_LEVEL);
 #define EXTREFCLK_FREQ 0
 #endif
 
-#if IS_ENABLED(CONFIG_BOARD_APOLLO510B_EVB_EM9305_EXTREF_INIT)
+#if IS_ENABLED(CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT)
 
-#define BT_HCI_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(ambiq_bt_hci_spi)
+#define AP5_EM9305_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(ambiq_bt_hci_spi)
 
-static const struct gpio_dt_spec em9305_irq_gpio = GPIO_DT_SPEC_GET(BT_HCI_NODE, irq_gpios);
-static const struct gpio_dt_spec em9305_rst_gpio = GPIO_DT_SPEC_GET(BT_HCI_NODE, reset_gpios);
-static const struct gpio_dt_spec em9305_cm_gpio = GPIO_DT_SPEC_GET(BT_HCI_NODE, cm_gpios);
-static const struct gpio_dt_spec em9305_cs_gpio = GPIO_DT_SPEC_GET(DT_BUS(BT_HCI_NODE), cs_gpios);
+static const struct gpio_dt_spec em9305_irq_gpio = GPIO_DT_SPEC_GET(AP5_EM9305_NODE, irq_gpios);
+static const struct gpio_dt_spec em9305_rst_gpio = GPIO_DT_SPEC_GET(AP5_EM9305_NODE, reset_gpios);
+static const struct gpio_dt_spec em9305_cm_gpio = GPIO_DT_SPEC_GET(AP5_EM9305_NODE, cm_gpios);
+static const struct gpio_dt_spec em9305_cs_gpio =
+	GPIO_DT_SPEC_GET(DT_BUS(AP5_EM9305_NODE), cs_gpios);
 
-static struct spi_dt_spec em9305_spi = SPI_DT_SPEC_GET(BT_HCI_NODE,
+static struct spi_dt_spec em9305_spi = SPI_DT_SPEC_GET(AP5_EM9305_NODE,
 						       SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB |
 							       SPI_WORD_SET(8));
 
@@ -152,10 +153,7 @@ static int em9305_enable_sleep(void)
 
 static int board_em9305_extref_init(void)
 {
-	am_devices_em9305_callback_t cb = {
-		.reset = am_devices_em9305_controller_reset,
-		.transceive = em9305_spi_transceive,
-	};
+	am_devices_em9305_callback_t cb;
 	uint32_t st;
 
 	if (!device_is_ready(em9305_spi.bus)) {
@@ -178,6 +176,9 @@ static int board_em9305_extref_init(void)
 		return -EIO;
 	}
 
+	cb.reset = am_devices_em9305_controller_reset;
+	cb.transceive = em9305_spi_transceive;
+
 	st = am_devices_em9305_init(&cb);
 	if (st != AM_DEVICES_EM9305_STATUS_SUCCESS) {
 		LOG_ERR("EM9305 init failed (%u)", st);
@@ -193,23 +194,26 @@ static int board_em9305_extref_init(void)
 	return 0;
 }
 
-#endif /* CONFIG_BOARD_APOLLO510B_EVB_EM9305_EXTREF_INIT */
+#endif /* CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT */
 
 void board_early_init_hook(void)
 {
-	/* Set board related info into clock manager */
 	am_hal_clkmgr_board_info_t sClkmgrBoardInfo = {
 		.sXtalHs = {.eXtalHsMode = XTAL_HS_MODE, .ui32XtalHsFreq = XTAL_HS_FREQ},
 		.sXtalLs = {.eXtalLsMode = XTAL_LS_MODE, .ui32XtalLsFreq = XTAL_LS_FREQ},
 		.ui32ExtRefClkFreq = EXTREFCLK_FREQ,
+#if IS_ENABLED(CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT)
 		.bIsSipEnabled = true,
+#endif
 	};
 
 	am_hal_clkmgr_board_info_set(&sClkmgrBoardInfo);
 
+#if IS_ENABLED(CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT)
 	/* SIP EXTREF path: enable EM9305 clock output via GPIO 136 */
 	am_hal_gpio_pinconfig(136, am_hal_gpio_pincfg_output);
 	am_hal_gpio_output_set(136);
+#endif
 
 	/* Default HFRC and HFRC2 to Free Running clocks */
 	am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_HFRC,
@@ -231,8 +235,9 @@ void board_early_init_hook(void)
 #endif /* CONFIG_AMBIQ_HAL_USE_USB */
 }
 
-#if IS_ENABLED(CONFIG_BOARD_APOLLO510B_EVB_EM9305_EXTREF_INIT)
-SYS_INIT(board_em9305_extref_init, POST_KERNEL, CONFIG_EXTREF_INIT_PRIORITY);
+#if IS_ENABLED(CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT)
+SYS_INIT(board_em9305_extref_init, POST_KERNEL,
+	 CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT_PRIORITY);
 #endif
 
 #if defined(CONFIG_BOARD_ENABLE_GPU_ASSET_RELOCATION)

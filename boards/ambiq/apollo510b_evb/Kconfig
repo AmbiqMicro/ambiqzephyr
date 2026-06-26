@@ -7,23 +7,6 @@ config BOARD_APOLLO510B_EVB
 
 if BOARD_APOLLO510B_EVB
 
-config BOARD_APOLLO510B_EVB_EM9305_EXTREF_INIT
-	bool "Wake SIP EM9305 for EXTREF clock"
-	default y
-	select GPIO
-	select SPI
-	select AMBIQ_COMPONENT_USE_BT
-	select AMBIQ_HAL_USE_TIMER
-	help
-	  After POST_KERNEL device init, wake the SIP EM9305 over SPI and enable sleep so
-	  CLKMGR can use EXTREF (~12 MHz). Uses ambiq,bt-hci-spi in devicetree;
-	  CONFIG_BT is not required. Runs via SYS_INIT at POST_KERNEL.
-
-config EXTREF_INIT_PRIORITY
-	int "Apollo510B EXTREF clock init priority"
-	default 51
-	depends on BOARD_APOLLO510B_EVB_EM9305_EXTREF_INIT
-
 config BOARD_ENABLE_GPU_ASSET_RELOCATION
 	bool "Relocate GPU asset from MRAM to PSRAM or SSRAM"
 	default y if LVGL
