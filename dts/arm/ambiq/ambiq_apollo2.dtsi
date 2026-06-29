@@ -63,9 +63,18 @@
 	soc {
 		compatible = "ambiq,apollo2", "ambiq,apollo2x", "simple-bus";
 
-		flash0: flash@APOLLO2_FLASH {
-			compatible = "soc-nv-flash";
+		flash: flash-controller@APOLLO2_FLASH {
+			compatible = "ambiq,flash-controller";
 			reg = <APOLLO2_FLASH_BASE APOLLO2_FLASH_SIZE>;
+
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			/* Flash region */
+			flash0: flash@APOLLO2_FLASH {
+				compatible = "soc-nv-flash";
+				reg = <APOLLO2_FLASH_BASE APOLLO2_FLASH_SIZE>;
+			};
 		};
 
 		uart0: uart@APOLLO2_UART0 {
