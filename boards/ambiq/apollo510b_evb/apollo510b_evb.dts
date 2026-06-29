@@ -191,14 +191,14 @@
 	spi6: spi {
 		pinctrl-0 = <&spi6_default>;
 		pinctrl-names = "default";
-		clock-frequency = <DT_FREQ_M(8)>;
+		clock-frequency = <DT_FREQ_M(16)>;
 		cs-gpios = <&gpio128_159 21 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 		status = "okay";
 
 		bt_hci: bt-hci@0 {
 			compatible = "ambiq,bt-hci-spi";
 			reg = <0>;
-			spi-max-frequency = <DT_FREQ_M(8)>;
+			spi-max-frequency = <DT_FREQ_M(16)>;
 			irq-gpios = <&gpio96_127 21 GPIO_ACTIVE_HIGH>;
 			reset-gpios = <&gpio64_95 29 GPIO_ACTIVE_LOW>;
 			clkreq-gpios = <&gpio128_159 10 GPIO_ACTIVE_HIGH>;

@@ -272,10 +272,11 @@ config BT_AMBIQ_HCI
 	default y
 	depends on DT_HAS_AMBIQ_BT_HCI_SPI_ENABLED
 	select SPI
-	select GPIO if SOC_SERIES_APOLLO4X
+	select GPIO if SOC_SERIES_APOLLO4X || SOC_SERIES_APOLLO5X
 	select CLOCK_CONTROL if SOC_SERIES_APOLLO4X
 	select BT_HCI_SETUP
 	select AMBIQ_COMPONENT_USE_BT
+	select AMBIQ_HAL_USE_TIMER if SOC_SERIES_APOLLO5X
 	help
 	  Supports Ambiq Bluetooth SoC using SPI as the communication protocol.
 	  HCI packets are sent and received as single Byte transfers.

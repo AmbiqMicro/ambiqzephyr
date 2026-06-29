@@ -36,6 +36,10 @@ LOG_MODULE_REGISTER(bt_apollox_driver);
 #include "am_apollo3_bt_support.h"
 #elif (CONFIG_SOC_SERIES_APOLLO5X)
 #include "am_devices_em9305.h"
+/* Apollo510B supports BT 5.3 and BT 5.4 */
+#define EM9305_BT_53 1
+#define EM9305_BT_54 1
+#include "em9305_ll_features.h"
 #endif /* CONFIG_SOC_SERIES_APOLLO4X */
 
 #define HCI_SPI_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(ambiq_bt_hci_spi)
@@ -60,6 +64,48 @@ LOG_MODULE_REGISTER(bt_apollox_driver);
 #define SPI_MAX_RX_MSG_LEN 258
 
 #if (CONFIG_SOC_SERIES_APOLLO5X)
+/* EM9305 vendor-specific HCI commands sent during controller bring-up.
+ */
+#define HCI_VSC_SET_LOCAL_SUP_FEAT_CMD_OPCODE 0xFFF2U
+#define HCI_VSC_SET_LOCAL_SUP_FEAT_CMD_LENGTH 8U
+#define HCI_VSC_SET_TX_POWER_LEVEL_CMD_OPCODE 0xFCC4U
+#define HCI_VSC_SET_TX_POWER_LEVEL_CMD_LENGTH 1U
+#define HCI_VSC_SET_DEV_PUB_ADDR_CMD_OPCODE   0xFC43U
+#define HCI_VSC_SET_DEV_PUB_ADDR_CMD_LENGTH   6U
+#define HCI_VSC_SET_SLEEP_OPTION_CMD_OPCODE   0xFC49U
+#define HCI_VSC_SET_SLEEP_OPTION_CMD_LENGTH   1U
+#define HCI_VSC_SET_ADV_TX_POWER_CMD_OPCODE   0xFFF5U
+#define HCI_VSC_SET_ADV_TX_POWER_CMD_LENGTH   1U
+#define HCI_VSC_SET_CONN_TX_POWER_CMD_OPCODE  0xFFF6U
+#define HCI_VSC_SET_CONN_TX_POWER_CMD_LENGTH  3U
+
+/* Default radio TX power for EM9305 (0 dBm) */
+#define EM9305_TX_POWER_DEFAULT 0x00
+
+/* Valid EM9305 TX power range in dBm: greater than -20, up to +6 inclusive.
+ */
+#define EM9305_TX_POWER_MIN_DBM  (-20)
+#define EM9305_TX_POWER_MAX_DBM  (6)
+#define EM9305_VSC_CC_TIMEOUT_MS 2000U
+
+#if !defined(CONFIG_BT_TRANSMIT_POWER_CONTROL)
+#define EM9305_LL_FEAT_BYTE4_NO_POWER_CTRL ((uint8_t)((LL_FEATURES_BYTE4 >> 32) & ~0x07U))
+#else
+#define EM9305_LL_FEAT_BYTE4_NO_POWER_CTRL ((uint8_t)(LL_FEATURES_BYTE4 >> 32))
+#endif
+
+/* 8-byte mask actually sent via VSC 0xFFF2 right after HCI_Reset */
+static const uint8_t em9305_ll_feats[HCI_VSC_SET_LOCAL_SUP_FEAT_CMD_LENGTH] = {
+	(uint8_t)(LL_FEATURES_BYTE0),
+	(uint8_t)(LL_FEATURES_BYTE1 >> 8),
+	(uint8_t)(LL_FEATURES_BYTE2 >> 16),
+	(uint8_t)(LL_FEATURES_BYTE3 >> 24),
+	EM9305_LL_FEAT_BYTE4_NO_POWER_CTRL,
+	(uint8_t)(LL_FEATURES_BYTE5 >> 40),
+	0,
+	0,
+};
+
 static const struct gpio_dt_spec irq_gpio = GPIO_DT_SPEC_GET(HCI_SPI_NODE, irq_gpios);
 static const struct gpio_dt_spec rst_gpio = GPIO_DT_SPEC_GET(HCI_SPI_NODE, reset_gpios);
 static const struct gpio_dt_spec cs_gpio = GPIO_DT_SPEC_GET(SPI_DEV_NODE, cs_gpios);
@@ -636,6 +682,182 @@ static int bt_apollo_set_nvds(void)
 }
 #endif /* CONFIG_SOC_SERIES_APOLLO4X */
 
+#if (CONFIG_SOC_SERIES_APOLLO5X) && defined(CONFIG_BT_HCI_RAW)
+static uint16_t g_vsc_pending_opcode;
+static uint8_t g_vsc_cc_status;
+static K_SEM_DEFINE(g_vsc_cc_done, 0, 1);
+
+void bt_apollo_vsc_cc_observe(uint16_t opcode, uint8_t status)
+{
+	if ((opcode != 0U) && (opcode == g_vsc_pending_opcode)) {
+		g_vsc_cc_status = status;
+		g_vsc_pending_opcode = 0U;
+		k_sem_give(&g_vsc_cc_done);
+	}
+}
+#else
+void bt_apollo_vsc_cc_observe(uint16_t opcode, uint8_t status)
+{
+	ARG_UNUSED(opcode);
+	ARG_UNUSED(status);
+}
+#endif /* CONFIG_SOC_SERIES_APOLLO5X && CONFIG_BT_HCI_RAW */
+
+#if (CONFIG_SOC_SERIES_APOLLO5X)
+static int bt_em9305_send_vsc(uint16_t opcode, uint8_t param_len, const uint8_t *param)
+{
+#if defined(CONFIG_BT_HCI_RAW)
+	struct net_buf *buf;
+	struct bt_hci_cmd_hdr hdr;
+	int ret;
+
+	hdr.opcode = sys_cpu_to_le16(opcode);
+	hdr.param_len = param_len;
+	buf = bt_buf_get_tx(BT_BUF_CMD, K_NO_WAIT, &hdr, sizeof(hdr));
+	if (!buf) {
+		return -ENOBUFS;
+	}
+	if (param_len > 0U) {
+		net_buf_add_mem(buf, param, param_len);
+	}
+
+	g_vsc_cc_status = 0xFFU;
+	g_vsc_pending_opcode = opcode;
+	k_sem_reset(&g_vsc_cc_done);
+
+	ret = bt_send(buf);
+	if (ret) {
+		g_vsc_pending_opcode = 0U;
+		return ret;
+	}
+
+	if (k_sem_take(&g_vsc_cc_done, K_MSEC(EM9305_VSC_CC_TIMEOUT_MS)) != 0) {
+		LOG_ERR("EM9305: VSC 0x%04x command-complete timeout", opcode);
+		g_vsc_pending_opcode = 0U;
+		return -ETIMEDOUT;
+	}
+
+	if (g_vsc_cc_status != 0U) {
+		LOG_ERR("EM9305: VSC 0x%04x rejected, status=0x%02x", opcode, g_vsc_cc_status);
+		return -EIO;
+	}
+
+	return 0;
+#else
+	struct net_buf *buf;
+
+	buf = bt_hci_cmd_alloc(K_FOREVER);
+	if (!buf) {
+		return -ENOBUFS;
+	}
+	if (param_len > 0U) {
+		net_buf_add_mem(buf, param, param_len);
+	}
+	return bt_hci_cmd_send_sync(opcode, buf, NULL);
+#endif /* defined(CONFIG_BT_HCI_RAW) */
+}
+
+/*
+ * Push the EM9305 LE local supported features mask.
+ */
+static int bt_em9305_set_ll_features(void)
+{
+	int ret = bt_em9305_send_vsc(HCI_VSC_SET_LOCAL_SUP_FEAT_CMD_OPCODE,
+				     HCI_VSC_SET_LOCAL_SUP_FEAT_CMD_LENGTH, em9305_ll_feats);
+	if (ret) {
+		LOG_ERR("EM9305: set LL features VSC failed (%d)", ret);
+	}
+	return ret;
+}
+
+/*
+ * Set the EM9305 default radio transmit power.
+ */
+static int bt_em9305_set_tx_power(int8_t dbm)
+{
+	uint8_t param = (uint8_t)dbm;
+	int ret = bt_em9305_send_vsc(HCI_VSC_SET_TX_POWER_LEVEL_CMD_OPCODE,
+				     HCI_VSC_SET_TX_POWER_LEVEL_CMD_LENGTH, &param);
+	if (ret) {
+		LOG_ERR("EM9305: set TX power VSC failed (%d)", ret);
+	}
+	return ret;
+}
+#endif /* CONFIG_SOC_SERIES_APOLLO5X */
+
+int bt_apollo_set_public_addr(const uint8_t addr[6])
+{
+#if (CONFIG_SOC_SERIES_APOLLO5X)
+	int ret;
+
+	if (addr == NULL) {
+		return -EINVAL;
+	}
+	ret = bt_em9305_send_vsc(HCI_VSC_SET_DEV_PUB_ADDR_CMD_OPCODE,
+				 HCI_VSC_SET_DEV_PUB_ADDR_CMD_LENGTH, addr);
+	if (ret) {
+		LOG_ERR("EM9305: set public BD addr VSC failed (%d)", ret);
+	}
+	return ret;
+#else
+	ARG_UNUSED(addr);
+	return -ENOTSUP;
+#endif /* CONFIG_SOC_SERIES_APOLLO5X */
+}
+
+int bt_apollo_set_adv_tx_power(int8_t txpower_dbm)
+{
+#if (CONFIG_SOC_SERIES_APOLLO5X)
+	uint8_t param = (uint8_t)txpower_dbm;
+	int ret;
+
+	if ((txpower_dbm <= EM9305_TX_POWER_MIN_DBM) || (txpower_dbm > EM9305_TX_POWER_MAX_DBM)) {
+		LOG_ERR("EM9305: adv TX power %d dBm out of range (%d..%d]", txpower_dbm,
+			EM9305_TX_POWER_MIN_DBM, EM9305_TX_POWER_MAX_DBM);
+		return -EINVAL;
+	}
+
+	ret = bt_em9305_send_vsc(HCI_VSC_SET_ADV_TX_POWER_CMD_OPCODE,
+				 HCI_VSC_SET_ADV_TX_POWER_CMD_LENGTH, &param);
+	if (ret) {
+		LOG_ERR("EM9305: set adv TX power VSC failed (%d)", ret);
+	}
+	return ret;
+#else
+	ARG_UNUSED(txpower_dbm);
+	return -ENOTSUP;
+#endif /* CONFIG_SOC_SERIES_APOLLO5X */
+}
+
+int bt_apollo_set_conn_tx_power(uint16_t conn_handle, int8_t txpower_dbm)
+{
+#if (CONFIG_SOC_SERIES_APOLLO5X)
+	uint8_t param[HCI_VSC_SET_CONN_TX_POWER_CMD_LENGTH];
+	int ret;
+
+	if ((txpower_dbm <= EM9305_TX_POWER_MIN_DBM) || (txpower_dbm > EM9305_TX_POWER_MAX_DBM)) {
+		LOG_ERR("EM9305: conn TX power %d dBm out of range (%d..%d]", txpower_dbm,
+			EM9305_TX_POWER_MIN_DBM, EM9305_TX_POWER_MAX_DBM);
+		return -EINVAL;
+	}
+
+	param[0] = (uint8_t)(conn_handle >> 8);
+	param[1] = (uint8_t)(conn_handle & 0xFFU);
+	param[2] = (uint8_t)txpower_dbm;
+
+	ret = bt_em9305_send_vsc(HCI_VSC_SET_CONN_TX_POWER_CMD_OPCODE,
+				 HCI_VSC_SET_CONN_TX_POWER_CMD_LENGTH, param);
+	if (ret) {
+		LOG_ERR("EM9305: set conn TX power VSC failed (%d)", ret);
+	}
+	return ret;
+#else
+	ARG_UNUSED(conn_handle);
+	ARG_UNUSED(txpower_dbm);
+	return -ENOTSUP;
+#endif /* CONFIG_SOC_SERIES_APOLLO5X */
+}
+
 int bt_apollo_vnd_setup(void)
 {
 	int ret = 0;
@@ -643,6 +865,21 @@ int bt_apollo_vnd_setup(void)
 #if (CONFIG_SOC_SERIES_APOLLO4X)
 	/* Set the NVDS parameters to BLE controller */
 	ret = bt_apollo_set_nvds();
+#elif (CONFIG_SOC_SERIES_APOLLO5X)
+	ret = bt_em9305_set_ll_features();
+	if (ret == 0) {
+		ret = bt_em9305_set_tx_power(EM9305_TX_POWER_DEFAULT);
+	}
+	if (ret == 0) {
+		const uint8_t sleep_disable = 0x00;
+
+		ret = bt_em9305_send_vsc(HCI_VSC_SET_SLEEP_OPTION_CMD_OPCODE,
+					 HCI_VSC_SET_SLEEP_OPTION_CMD_LENGTH, &sleep_disable);
+		if (ret != 0) {
+			LOG_WRN("EM9305: sleep disable VSC failed (%d), continuing", ret);
+			ret = 0; /* non-fatal � proceed without sleep disable */
+		}
+	}
 #endif /* CONFIG_SOC_SERIES_APOLLO4X */
 
 	return ret;

@@ -56,13 +56,11 @@ static uint8_t __noinit rxmsg[SPI_MAX_RX_MSG_LEN];
 
 #if (CONFIG_SOC_SERIES_APOLLO5X)
 static struct spi_dt_spec spi_bus =
-	SPI_DT_SPEC_INST_GET(0,
-			     SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB | SPI_WORD_SET(8));
+	SPI_DT_SPEC_INST_GET(0, SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB | SPI_WORD_SET(8));
 #else
 static struct spi_dt_spec spi_bus =
-	SPI_DT_SPEC_INST_GET(0,
-			     SPI_OP_MODE_MASTER | SPI_HALF_DUPLEX | SPI_TRANSFER_MSB |
-			     SPI_MODE_CPOL | SPI_MODE_CPHA | SPI_WORD_SET(8));
+	SPI_DT_SPEC_INST_GET(0, SPI_OP_MODE_MASTER | SPI_HALF_DUPLEX | SPI_TRANSFER_MSB |
+					SPI_MODE_CPOL | SPI_MODE_CPHA | SPI_WORD_SET(8));
 #endif
 static K_KERNEL_STACK_DEFINE(spi_rx_stack, CONFIG_BT_DRV_RX_STACK_SIZE);
 static struct k_thread spi_rx_thread_data;
@@ -170,7 +168,14 @@ static int hci_event_filter(const uint8_t *evt_data)
 		uint8_t subevt_type = evt_data[sizeof(struct bt_hci_evt_hdr)];
 
 		switch (subevt_type) {
-		case BT_HCI_EVT_LE_ADVERTISING_REPORT:
+		/* Bluetooth 4.2+ */
+		case BT_HCI_EVT_LE_DIRECT_ADV_REPORT:
+		case BT_HCI_EVT_LE_SCAN_REQ_RECEIVED:
+		/* Bluetooth 5.0+ */
+		case BT_HCI_EVT_LE_EXT_ADVERTISING_REPORT:
+		case BT_HCI_EVT_LE_PER_ADVERTISING_REPORT:
+		/* Bluetooth 5.4+ */
+		case BT_HCI_EVT_LE_PER_ADVERTISING_REPORT_V2:
 			return EVT_DISCARD;
 		default:
 			return EVT_OK;
@@ -179,6 +184,7 @@ static int hci_event_filter(const uint8_t *evt_data)
 	case BT_HCI_EVT_CMD_COMPLETE: {
 		uint16_t opcode = (uint16_t)(evt_data[EVT_CMD_COMP_OP_LSB] +
 					     (evt_data[EVT_CMD_COMP_OP_MSB] << 8));
+		bt_apollo_vsc_cc_observe(opcode, evt_data[EVT_CMD_COMP_DATA]);
 
 		switch (opcode) {
 		case BT_OP_NOP:
