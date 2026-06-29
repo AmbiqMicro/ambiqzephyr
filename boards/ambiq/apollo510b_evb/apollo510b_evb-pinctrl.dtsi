@@ -322,18 +322,22 @@
 
 	sdio0_default: sdio0_default {
 		group0 {
-			pinmux = <SDIF0_DAT1_P85>,
-				 <SDIF0_DAT3_P87>,
-				 <SDIF0_DAT4_P156>,
+			pinmux = <SDIF0_DAT4_P156>,
 				 <SDIF0_DAT5_P157>,
 				 <SDIF0_DAT6_P158>,
 				 <SDIF0_DAT7_P159>;
 			drive-strength = "1.0";
 		};
 
+		/* DAT0..DAT3 and CMD need pull-ups so the eMMC can pull them
+		 * low without floating; without pull-ups on DAT1/DAT3 the
+		 * 8-bit eMMC CRC fails intermittently on multi-block writes.
+		 */
 		group1 {
 			pinmux = <SDIF0_DAT0_P84>,
+				 <SDIF0_DAT1_P85>,
 				 <SDIF0_DAT2_P86>,
+				 <SDIF0_DAT3_P87>,
 				 <SDIF0_CMD_P160>,
 				 <SDIF0_CLKOUT_P88>;
 			drive-strength = "1.0";
