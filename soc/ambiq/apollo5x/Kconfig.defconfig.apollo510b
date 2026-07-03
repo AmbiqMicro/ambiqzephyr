@@ -14,6 +14,6 @@ config SOC_AMBIQ_DCACHE_SIZE
 	default 65536
 
 config SOC_APOLLO510B_EM9305_EXTREF_INIT
-	default y
+	default y if !BT
 
 endif # SOC_APOLLO510B
