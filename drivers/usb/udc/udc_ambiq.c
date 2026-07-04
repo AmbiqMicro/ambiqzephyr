@@ -135,17 +135,6 @@ static int udc_ambiq_rx(const struct device *dev, uint8_t ep, struct net_buf *bu
 	}
 	udc_ep_set_busy(ep_cfg, true);
 
-	/*
-	 * Make sure that OUT transaction size triggered doesn't exceed EP's MPS,
-	 * as the USB IP has no way to detect end on transaction when last packet
-	 * is not a short packet. Except for UDC_AMBIQ_DMA1_MODE, where such
-	 * detection is available.
-	 */
-	if (!IS_ENABLED(CONFIG_UDC_AMBIQ_DMA1_MODE) && (ep != USB_CONTROL_EP_OUT) &&
-	    (ep_cfg->mps < rx_size)) {
-		rx_size = ep_cfg->mps;
-	}
-
 	/* Cache management if cache and DMA is enabled */
 	if (!IS_ENABLED(CONFIG_UDC_AMBIQ_PIO_MODE) && (ep != USB_CONTROL_EP_OUT)) {
 		sys_cache_data_invd_range(buf->data, buf->size);
