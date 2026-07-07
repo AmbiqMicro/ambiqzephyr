@@ -143,10 +143,6 @@
 	status = "okay";
 };
 
-&xo32m_xtal {
-	clock-frequency = <DT_FREQ_M(48)>;
-};
-
 &itm {
 	pinctrl-0 = <&swo_default>;
 	pinctrl-names = "default";
@@ -274,7 +270,6 @@
 zephyr_udc0: &usb {
 	vddusb33-gpios = <&gpio32_63 15 GPIO_PULL_UP>;
 	vddusb0p9-gpios = <&gpio32_63 16 GPIO_PULL_UP>;
-	maximum-speed = "full-speed";
 	status = "okay";
 };
 

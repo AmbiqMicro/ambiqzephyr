@@ -13,4 +13,7 @@ config HAS_CPU_FREQ
 config SOC_AMBIQ_DCACHE_SIZE
 	default 65536
 
+config SOC_APOLLO510B_EM9305_EXTREF_INIT
+	default y if UDC_AMBIQ
+
 endif # SOC_APOLLO510B
