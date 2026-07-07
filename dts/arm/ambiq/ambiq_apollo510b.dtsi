@@ -40,7 +40,7 @@
 
 		extrefclk: extrefclk {
 			compatible = "fixed-clock";
-			clock-frequency = <0>;
+			clock-frequency = <DT_FREQ_M(12)>;
 			#clock-cells = <0>;
 		};
 	};
