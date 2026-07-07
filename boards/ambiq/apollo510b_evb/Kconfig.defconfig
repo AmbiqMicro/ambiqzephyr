@@ -66,4 +66,14 @@ endif # FLASH
 config ROM_START_OFFSET
 	default 0x400 if BOOTLOADER_MCUBOOT
 
+if UDC_AMBIQ
+
+config NOCACHE_MEMORY
+	default y
+
+config UDC_BUF_FORCE_NOCACHE
+	default y
+
+endif # UDC_AMBIQ
+
 endif # BOARD_APOLLO510B_EVB
