@@ -487,6 +487,9 @@ int bt_apollo_controller_init(spi_transmit_fun transmit)
 		.reset = am_devices_em9305_controller_reset,
 	};
 
+	/* Clear any stale active-state flag before a fresh reset/init cycle. */
+	(void)am_devices_em9305_deinit();
+
 	/* Initialize the BLE controller */
 	ret = am_devices_em9305_init(&cb);
 
