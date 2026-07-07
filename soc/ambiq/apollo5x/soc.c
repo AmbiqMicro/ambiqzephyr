@@ -7,7 +7,9 @@
 #include <zephyr/init.h>
 #include <zephyr/cache.h>
 #include <zephyr/logging/log.h>
+#ifdef CONFIG_MEM_ATTR
 #include <zephyr/mem_mgmt/mem_attr.h>
+#endif
 #ifdef CONFIG_CACHE_MANAGEMENT
 #include <zephyr/dt-bindings/memory-attr/memory-attr-arm.h>
 #endif /* CONFIG_CACHE_MANAGEMENT */
@@ -179,9 +181,11 @@ bool buf_in_nocache(uintptr_t buf, size_t len_bytes)
 	}
 #endif /* CONFIG_NOCACHE_MEMORY */
 
+#ifdef CONFIG_MEM_ATTR
 	/* Check if buffer is in nocache memory region defined in DT */
 	buf_within_nocache = mem_attr_check_buf((void *)buf, len_bytes,
 						DT_MEM_ARM(ATTR_MPU_RAM_NOCACHE)) == 0;
+#endif
 
 	return buf_within_nocache;
 }
