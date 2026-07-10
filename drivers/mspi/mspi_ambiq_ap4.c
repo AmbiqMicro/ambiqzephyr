@@ -22,7 +22,7 @@ LOG_LEVEL_SET(CONFIG_MSPI_LOG_LEVEL);
 
 #include "mspi_ambiq.h"
 
-#define MSPI_MAX_FREQ        125000000
+#define MSPI_MAX_FREQ        96000000
 #define MSPI_MAX_DEVICE      2
 #define MSPI_TIMEOUT_US      1000000
 
@@ -858,7 +858,7 @@ static int mspi_ambiq_dev_config(const struct device         *controller,
 			}
 			data->dev_cfg.freq = dev_cfg->freq;
 
-			if (hal_dev_cfg.eClockFreq >= AM_HAL_MSPI_CLK_96MHZ &&
+			if (hal_dev_cfg.eClockFreq == AM_HAL_MSPI_CLK_96MHZ &&
 			    hal_dev_cfg.bEmulateDDR) {
 				hal_rx_cfg.ui8RxSmp = 2;
 			} else {
@@ -1150,7 +1150,7 @@ static int mspi_ambiq_dev_config(const struct device         *controller,
 		hal_dev_cfg.ui16DMATimeLimit = mspi_set_time_limit(hal_dev_cfg.eClockFreq,
 								   dev_cfg->time_to_break);
 
-		if (hal_dev_cfg.eClockFreq >= AM_HAL_MSPI_CLK_96MHZ &&
+		if (hal_dev_cfg.eClockFreq == AM_HAL_MSPI_CLK_96MHZ &&
 		    hal_dev_cfg.bEmulateDDR) {
 			hal_rx_cfg.ui8RxSmp = 2;
 		} else {
