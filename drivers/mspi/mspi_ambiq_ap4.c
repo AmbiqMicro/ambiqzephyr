@@ -431,8 +431,9 @@ static inline int mspi_verify_device(const struct device      *controller,
 				     const struct mspi_dev_id *dev_id)
 {
 	const struct mspi_ambiq_config *cfg = controller->config;
+
 	int device_index = cfg->mspicfg.num_periph;
-	int ret = 0;
+	int ret          = 0;
 
 	for (int i = 0; i < cfg->mspicfg.num_periph; i++) {
 		if (dev_id->ce.port == cfg->mspicfg.ce_group[i].port &&
@@ -454,6 +455,7 @@ static inline int mspi_verify_device(const struct device      *controller,
 static int mspi_ambiq_deinit(const struct device *controller)
 {
 	struct mspi_ambiq_data *data = controller->data;
+
 	int ret = 0;
 
 	if (!data->mspiHandle) {
@@ -532,9 +534,10 @@ e_deinit_return:
 static int mspi_xfer_config(const struct device    *controller,
 			    const struct mspi_xfer *xfer)
 {
-	struct mspi_ambiq_data *data = controller->data;
-	am_hal_mspi_dev_config_t hal_dev_cfg = data->hal_dev_cfg;
-	am_hal_mspi_request_e eRequest;
+	struct mspi_ambiq_data  *data         = controller->data;
+	am_hal_mspi_dev_config_t hal_dev_cfg  = data->hal_dev_cfg;
+	am_hal_mspi_request_e    eRequest;
+
 	int ret = 0;
 
 	if (data->scramble_cfg.enable) {
@@ -618,7 +621,8 @@ static int mspi_ambiq_pm_action(const struct device *controller, enum pm_device_
 {
 	const struct mspi_ambiq_config *cfg  = controller->config;
 	struct mspi_ambiq_data         *data = controller->data;
-	int                             ret  = 0;
+
+	int ret = 0;
 
 	switch (action) {
 	case PM_DEVICE_ACTION_RESUME:
@@ -672,11 +676,11 @@ static int mspi_ambiq_pm_action(const struct device *controller, enum pm_device_
 
 static int mspi_ambiq_config(const struct mspi_dt_spec *spec)
 {
-	const struct mspi_cfg *config = &spec->config;
-	const struct mspi_ambiq_config *cfg = spec->bus->config;
-	struct mspi_ambiq_data *data = spec->bus->data;
-	am_hal_mspi_config_t *hal_cfg = &data->hal_cfg;
-	am_hal_mspi_dqs_t dqs_cfg;
+	const struct mspi_cfg          *config  = &spec->config;
+	const struct mspi_ambiq_config *cfg     = spec->bus->config;
+	struct mspi_ambiq_data         *data    = spec->bus->data;
+	am_hal_mspi_config_t           *hal_cfg = &data->hal_cfg;
+	am_hal_mspi_dqs_t               dqs_cfg;
 
 	int ret = 0;
 
@@ -790,10 +794,11 @@ static int mspi_ambiq_dev_config(const struct device         *controller,
 				 const enum mspi_dev_cfg_mask param_mask,
 				 const struct mspi_dev_cfg   *dev_cfg)
 {
-	const struct mspi_ambiq_config *cfg = controller->config;
-	struct mspi_ambiq_data *data = controller->data;
-	am_hal_mspi_dev_config_t hal_dev_cfg = data->hal_dev_cfg;
-	am_hal_mspi_rxcfg_t hal_rx_cfg = data->hal_rx_cfg;
+	const struct mspi_ambiq_config *cfg         = controller->config;
+	struct mspi_ambiq_data         *data        = controller->data;
+	am_hal_mspi_dev_config_t        hal_dev_cfg = data->hal_dev_cfg;
+	am_hal_mspi_rxcfg_t             hal_rx_cfg  = data->hal_rx_cfg;
+
 	int ret = 0;
 
 	if (data->dev_id != dev_id) {
@@ -1254,7 +1259,8 @@ static int mspi_ambiq_xip_config(const struct device       *controller,
 	struct mspi_ambiq_data         *data = controller->data;
 	am_hal_mspi_request_e           eRequest;
 	am_hal_mspi_xip_config_t        hal_xip_cfg = data->hal_xip_cfg;
-	int                             ret         = 0;
+
+	int ret = 0;
 
 	if (dev_id != data->dev_id) {
 		LOG_INST_ERR(cfg->log, "%u, dev_id don't match.", __LINE__);
@@ -1305,10 +1311,11 @@ static int mspi_ambiq_scramble_config(const struct device            *controller
 				      const struct mspi_dev_id       *dev_id,
 				      const struct mspi_scramble_cfg *scramble_cfg)
 {
-	struct mspi_ambiq_data         *data        = controller->data;
-	am_hal_mspi_xip_config_t        hal_xip_cfg = data->hal_xip_cfg;
-	am_hal_mspi_request_e           eRequest;
-	int                             ret = 0;
+	struct mspi_ambiq_data  *data        = controller->data;
+	am_hal_mspi_xip_config_t hal_xip_cfg = data->hal_xip_cfg;
+	am_hal_mspi_request_e    eRequest;
+
+	int ret = 0;
 
 	if (mspi_is_inp(controller)) {
 		return -EBUSY;
@@ -1354,11 +1361,12 @@ static int mspi_ambiq_timing_config(const struct device      *controller,
 				    const uint32_t            param_mask,
 				    void                     *timing_cfg)
 {
-	struct mspi_ambiq_data         *data        = controller->data;
-	am_hal_mspi_dev_config_t        hal_dev_cfg = data->hal_dev_cfg;
-	struct mspi_ambiq_timing_cfg   *time_cfg    = timing_cfg;
-	am_hal_mspi_timing_scan_t       hal_timing  = data->hal_timing;
-	int                             ret         = 0;
+	struct mspi_ambiq_data       *data        = controller->data;
+	am_hal_mspi_dev_config_t      hal_dev_cfg = data->hal_dev_cfg;
+	struct mspi_ambiq_timing_cfg *time_cfg    = timing_cfg;
+	am_hal_mspi_timing_scan_t     hal_timing  = data->hal_timing;
+
+	int ret = 0;
 
 	if (mspi_is_inp(controller)) {
 		return -EBUSY;
@@ -1418,7 +1426,8 @@ static int mspi_ambiq_get_channel_status(const struct device *controller, uint8_
 
 	const struct mspi_ambiq_config *cfg  = controller->config;
 	struct mspi_ambiq_data         *data = controller->data;
-	int                             ret  = 0;
+
+	int ret = 0;
 
 	if (sys_read32(cfg->reg_base) & MSPI_BUSY) {
 		ret = -EBUSY;
@@ -1459,12 +1468,12 @@ static void hal_mspi_callback(void *pCallbackCtxt, uint32_t status)
 static int mspi_pio_prepare(const struct device        *controller,
 			    am_hal_mspi_pio_transfer_t *trans)
 {
-	struct mspi_ambiq_data         *data       = controller->data;
-	const struct mspi_xfer         *xfer       = &data->ctx.xfer;
-	am_hal_mspi_instr_e             eInstrCfg  = data->hal_dev_cfg.eInstrCfg;
-	am_hal_mspi_addr_e              eAddrCfg   = data->hal_dev_cfg.eAddrCfg;
-	uint8_t                         cmd_length = xfer->cmd_length;
-	int                             ret        = 0;
+	struct mspi_ambiq_data *data       = controller->data;
+	const struct mspi_xfer *xfer       = &data->ctx.xfer;
+	am_hal_mspi_instr_e     eInstrCfg  = data->hal_dev_cfg.eInstrCfg;
+	am_hal_mspi_addr_e      eAddrCfg   = data->hal_dev_cfg.eAddrCfg;
+	uint8_t                 cmd_length = xfer->cmd_length;
+	int                     ret        = 0;
 
 	trans->bScrambling  = false;
 	trans->bSendAddr    = (xfer->addr_length != 0);
@@ -1529,13 +1538,13 @@ static int mspi_pio_transceive(const struct device          *controller,
 			       mspi_callback_handler_t       cb,
 			       struct mspi_callback_context *cb_ctx)
 {
-	struct mspi_ambiq_data         *data = controller->data;
-	struct mspi_context            *ctx  = &data->ctx;
-	const struct mspi_xfer_packet  *packet;
-	uint32_t                        packet_idx;
-	am_hal_mspi_pio_transfer_t      trans;
-	int                             ret      = 0;
-	int                             cfg_flag = 0;
+	struct mspi_ambiq_data        *data = controller->data;
+	struct mspi_context           *ctx  = &data->ctx;
+	const struct mspi_xfer_packet *packet;
+	uint32_t                       packet_idx;
+	am_hal_mspi_pio_transfer_t     trans;
+	int                            ret      = 0;
+	int                            cfg_flag = 0;
 
 	if (xfer->num_packet == 0 ||
 	    !xfer->packets ||
@@ -1599,11 +1608,11 @@ static int mspi_dma_transceive(const struct device          *controller,
 			       mspi_callback_handler_t       cb,
 			       struct mspi_callback_context *cb_ctx)
 {
-	struct mspi_ambiq_data         *data = controller->data;
-	struct mspi_context            *ctx  = &data->ctx;
-	am_hal_mspi_dma_transfer_t      trans;
-	int                             ret      = 0;
-	int                             cfg_flag = 0;
+	struct mspi_ambiq_data    *data = controller->data;
+	struct mspi_context       *ctx  = &data->ctx;
+	am_hal_mspi_dma_transfer_t trans;
+	int                        ret      = 0;
+	int                        cfg_flag = 0;
 
 	if (xfer->num_packet == 0 ||
 	    !xfer->packets ||
@@ -1700,9 +1709,9 @@ static int mspi_ambiq_transceive(const struct device      *controller,
 				 const struct mspi_dev_id *dev_id,
 				 const struct mspi_xfer   *xfer)
 {
-	struct mspi_ambiq_data         *data   = controller->data;
-	mspi_callback_handler_t         cb     = NULL;
-	struct mspi_callback_context   *cb_ctx = NULL;
+	struct mspi_ambiq_data       *data   = controller->data;
+	mspi_callback_handler_t       cb     = NULL;
+	struct mspi_callback_context *cb_ctx = NULL;
 
 	if (dev_id != data->dev_id) {
 		LOG_INST_ERR(MSPI_LOG_HANDLE(controller), "%u, dev_id don't match.",
