@@ -79,6 +79,7 @@ struct mspi_ambiq_data {
 	am_hal_mspi_xip_misc_t           hal_xip_misc_cfg;
 	am_hal_mspi_dqs_t                hal_dqs_cfg;
 	am_hal_mspi_timing_scan_t        hal_timing;
+	bool                             timing_configured;
 
 	struct mspi_dev_id              *dev_id;
 	struct k_mutex                   lock;
@@ -588,9 +589,9 @@ e_deinit_return:
 static int mspi_xfer_config(const struct device    *controller,
 			    const struct mspi_xfer *xfer)
 {
-	struct mspi_ambiq_data  *data         = controller->data;
-	am_hal_mspi_dev_config_t hal_dev_cfg  = data->hal_dev_cfg;
-	am_hal_mspi_request_e    eRequest;
+	struct mspi_ambiq_data   *data        = controller->data;
+	am_hal_mspi_dev_config_t  hal_dev_cfg = data->hal_dev_cfg;
+	am_hal_mspi_request_e     eRequest;
 
 	int ret = 0;
 
@@ -646,16 +647,41 @@ static int mspi_xfer_config(const struct device    *controller,
 
 	hal_dev_cfg.bTurnaround     = (xfer->rx_dummy != 0);
 	hal_dev_cfg.ui8TurnAround   = (uint8_t)(hal_dev_cfg.bEmulateDDR ? xfer->rx_dummy * 2 :
-									  xfer->rx_dummy);
+								  xfer->rx_dummy);
 	hal_dev_cfg.bEnWriteLatency = (xfer->tx_dummy != 0);
 	hal_dev_cfg.ui8WriteLatency = (uint8_t)(hal_dev_cfg.bEmulateDDR ? xfer->tx_dummy * 2 :
-									  xfer->tx_dummy);
+								  xfer->tx_dummy);
 
 	ret = am_hal_mspi_device_configure(data->mspiHandle, &hal_dev_cfg);
 	if (ret) {
 		LOG_INST_ERR(MSPI_LOG_HANDLE(controller), "%u, fail to configure MSPI, code:%d.",
 							  __LINE__, ret);
 		return -EHOSTDOWN;
+	}
+
+	/*
+	 * am_hal_mspi_device_configure() performs a full DEV0CFG register write
+	 * that resets TXNEG0, RXNEG0, RXCAP0 and DQS delays to HAL defaults,
+	 * destroying any board-level signal-timing calibration previously applied
+	 * via AM_HAL_MSPI_REQ_TIMING_SCAN_SET (e.g. RxNeg=1 for reliable 96 MHz
+	 * SDR sampling).  Re-apply the saved calibration here, substituting the
+	 * rx_dummy-derived turnaround that device_configure() just wrote so that
+	 * per-transfer dummy-cycle counts are preserved.  Use timing_configured
+	 * rather than nonzero field values so an intentional all-zero calibration
+	 * is still restored.
+	 */
+	if (data->timing_configured) {
+		am_hal_mspi_timing_scan_t restore_timing = data->hal_timing;
+
+		restore_timing.ui8Turnaround = hal_dev_cfg.ui8TurnAround;
+		ret = am_hal_mspi_control(data->mspiHandle,
+					  AM_HAL_MSPI_REQ_TIMING_SCAN_SET, &restore_timing);
+		if (ret) {
+			LOG_INST_ERR(MSPI_LOG_HANDLE(controller),
+				     "%u, fail to restore timing scan, code:%d.",
+				     __LINE__, ret);
+			return -EHOSTDOWN;
+		}
 	}
 
 	ret = am_hal_mspi_enable(data->mspiHandle);
@@ -1471,6 +1497,7 @@ static int mspi_ambiq_timing_config(const struct device      *controller,
 
 	data->hal_dev_cfg = hal_dev_cfg;
 	data->hal_timing  = hal_timing;
+	data->timing_configured = true;
 	return ret;
 }
 
