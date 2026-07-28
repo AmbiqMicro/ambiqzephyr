@@ -59,6 +59,7 @@
  * @}
  */
 
+#include <zephyr/cache.h>
 #include <zephyr/drivers/watchdog.h>
 #include <zephyr/kernel.h>
 #include <zephyr/ztest.h>
@@ -194,12 +195,24 @@ volatile DATATYPE m_testvalue __attribute__((section(NOINIT_SECTION)));
 /* m_magic is used to detect first boot (random value) vs reset (magic retained) */
 volatile DATATYPE m_magic __attribute__((section(NOINIT_SECTION)));
 
+/* Commit the noinit state to memory: a watchdog reset discards dirty
+ * write-back cache lines
+ */
+static void commit_noinit_state(void)
+{
+	sys_cache_data_flush_range((void *)(uintptr_t)&m_state, sizeof(m_state));
+	sys_cache_data_flush_range((void *)(uintptr_t)&m_testcase_index, sizeof(m_testcase_index));
+	sys_cache_data_flush_range((void *)(uintptr_t)&m_testvalue, sizeof(m_testvalue));
+	sys_cache_data_flush_range((void *)(uintptr_t)&m_magic, sizeof(m_magic));
+}
+
 #if TEST_WDT_CALLBACK_1
 static void wdt_int_cb0(const struct device *wdt_dev, int channel_id)
 {
 	ARG_UNUSED(wdt_dev);
 	ARG_UNUSED(channel_id);
 	m_testvalue += WDT_TEST_CB0_TEST_VALUE;
+	commit_noinit_state();
 }
 #endif
 
@@ -209,6 +222,7 @@ static void wdt_int_cb1(const struct device *wdt_dev, int channel_id)
 	ARG_UNUSED(wdt_dev);
 	ARG_UNUSED(channel_id);
 	m_testvalue += WDT_TEST_CB1_TEST_VALUE;
+	commit_noinit_state();
 }
 #endif
 
@@ -253,6 +267,7 @@ static int test_wdt_no_callback(void)
 	TC_PRINT("Waiting to restart MCU\n");
 	m_testvalue = 0U;
 	m_state = WDT_TEST_STATE_CHECK_RESET;
+	commit_noinit_state();
 	while (1) {
 		k_yield();
 	}
@@ -317,6 +332,7 @@ static int test_wdt_callback_1(void)
 	TC_PRINT("Waiting to restart MCU\n");
 	m_testvalue = 0U;
 	m_state = WDT_TEST_STATE_CHECK_RESET;
+	commit_noinit_state();
 	while (1) {
 		k_yield();
 	}
@@ -386,6 +402,7 @@ static int test_wdt_callback_2(void)
 	TC_PRINT("Waiting to restart MCU\n");
 	m_testvalue = 0U;
 	m_state = WDT_TEST_STATE_CHECK_RESET;
+	commit_noinit_state();
 
 	while (1) {
 		wdt_feed(wdt, 0);
@@ -480,6 +497,7 @@ static int test_wdt_enable_wait_mode(void)
 	TC_PRINT("Waiting to restart MCU\n");
 	m_testvalue = 0U;
 	m_state = WDT_TEST_STATE_CHECK_RESET;
+	commit_noinit_state();
 	while (1) {
 		k_yield();
 	}
