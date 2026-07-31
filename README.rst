@@ -19,6 +19,19 @@ Whether it's the Real Time Clock (RTC) IC, or a System-on-a-Chip (SoC), Ambiq® 
 lowest power consumption with the highest computing performance possible for our customers to make the most
 innovative battery-power endpoint devices for their end-users. `Ambiq Products`_
 
+Ambiq release branch
+********************
+
+Manufacturing and customer releases use ``ambiq-stable``. The release number is
+in ``VERSION`` (for example ``4.3.0``) and is what the boot banner reports.
+
+See `How_to_Setup_Toolchain.rst <doc/ambiq/How_to_Setup_Toolchain.rst>`_ for
+toolchain setup and version verification.
+
+.. code-block:: console
+
+   git checkout ambiq-stable
+
 Command References
 ******************
 
@@ -27,6 +40,7 @@ apollo330mP_evb board DTS files, see:
 
 - `samples/README.rst <samples/README.rst>`_
 - `tests/README.rst <tests/README.rst>`_
+- `doc/ambiq/How_to_Setup_Toolchain.rst <doc/ambiq/How_to_Setup_Toolchain.rst>`_
 - `doc/ambiq/How_to_Run_Zephyr_USB_Samples.rst <doc/ambiq/How_to_Run_Zephyr_USB_Samples.rst>`_
 - `doc/ambiq/How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst <doc/ambiq/How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst>`_
 - `doc/ambiq/How_to_Run_MCUBoot_Samples_and_Tests.rst <doc/ambiq/How_to_Run_MCUBoot_Samples_and_Tests.rst>`_
@@ -156,8 +170,11 @@ Check `Ambiq SoC`_ for Ambiq Apollo SoCs documents.
 Setup Development Environment
 -----------------------------
 
-Follow `Getting Started Guide`_ to install denpendencies and use west tool to get the Zephyr source code to local.
-Install Zephyr SDK and check whether the environment variables are set properly.
+Follow `Getting Started Guide`_ to install dependencies and use west to set up
+the workspace. Install the Zephyr SDK version matched to your release branch
+(see `How_to_Setup_Toolchain.rst <doc/ambiq/How_to_Setup_Toolchain.rst>`_) and
+confirm ``ZEPHYR_BASE``, ``ZEPHYR_TOOLCHAIN_VARIANT``, and
+``ZEPHYR_SDK_INSTALL_DIR`` are set in your shell.
 
 
 Upstream Repository Synchronization
@@ -171,7 +188,8 @@ Execute ``git remote -v`` again to check if it configures successfully.
 
 Execute ``git fetch upstream`` to fetch the upstream repository.
 
-Execute ``git checkout apollo510L-dev`` to get the latest ambiq soc development branch.
+Execute ``git checkout ambiq-stable`` for the current manufacturing release
+branch, or check out a release tag (for example ``git checkout v4.3.0``).
 
 
 Get to Know Ambiq Components
@@ -287,7 +305,7 @@ In default we use UART COM for console, and the default baudrate is 115200, so a
 
 You should be able to see the logs in the serial terminal.
 
-``*** Booting Zephyr OS build zephyr-v2.5.0-71817-ga786a7f23388 ***``
+``*** Booting Zephyr OS build 4.3.0 ***``
 
 ``Hello World! apollo510_evb``
 

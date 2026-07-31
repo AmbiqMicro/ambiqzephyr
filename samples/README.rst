@@ -18,6 +18,8 @@ chosen nodes, the regular ``west build -b your_board_here ... -p always`` form i
 Related Ambiq Docs
 ******************
 
+- `../README.rst <../README.rst>`_ — Ambiq Zephyr hub (branch, toolchain, index)
+- `../doc/ambiq/How_to_Setup_Toolchain.rst <../doc/ambiq/How_to_Setup_Toolchain.rst>`_
 - `../doc/ambiq/How_to_Run_Zephyr_USB_Samples.rst <../doc/ambiq/How_to_Run_Zephyr_USB_Samples.rst>`_
 - `../doc/ambiq/How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst <../doc/ambiq/How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst>`_
 - `../doc/ambiq/How_to_Run_MCUBoot_Samples_and_Tests.rst <../doc/ambiq/How_to_Run_MCUBoot_Samples_and_Tests.rst>`_
