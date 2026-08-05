@@ -41,8 +41,15 @@
 LOG_MODULE_REGISTER(pm_demo, CONFIG_LOG_DEFAULT_LEVEL);
 
 /* ---- Device nodes ---- */
-#if DT_HAS_CHOSEN(zephyr_crc)
+/*
+ * The CRC demo needs both a chosen node and a CRC driver built for it.
+ * DT_HAS_CHOSEN() alone is not enough: a board may choose an enabled
+ * crc32 node whose driver cannot be selected (for example, CRC_AMBIQ
+ * depends on SOC_SERIES_APOLLO5X), leaving DEVICE_DT_GET() unresolved.
+ */
+#if defined(CONFIG_CRC_DRIVER) && DT_HAS_CHOSEN(zephyr_crc)
 #define CRC_NODE  DT_CHOSEN(zephyr_crc)
+#define DEMO_HAS_CRC 1
 #endif
 #if DT_NODE_EXISTS(DT_ALIAS(demo_spi))
 #define SPI_NODE DT_ALIAS(demo_spi)
@@ -218,7 +225,7 @@ out:
 	return ret;
 }
 
-#if DT_HAS_CHOSEN(zephyr_crc)
+#if defined(DEMO_HAS_CRC)
 /* ================================================================
  * CRC32 demo — hardware digest over flash read-back buffer
  * ================================================================
@@ -261,7 +268,7 @@ static int demo_thread_crc32(void)
 		(uint32_t)ctx.result, sizeof(flash_read_buf));
 	return 0;
 }
-#endif /* DT_HAS_CHOSEN(zephyr_crc) */
+#endif /* DEMO_HAS_CRC */
 
 /* ================================================================
  * AES demo — hardware AES-128-ECB via ARM CC312 AES accelerator
@@ -458,7 +465,7 @@ static void flash_crc_thread_fn(void *p1, void *p2, void *p3)
 	k_msleep(STAGGER_FLASH_CRC_MS);
 	while (true) {
 		demo_thread_flash();
-#if DT_HAS_CHOSEN(zephyr_crc)
+#if defined(DEMO_HAS_CRC)
 		demo_thread_crc32();
 #endif
 		k_msleep(DEMO_PERIOD_MS);
