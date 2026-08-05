@@ -323,43 +323,64 @@ static int i2s_ambiq_clock_settings_derive(uint32_t i2s_bclk_freq, am_hal_i2s_co
 	return (valid_settings_found == true ? 0 : -EINVAL);
 }
 #elif defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
+/* FOUT3=/6, FOUT4=/8; BCLK = POSTDIV/(fout*ratio). CRM div field 7-bit -> ratio 1..128. */
+#define I2S_AMBIQ_MAX_CLK_DIV 128U
+
 static int i2s_ambiq_clock_settings_derive(uint32_t i2s_bclk_freq, am_hal_i2s_config_t *hal_cfg)
 {
-	int ret;
-	uint32_t vco_freq;
-	bool valid_settings_found = false;
+	uint32_t pll_precfg_freq = 0;
+	static const struct {
+		uint32_t fout_div;
+		am_hal_i2s_clksel_e clksel;
+	}
 
-	uint32_t clock_divider_pairs[][2] = {{6, 1}, {8, 1}, {6, 3}, {8, 3}};
+	fout_opts[] = {
+		{6U, AM_HAL_I2S_CLKSEL_PLL_FOUT3},
+		{8U, AM_HAL_I2S_CLKSEL_PLL_FOUT4},
+	};
 
-	if (i2s_bclk_freq % 22050 == 0) {
-		vco_freq = 237081600;
-	} else if (i2s_bclk_freq % 8000 == 0) {
-		vco_freq = 245760000;
-	} else {
+	if (i2s_bclk_freq == 0U) {
 		return -EINVAL;
 	}
 
-	if (AM_HAL_STATUS_SUCCESS !=
-	    am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_PLLVCO, vco_freq, NULL)) {
-		LOG_ERR("i2s_configure: HAL failed to configure PLLVCO");
-		return -EINVAL;
-	}
+	am_hal_clkmgr_clock_config_get(AM_HAL_CLKMGR_CLK_ID_PLLPOSTDIV, &pll_precfg_freq, 0);
 
-	ARRAY_FOR_EACH(clock_divider_pairs, i) {
-		uint32_t pll_freq =
-			clock_divider_pairs[i][0] * clock_divider_pairs[i][1] * i2s_bclk_freq;
-		ret = am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_PLLPOSTDIV, pll_freq, NULL);
-		if (ret == AM_HAL_STATUS_SUCCESS) {
-			hal_cfg->eClock = (clock_divider_pairs[i][0] == 6)
-						  ? AM_HAL_I2S_CLKSEL_PLL_FOUT3
-						  : AM_HAL_I2S_CLKSEL_PLL_FOUT4;
-			hal_cfg->eDiv3 = (clock_divider_pairs[i][1] == 3) ? 1 : 0;
-			valid_settings_found = true;
-			break;
+	if (pll_precfg_freq == 0U) {
+		uint32_t vco_freq = ((i2s_bclk_freq % 22050U) == 0U)   ? 237081600U
+				    : ((i2s_bclk_freq % 8000U) == 0U) ? 245760000U
+								      : 0U;
+
+		if ((vco_freq == 0U) || (am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_PLLVCO,
+								   vco_freq, NULL) !=
+					AM_HAL_STATUS_SUCCESS)) {
+			LOG_ERR("i2s_configure: HAL failed to configure PLLVCO");
+			return -EINVAL;
 		}
 	}
 
-	return (valid_settings_found == true ? 0 : -EINVAL);
+	/* Reuse POSTDIV if set; otherwise try to configure it. */
+	for (uint32_t ratio = 1U; ratio <= I2S_AMBIQ_MAX_CLK_DIV; ratio++) {
+		ARRAY_FOR_EACH(fout_opts, i) {
+			uint32_t pll_freq = fout_opts[i].fout_div * ratio * i2s_bclk_freq;
+
+			if (pll_precfg_freq != 0U) {
+				if (pll_precfg_freq != pll_freq) {
+					continue;
+				}
+			} else if (am_hal_clkmgr_clock_config(AM_HAL_CLKMGR_CLK_ID_PLLPOSTDIV,
+							     pll_freq, NULL) !=
+				   AM_HAL_STATUS_SUCCESS) {
+				continue;
+			}
+
+			hal_cfg->eClock = fout_opts[i].clksel;
+			hal_cfg->ui32ClockDivideRatio = ratio;
+			return 0;
+		}
+	}
+
+	LOG_ERR("i2s_configure: cannot derive BCLK %u", i2s_bclk_freq);
+	return -EINVAL;
 }
 #else
 #error "Unsupported device."
@@ -466,7 +487,7 @@ static int i2s_ambiq_configure(const struct device *dev, enum i2s_dir dir,
 	hal_cfg->eData->eSampleLenPhase2 = AM_HAL_I2S_SAMPLE_LENGTH_8BITS;
 	hal_cfg->eASRC = 0;
 #if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
-	hal_cfg->ui32ClockDivideRatio = 1;
+	hal_cfg->eDiv3 = 0;
 	hal_cfg->ui32MclkoutDiv = 1;
 	hal_cfg->eMclkout = AM_HAL_I2S_MCLKOUT_SEL_OFF;
 #endif
@@ -481,7 +502,7 @@ static int i2s_ambiq_configure(const struct device *dev, enum i2s_dir dir,
 		hal_cfg->eData->eSampleLenPhase1 = AM_HAL_I2S_SAMPLE_LENGTH_16BITS;
 		break;
 	case 24:
-		hal_cfg->eData->eChannelLenPhase1 = AM_HAL_I2S_FRAME_WDLEN_24BITS;
+		hal_cfg->eData->eChannelLenPhase1 = AM_HAL_I2S_FRAME_WDLEN_32BITS;
 		hal_cfg->eData->eSampleLenPhase1 = AM_HAL_I2S_SAMPLE_LENGTH_24BITS;
 		break;
 	case 32:
@@ -551,7 +572,8 @@ static int i2s_ambiq_configure(const struct device *dev, enum i2s_dir dir,
 	}
 
 	hal_cfg->eData->ui32ChannelNumbersPhase1 = num_of_channels;
-	i2s_bclk_freq = i2s_config_in->frame_clk_freq * num_of_channels * i2s_config_in->word_size;
+	i2s_bclk_freq = i2s_config_in->frame_clk_freq * num_of_channels *
+			(i2s_config_in->word_size > 16U ? 32U : 16U);
 
 	switch (dir) {
 	case I2S_DIR_RX:
