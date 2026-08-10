@@ -12,16 +12,21 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/cache.h>
 #include <errno.h>
-#include <stdio.h>
 
 #include <soc.h>
 
 LOG_MODULE_REGISTER(flash_ambiq, CONFIG_FLASH_LOG_LEVEL);
 
-#define SOC_NV_FLASH_NODE DT_INST(0, soc_nv_flash)
+#include "flash_priv.h"
+
+#define SOC_NV_FLASH_NODE SOC_NV_FLASH_CHILD_NODE(0)
+
 #define SOC_NV_FLASH_ADDR DT_REG_ADDR(SOC_NV_FLASH_NODE)
 #define SOC_NV_FLASH_SIZE DT_REG_SIZE(SOC_NV_FLASH_NODE)
-#if (CONFIG_SOC_SERIES_APOLLO3X)
+
+/* Apollo2x and Apollo3x both use traditional NOR flash (am_hal_flash_* HAL, 4-byte writes) */
+#if defined(CONFIG_SOC_SERIES_APOLLO2X) || defined(CONFIG_SOC_SERIES_APOLLO3X)
+#define AMBIQ_NOR_FLASH 1
 #define MIN_WRITE_SIZE 4
 #else
 #define MIN_WRITE_SIZE 16
@@ -68,12 +73,7 @@ struct flash_ambiq_data {
 #if defined(CONFIG_MULTITHREADING)
 static inline int flash_ambiq_lock_take(struct flash_ambiq_data *data)
 {
-	if (k_mutex_lock(&data->lock, K_MSEC(100)) == 0) {
-		return 0;
-	}
-
-	LOG_ERR("Cannot lock flash mutex");
-	return -EBUSY;
+	return k_mutex_lock(&data->lock, K_FOREVER);
 }
 
 #define FLASH_LOCK_INIT(data) k_mutex_init(&(data)->lock)
@@ -88,34 +88,59 @@ static inline int flash_ambiq_lock_take(struct flash_ambiq_data *data)
 static const struct flash_parameters flash_ambiq_parameters = {
 	.write_block_size = FLASH_WRITE_BLOCK_SIZE,
 	.erase_value = FLASH_ERASE_BYTE,
-#if !defined(CONFIG_SOC_SERIES_APOLLO3X)
+#if !defined(AMBIQ_NOR_FLASH)
 	.caps = {
 		.no_explicit_erase = true,
 	},
 #endif
 };
 
-/* Map Ambiq HAL status codes to negative errno codes */
-static int flash_ambiq_hal_status_to_errno(uint32_t hal_status)
+/* Map Ambiq HAL status codes to negative errno codes.
+ *
+ * Apollo2x HAL predates the unified AM_HAL_STATUS_* enum: its am_hal_flash_*
+ * functions return int with 0 for success and non-zero for failure.
+ * Apollo3x/4p HAL functions return int (can be -1 for alignment errors).
+ * Apollo5x HAL functions return uint32_t (AM_HAL_MRAM_* codes >= 0x08000100).
+ * AM_HAL_STATUS_* enum values 0-9 are shared across Apollo3x/4x/5x.
+ */
+static int flash_ambiq_hal_status_to_errno(int hal_status)
 {
-	switch (hal_status) {
+	if (hal_status < 0) {
+		LOG_ERR("HAL returned error: %d", hal_status);
+		return -EIO;
+	}
+
+#if defined(CONFIG_SOC_SERIES_APOLLO2X)
+	/* Apollo2x has no AM_HAL_STATUS_* codes; non-zero simply means failure. */
+	if (hal_status != 0) {
+		LOG_ERR("Ambiq HAL error code: %d", hal_status);
+		return -EIO;
+	}
+
+	return 0;
+#else
+	switch ((uint32_t)hal_status) {
 	case AM_HAL_STATUS_SUCCESS:
 		return 0;
 	case AM_HAL_STATUS_FAIL:
 		return -EIO;
+	case AM_HAL_STATUS_INVALID_HANDLE:
+		return -EINVAL;
+	case AM_HAL_STATUS_IN_USE:
+		return -EBUSY;
+	case AM_HAL_STATUS_TIMEOUT:
+		return -ETIMEDOUT;
+	case AM_HAL_STATUS_OUT_OF_RANGE:
+		return -ERANGE;
 	case AM_HAL_STATUS_INVALID_ARG:
 		return -EINVAL;
 	case AM_HAL_STATUS_INVALID_OPERATION:
 		return -EPERM;
-	case AM_HAL_STATUS_OUT_OF_RANGE:
-		return -ERANGE;
-	case AM_HAL_STATUS_TIMEOUT:
-		return -ETIMEDOUT;
 	default:
-		/* Unknown HAL error - report to help debugging */
-		LOG_ERR("Unknown Ambiq HAL error code: 0x%x", hal_status);
+		LOG_ERR("Unknown Ambiq HAL error code: 0x%x", (uint32_t)hal_status);
 		return -EIO;
 	}
+#endif
 }
 
 static bool flash_ambiq_valid_range(off_t offset, size_t len)
@@ -195,7 +220,7 @@ static int flash_ambiq_write(const struct device *dev, off_t offset, const void 
 			/* Lock interrupts for write operation */
 			key = irq_lock();
 
-#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+#if defined(AMBIQ_NOR_FLASH)
 			ret = am_hal_flash_program_main(
 				AM_HAL_FLASH_PROGRAM_KEY, aligned,
 				(uint32_t *)(SOC_NV_FLASH_ADDR + current_offset), words);
@@ -205,19 +230,26 @@ static int flash_ambiq_write(const struct device *dev, off_t offset, const void 
 				(uint32_t *)(SOC_NV_FLASH_ADDR + current_offset), words);
 #endif
 			/*
-			 * Invalidate caches before re-enabling interrupts so an
-			 * ISR taken after irq_unlock cannot observe stale code or
-			 * data from the just-modified flash. Also ensures the
-			 * subsequent verify reads actual flash contents.
+			 * Invalidate instruction cache before re-enabling interrupts
+			 * so an ISR cannot execute stale code from the just-modified
+			 * flash region. Apollo2x/3x have no standard ARM caches; their
+			 * proprietary cache is not a concern for data writes.
 			 */
+#if defined(CONFIG_SOC_SERIES_APOLLO4X)
+			if (ret == AM_HAL_STATUS_SUCCESS) {
+				am_hal_cachectrl_control(
+					AM_HAL_CACHECTRL_CONTROL_MRAM_CACHE_INVALIDATE, NULL);
+			}
+#elif !defined(AMBIQ_NOR_FLASH)
 			if (ret == AM_HAL_STATUS_SUCCESS) {
 				sys_cache_data_invd_range(
-					(uint32_t *)(SOC_NV_FLASH_ADDR + current_offset),
+					(void *)(SOC_NV_FLASH_ADDR + current_offset),
 					chunk_size);
 				sys_cache_instr_flush_range(
-					(uint32_t *)(SOC_NV_FLASH_ADDR + current_offset),
+					(void *)(SOC_NV_FLASH_ADDR + current_offset),
 					chunk_size);
 			}
+#endif
 
 			/* Unlock interrupts to allow timing-critical ISRs */
 			irq_unlock(key);
@@ -233,15 +265,14 @@ static int flash_ambiq_write(const struct device *dev, off_t offset, const void 
 			}
 
 			/* Verify write */
-			if (memcmp((void *)(SOC_NV_FLASH_ADDR + current_offset), src,
-				   chunk_size) == 0) {
+			if (memcmp((void *)(SOC_NV_FLASH_ADDR + current_offset), src, chunk_size) ==
+			    0) {
 				write_verified = true;
 				break;
 			}
 
 			LOG_WRN("Flash write verification failed at offset 0x%lx (attempt %d/%d)",
-				(long)current_offset, retry_count + 1,
-				FLASH_OPERATION_MAX_RETRIES);
+				(long)current_offset, retry_count + 1, FLASH_OPERATION_MAX_RETRIES);
 		}
 
 		if (!write_verified) {
@@ -256,11 +287,22 @@ static int flash_ambiq_write(const struct device *dev, off_t offset, const void 
 		remaining -= chunk_size;
 	}
 
-	sys_cache_data_invd_range((uint32_t *)(SOC_NV_FLASH_ADDR + offset), len);
-	sys_cache_instr_flush_range((uint32_t *)(SOC_NV_FLASH_ADDR + offset), len);
 	FLASH_UNLOCK(dev_data);
 
 	return ret;
+}
+
+static bool flash_ambiq_is_erased(off_t offset, size_t len)
+{
+	const uint8_t *flash_ptr = (const uint8_t *)(SOC_NV_FLASH_ADDR + offset);
+
+	for (size_t i = 0; i < len; i++) {
+		if (flash_ptr[i] != FLASH_ERASE_BYTE) {
+			return false;
+		}
+	}
+
+	return true;
 }
 
 static int flash_ambiq_erase(const struct device *dev, off_t offset, size_t len)
@@ -277,7 +319,7 @@ static int flash_ambiq_erase(const struct device *dev, off_t offset, size_t len)
 		return 0;
 	}
 
-#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+#if defined(AMBIQ_NOR_FLASH)
 	if ((offset % FLASH_ERASE_BLOCK_SIZE) != 0) {
 		LOG_ERR("offset 0x%lx is not on a page boundary", (long)offset);
 		return -EINVAL;
@@ -297,39 +339,24 @@ static int flash_ambiq_erase(const struct device *dev, off_t offset, size_t len)
 		return ret;
 	}
 
-#if defined(CONFIG_SOC_SERIES_APOLLO3X)
-	/* Apollo3: erase each page individually with retry logic */
+#if defined(AMBIQ_NOR_FLASH)
+	/* Apollo2/3: erase each page individually with retry logic */
 	size_t num_pages = len / FLASH_ERASE_BLOCK_SIZE;
 	size_t current_offset = offset;
 
 	for (size_t page = 0; page < num_pages; page++) {
 		bool erase_verified = false;
-		uint32_t page_inst = AM_HAL_FLASH_ADDR2INST(((uint32_t)SOC_NV_FLASH_ADDR +
-					current_offset));
-		uint32_t page_num = AM_HAL_FLASH_ADDR2PAGE(((uint32_t)SOC_NV_FLASH_ADDR +
-				       current_offset));
+		uint32_t page_inst =
+			AM_HAL_FLASH_ADDR2INST(((uint32_t)SOC_NV_FLASH_ADDR + current_offset));
+		uint32_t page_num =
+			AM_HAL_FLASH_ADDR2PAGE(((uint32_t)SOC_NV_FLASH_ADDR + current_offset));
 
 		/* Retry logic: attempt erase up to MAX_RETRIES times */
 		for (retry_count = 0; retry_count < FLASH_OPERATION_MAX_RETRIES; retry_count++) {
 			unsigned int key = irq_lock();
 
 			ret = am_hal_flash_page_erase(AM_HAL_FLASH_PROGRAM_KEY, page_inst,
-						       page_num);
-
-			/*
-			 * Invalidate caches before re-enabling interrupts so an
-			 * ISR taken after irq_unlock cannot observe stale code or
-			 * data from the just-erased flash. Also ensures the
-			 * subsequent verify reads actual flash contents.
-			 */
-			if (ret == AM_HAL_STATUS_SUCCESS) {
-				sys_cache_data_invd_range(
-					(uint32_t *)(SOC_NV_FLASH_ADDR + current_offset),
-					FLASH_ERASE_BLOCK_SIZE);
-				sys_cache_instr_flush_range(
-					(uint32_t *)(SOC_NV_FLASH_ADDR + current_offset),
-					FLASH_ERASE_BLOCK_SIZE);
-			}
+					     page_num);
 
 			irq_unlock(key);
 
@@ -344,25 +371,13 @@ static int flash_ambiq_erase(const struct device *dev, off_t offset, size_t len)
 			}
 
 			/* Verify erase - check if all bytes are 0xFF */
-			const uint8_t *flash_ptr =
-				(const uint8_t *)(SOC_NV_FLASH_ADDR + current_offset);
-			bool all_erased = true;
-
-			for (size_t i = 0; i < FLASH_ERASE_BLOCK_SIZE; i++) {
-				if (flash_ptr[i] != FLASH_ERASE_BYTE) {
-					all_erased = false;
-					break;
-				}
-			}
-
-			if (all_erased) {
+			if (flash_ambiq_is_erased(current_offset, FLASH_ERASE_BLOCK_SIZE)) {
 				erase_verified = true;
 				break;
 			}
 
 			LOG_WRN("Flash erase verification failed at offset 0x%lx (attempt %d/%d)",
-				(long)current_offset, retry_count + 1,
-				FLASH_OPERATION_MAX_RETRIES);
+			(long)current_offset, retry_count + 1, FLASH_OPERATION_MAX_RETRIES);
 		}
 
 		if (!erase_verified) {
@@ -375,7 +390,7 @@ static int flash_ambiq_erase(const struct device *dev, off_t offset, size_t len)
 		current_offset += FLASH_ERASE_BLOCK_SIZE;
 	}
 #else
-	/* Apollo4: use fill operation with retry logic */
+	/* Apollo4/5: use fill operation with retry logic */
 	bool erase_verified = false;
 
 	for (retry_count = 0; retry_count < FLASH_OPERATION_MAX_RETRIES; retry_count++) {
@@ -384,14 +399,20 @@ static int flash_ambiq_erase(const struct device *dev, off_t offset, size_t len)
 					    (len / sizeof(uint32_t)));
 
 		/*
-		 * Invalidate caches immediately after the HAL fill so any ISR
-		 * taken before the verify (or before this function returns)
-		 * cannot observe stale code or data from the just-erased flash.
+		 * Invalidate instruction cache so an ISR cannot execute stale
+		 * code from the just-erased flash region.
 		 */
+#if defined(CONFIG_SOC_SERIES_APOLLO4X)
 		if (ret == AM_HAL_STATUS_SUCCESS) {
-			sys_cache_data_invd_range((uint32_t *)(SOC_NV_FLASH_ADDR + offset), len);
-			sys_cache_instr_flush_range((uint32_t *)(SOC_NV_FLASH_ADDR + offset), len);
+			am_hal_cachectrl_control(
+				AM_HAL_CACHECTRL_CONTROL_MRAM_CACHE_INVALIDATE, NULL);
 		}
+#else
+		if (ret == AM_HAL_STATUS_SUCCESS) {
+			sys_cache_data_invd_range((void *)(SOC_NV_FLASH_ADDR + offset), len);
+			sys_cache_instr_flush_range((void *)(SOC_NV_FLASH_ADDR + offset), len);
+		}
+#endif
 
 		/* Map HAL error code to errno */
 		ret = flash_ambiq_hal_status_to_errno(ret);
@@ -403,17 +424,7 @@ static int flash_ambiq_erase(const struct device *dev, off_t offset, size_t len)
 		}
 
 		/* Verify erase */
-		const uint8_t *flash_ptr = (const uint8_t *)(SOC_NV_FLASH_ADDR + offset);
-		bool all_erased = true;
-
-		for (size_t i = 0; i < len; i++) {
-			if (flash_ptr[i] != FLASH_ERASE_BYTE) {
-				all_erased = false;
-				break;
-			}
-		}
-
-		if (all_erased) {
+		if (flash_ambiq_is_erased(offset, len)) {
 			erase_verified = true;
 			break;
 		}
@@ -429,8 +440,6 @@ static int flash_ambiq_erase(const struct device *dev, off_t offset, size_t len)
 	}
 #endif
 
-	sys_cache_data_invd_range((uint32_t *)(SOC_NV_FLASH_ADDR + offset), len);
-	sys_cache_instr_flush_range((uint32_t *)(SOC_NV_FLASH_ADDR + offset), len);
 	FLASH_UNLOCK(dev_data);
 
 	return ret;
@@ -468,17 +477,6 @@ static void flash_ambiq_pages_layout(const struct device *dev,
 }
 #endif /* CONFIG_FLASH_PAGE_LAYOUT */
 
-/**
- * @brief Ambiq MRAM flash driver API
- *
- * Power Management: NOT NEEDED
- *
- * The Ambiq internal MRAM flash is always accessible for read/write/erase operations
- * via memory-mapped access and HAL register programming. There are no power domains to
- * gate or clocks to manage - the memory array and flash controller remain powered and
- * operational throughout all system power states. All operations complete synchronously
- * before returning, so runtime PM would provide no benefit.
- */
 static DEVICE_API(flash, flash_ambiq_driver_api) = {
 	.read = flash_ambiq_read,
 	.write = flash_ambiq_write,

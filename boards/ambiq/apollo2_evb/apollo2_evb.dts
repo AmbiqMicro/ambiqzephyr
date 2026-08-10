@@ -1,4 +1,8 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright (c) 2026 Ambiq Micro Inc. <www.ambiq.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /dts-v1/;
 #include <ambiq/ambiq_apollo2.dtsi>
@@ -16,6 +20,8 @@
 		zephyr,shell-uart = &uart0;
 		zephyr,uart-mcumgr = &uart0;
 		zephyr,uart-pipe = &uart0;
+		zephyr,flash-controller = &flash;
+		zephyr,code-partition = &slot0_partition;
 	};
 };
 
