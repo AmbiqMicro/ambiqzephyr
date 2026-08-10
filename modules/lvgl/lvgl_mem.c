@@ -8,6 +8,8 @@
 #include "lvgl_mem.h"
 #include <zephyr/kernel.h>
 #include <zephyr/init.h>
+#include <zephyr/devicetree.h>
+#include <zephyr/linker/devicetree_regions.h>
 #include <zephyr/sys/sys_heap.h>
 
 #include <zephyr/logging/log.h>
@@ -16,8 +18,15 @@ LOG_MODULE_DECLARE(lvgl, CONFIG_LV_Z_LOG_LEVEL);
 #ifdef CONFIG_LV_Z_MEMORY_POOL_CUSTOM_SECTION
 #define HEAP_MEM_ATTRIBUTES Z_GENERIC_SECTION(.lvgl_heap) __aligned(8)
 #elif defined(CONFIG_LV_Z_MEMORY_POOL_ZEPHYR_REGION)
-#define HEAP_MEM_ATTRIBUTES Z_GENERIC_SECTION(CONFIG_LV_Z_MEMORY_POOL_ZEPHYR_REGION_NAME)
-			    __aligned(8)
+/*
+ * The region name has to reach Z_GENERIC_SECTION() as a bare token. That macro
+ * stringifies what it is given, so passing a Kconfig string produced a section
+ * named "XIP0" with the quotes included, which matches nothing in the linker
+ * script and left this pool in RAM as an orphan section.
+ */
+#define LVGL_MEM_POOL_REGION                                                                       \
+	LINKER_DT_NODE_REGION_NAME_TOKEN(DT_CHOSEN(zephyr_lvgl_mem_pool_region))
+#define HEAP_MEM_ATTRIBUTES Z_GENERIC_SECTION(LVGL_MEM_POOL_REGION) __aligned(8)
 #else
 #define HEAP_MEM_ATTRIBUTES __aligned(8)
 #endif /* CONFIG_LV_Z_MEMORY_POOL_CUSTOM_SECTION */

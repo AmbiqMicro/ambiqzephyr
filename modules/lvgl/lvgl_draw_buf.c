@@ -7,13 +7,24 @@
 #include "lvgl_draw_buf.h"
 
 #include <zephyr/kernel.h>
+#include <zephyr/devicetree.h>
+#include <zephyr/linker/devicetree_regions.h>
 #include <zephyr/sys/sys_heap.h>
 
 #include <lvgl.h>
 #include "draw/lv_draw_buf_private.h"
 
+/*
+ * The region name has to reach Z_GENERIC_SECTION() as a bare token. That macro
+ * stringifies what it is given, so passing a Kconfig string produced a section
+ * named "XIP0" with the quotes included, which matches nothing in the linker
+ * script and left this heap in RAM as an orphan section.
+ */
+#define LVGL_DRAW_BUF_REGION                                                                       \
+	LINKER_DT_NODE_REGION_NAME_TOKEN(DT_CHOSEN(zephyr_lvgl_draw_buf_region))
+
 static char lvgl_draw_buf_heap_mem[CONFIG_LV_Z_DRAW_BUF_HEAP_SIZE]
-	Z_GENERIC_SECTION(CONFIG_LV_Z_DRAW_BUF_ZEPHYR_REGION_NAME) __aligned(8);
+	Z_GENERIC_SECTION(LVGL_DRAW_BUF_REGION) __aligned(8);
 
 static struct sys_heap lvgl_draw_buf_heap;
 static struct k_spinlock lvgl_draw_buf_heap_lock;

@@ -36,6 +36,11 @@
 		 */
 		ambiq,psram = &aps25616ba;
 		ambiq,external-ram-region = &xip0;
+		/* LVGL's draw buffers and memory pool are far too large for SRAM;
+		 * place both in the same MSPI PSRAM aperture.
+		 */
+		zephyr,lvgl-draw-buf-region = &xip0;
+		zephyr,lvgl-mem-pool-region = &xip0;
 		zephyr,crc = &crc32;
 	};
 
