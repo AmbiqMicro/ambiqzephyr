@@ -22,7 +22,6 @@ jobs:
           if [ -d "${CACHE_DIR}" ]; then
             echo "Cloning from local cache (${CACHE_DIR}) at ${GIT_REF}…"
             git clone --reference "${CACHE_DIR}" \
-                      --depth 1 \
                       https://github.com/${{ github.repository }}.git "zephyr"
           else
             echo "Cache not found; doing fresh shallow clone at ${GIT_REF}…"
