@@ -30,6 +30,7 @@ config SOC_APOLLO510B_EM9305_EXTREF_INIT
 	bool "Wake SIP EM9305 for EXTREF clock"
 	depends on SOC_APOLLO510B
 	depends on DT_HAS_AMBIQ_BT_HCI_SPI_ENABLED
+	depends on !MCUBOOT
 	select GPIO
 	select SPI
 	select AMBIQ_COMPONENT_USE_BT
