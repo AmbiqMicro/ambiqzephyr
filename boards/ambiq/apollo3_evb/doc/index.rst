@@ -58,6 +58,49 @@ the following message:
 
    Hello World! apollo3_evb
 
+Building other samples
+----------------------
+
+The samples and tests below are built for this board as part of the Ambiq SDK
+release test. Paths are relative to the workspace root.
+
+* ``samples/basic/blinky_pwm``
+* ``samples/basic/button``
+* ``samples/basic/threads``
+* ``samples/cpp/hello_world``
+* ``samples/drivers/adc/adc_dt``
+* ``samples/drivers/counter/alarm``
+* ``samples/drivers/led/pwm``
+* ``samples/drivers/rtc``
+* ``samples/drivers/watchdog``
+* ``samples/hello_world``
+* ``samples/philosophers``
+* ``samples/subsys/logging/logger``
+* ``samples/subsys/mgmt/mcumgr/smp_svr`` (``--sysbuild -T sample.mcumgr.smp_svr.serial``)
+* ``samples/synchronization``
+* ``samples/sysbuild/with_mcuboot`` (``--sysbuild``)
+* ``tests/drivers/adc/adc_api``
+* ``tests/drivers/counter/counter_basic_api``
+* ``tests/drivers/gpio/gpio_basic_api``
+* ``tests/drivers/hwinfo/api``
+* ``tests/drivers/i2c/i2c_api``
+* ``tests/drivers/pwm/pwm_api``
+* ``tests/drivers/rtc/rtc_api``
+* ``tests/drivers/spi/spi_loopback``
+* ``tests/drivers/watchdog/wdt_basic_api``
+* ``tests/kernel/common``
+* ``tests/kernel/context``
+* ``tests/kernel/fifo/fifo_api``
+* ``tests/kernel/mutex/mutex_api``
+* ``tests/kernel/queue``
+* ``tests/kernel/semaphore/semaphore``
+* ``tests/kernel/sleep``
+* ``tests/kernel/threads/thread_apis``
+* ``tests/kernel/timer/timer_api``
+* ``tests/kernel/workq/work``
+* ``tests/lib/heap``
+* ``tests/subsys/logging/log_api``
+
 .. _Apollo3 Blue Website:
    https://ambiq.com/apollo3-blue/
 
