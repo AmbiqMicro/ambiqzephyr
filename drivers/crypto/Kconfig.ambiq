@@ -17,3 +17,29 @@ config CRYPTO_AMBIQ_AES
 		- CCM
 		- GCM
 		- XTS
+
+config CRYPTO_AMBIQ_SHA
+	bool "Ambiq CryptoCell SHA driver"
+	default y
+	depends on DT_HAS_AMBIQ_CRYPTO_SHA_ENABLED
+	select AMBIQ_HAL
+	select POWER_DOMAIN
+	help
+		Enable the Ambiq CryptoCell-312 SHA hash driver.
+
+		Supported hash algorithms:
+		- SHA-1
+		- SHA-256
+
+if CRYPTO_AMBIQ_SHA
+
+config CRYPTO_AMBIQ_SHA_MAX_SESSION
+	int "Maximum number of simultaneous SHA sessions"
+	default 2
+	range 1 8
+	help
+		Number of hash sessions that can be open at once. Each session
+		holds its own running digest state, so sessions may be
+		interleaved; access to the engine itself is serialised.
+
+endif # CRYPTO_AMBIQ_SHA

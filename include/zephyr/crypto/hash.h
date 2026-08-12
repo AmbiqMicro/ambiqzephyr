@@ -28,6 +28,7 @@ enum hash_algo {
 	CRYPTO_HASH_ALGO_SHA256 = 2,
 	CRYPTO_HASH_ALGO_SHA384 = 3,
 	CRYPTO_HASH_ALGO_SHA512 = 4,
+	CRYPTO_HASH_ALGO_SHA1 = 5,
 };
 
 /* Forward declarations */
