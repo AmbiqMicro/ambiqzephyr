@@ -1193,6 +1193,9 @@ int bt_apollo_dev_init(void)
 		return -ENODEV;
 	}
 
+#if IS_ENABLED(CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT)
+	/* Board EXTREF init already asserted CLKREQ; do not de-assert it here. */
+#else
 	/* Drive CLKREQ low (de-asserted) until bt_hci_transport_setup asserts
 	 * it; configure the pin as output before any SPI activity.
 	 */
@@ -1203,6 +1206,7 @@ int bt_apollo_dev_init(void)
 			return ret;
 		}
 	}
+#endif /* CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT */
 #endif /* CONFIG_SOC_SERIES_APOLLO4X */
 
 	return 0;

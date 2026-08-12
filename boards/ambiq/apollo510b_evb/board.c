@@ -73,11 +73,20 @@ LOG_MODULE_REGISTER(apollo510b_evb, CONFIG_LOG_DEFAULT_LEVEL);
 
 #if IS_ENABLED(CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT)
 
+#if !IS_ENABLED(CONFIG_BT)
+#define EM9305_CM_TIMER         11U
+#define EM9305_CM_PAD_CT_FNCSEL 6U
+#define EM9305_CM_PWM_COMPARE0  50U /* HFRC/64 = 1.5 MHz -> 30 kHz period */
+#define EM9305_CM_PWM_COMPARE1  25U /* 50 % duty cycle                    */
+#endif
+
 #define AP5_EM9305_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(ambiq_bt_hci_spi)
 
 static const struct gpio_dt_spec em9305_irq_gpio = GPIO_DT_SPEC_GET(AP5_EM9305_NODE, irq_gpios);
 static const struct gpio_dt_spec em9305_rst_gpio = GPIO_DT_SPEC_GET(AP5_EM9305_NODE, reset_gpios);
 static const struct gpio_dt_spec em9305_cm_gpio = GPIO_DT_SPEC_GET(AP5_EM9305_NODE, cm_gpios);
+static const struct gpio_dt_spec em9305_clkreq_gpio =
+	GPIO_DT_SPEC_GET(AP5_EM9305_NODE, clkreq_gpios);
 static const struct gpio_dt_spec em9305_cs_gpio =
 	GPIO_DT_SPEC_GET(DT_BUS(AP5_EM9305_NODE), cs_gpios);
 
@@ -118,6 +127,38 @@ static void em9305_cs_release(void)
 static void em9305_set_cm(bool state)
 {
 	(void)gpio_pin_set_dt(&em9305_cm_gpio, state ? 1 : 0);
+}
+
+#if !IS_ENABLED(CONFIG_BT)
+static void em9305_cm_pwm_ctrl(bool enable)
+{
+	if (enable) {
+		am_hal_timer_config_t timer_cfg;
+		am_hal_gpio_pincfg_t ct_cfg = am_hal_gpio_pincfg_output;
+
+		am_hal_timer_default_config_set(&timer_cfg);
+		timer_cfg.eFunction = AM_HAL_TIMER_FN_PWM;
+		timer_cfg.eInputClock = AM_HAL_TIMER_CLOCK_HFRC_DIV64;
+		timer_cfg.ui32Compare0 = EM9305_CM_PWM_COMPARE0;
+		timer_cfg.ui32Compare1 = EM9305_CM_PWM_COMPARE1;
+		am_hal_timer_config(EM9305_CM_TIMER, &timer_cfg);
+
+		am_hal_timer_output_config(em9305_cm_gpio.pin, AM_HAL_TIMER_OUTPUT_TMR11_OUT0);
+
+		ct_cfg.GP.cfg_b.uFuncSel = EM9305_CM_PAD_CT_FNCSEL;
+		am_hal_gpio_pinconfig(em9305_cm_gpio.pin, ct_cfg);
+
+		am_hal_timer_enable(EM9305_CM_TIMER);
+	} else {
+		am_hal_timer_disable(EM9305_CM_TIMER);
+		gpio_pin_configure_dt(&em9305_cm_gpio, GPIO_INPUT);
+	}
+}
+#endif
+
+static void em9305_hsclk_req(bool enable)
+{
+	(void)gpio_pin_set_dt(&em9305_clkreq_gpio, enable ? 1 : 0);
 }
 
 static int em9305_spi_transceive(void *tx, uint32_t tx_len, void *rx, uint32_t rx_len)
@@ -161,15 +202,28 @@ static int board_em9305_extref_init(void)
 		return -ENODEV;
 	}
 
+	if (!gpio_is_ready_dt(&em9305_clkreq_gpio)) {
+		LOG_ERR("EM9305 EXTREF init: CLKREQ GPIO not ready");
+		return -ENODEV;
+	}
+
 	am_devices_em9305_register_gpio_ops(em9305_set_reset, em9305_get_reset,
 					    em9305_irq_pin_state, em9305_cs_set,
 					    em9305_cs_release);
 	am_devices_em9305_register_cm_gpio(em9305_set_cm);
+#if !IS_ENABLED(CONFIG_BT)
+	am_devices_em9305_register_cm_pwm_ops(em9305_cm_pwm_ctrl);
+#endif
+
+	if (gpio_pin_configure_dt(&em9305_clkreq_gpio, GPIO_OUTPUT_INACTIVE) != 0) {
+		return -EIO;
+	}
+	em9305_hsclk_req(true);
 
 	if (gpio_pin_configure_dt(&em9305_rst_gpio, GPIO_OUTPUT_ACTIVE) != 0) {
 		return -EIO;
 	}
-	if (gpio_pin_configure_dt(&em9305_cm_gpio, GPIO_OUTPUT_INACTIVE) != 0) {
+	if (gpio_pin_configure_dt(&em9305_cm_gpio, GPIO_INPUT) != 0) {
 		return -EIO;
 	}
 	if (gpio_pin_configure_dt(&em9305_irq_gpio, GPIO_INPUT) != 0) {
@@ -178,6 +232,7 @@ static int board_em9305_extref_init(void)
 
 	cb.reset = am_devices_em9305_controller_reset;
 	cb.transceive = em9305_spi_transceive;
+	cb.skip_fw_update = IS_ENABLED(CONFIG_BT);
 
 	st = am_devices_em9305_init(&cb);
 	if (st != AM_DEVICES_EM9305_STATUS_SUCCESS) {
