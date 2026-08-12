@@ -4,18 +4,23 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-&spi6 {
-	status = "okay";
+&iom0 {
+	spi0: spi {
+		pinctrl-0 = <&spi0_default>;
+		pinctrl-names = "default";
+		clock-frequency = <1000000>;
+		status = "okay";
 
-	slow@0 {
-		compatible = "test-spi-loopback-slow";
-		reg = <0>;
-		spi-max-frequency = <500000>;
-	};
+		slow@0 {
+			compatible = "test-spi-loopback-slow";
+			reg = <0>;
+			spi-max-frequency = <500000>;
+		};
 
-	fast@0 {
-		compatible = "test-spi-loopback-fast";
-		reg = <0>;
-		spi-max-frequency = <8000000>;
+		fast@0 {
+			compatible = "test-spi-loopback-fast";
+			reg = <0>;
+			spi-max-frequency = <8000000>;
+		};
 	};
 };
