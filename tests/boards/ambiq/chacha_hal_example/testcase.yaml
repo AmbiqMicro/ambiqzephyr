@@ -15,3 +15,5 @@ tests:
     platform_allow:
       - apollo510_evb
       - apollo510b_evb
+      - apollo510dL_evb
+      - apollo330mP_evb

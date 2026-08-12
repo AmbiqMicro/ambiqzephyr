@@ -199,6 +199,14 @@
 			status = "disabled";
 		};
 
+		cc312_chacha: chacha@400c0000 {
+			compatible = "ambiq,crypto-chacha";
+			reg = <0x400c0000 0x1f30>;
+			interrupts = <24 0>;
+			power-domains = <&crypto_pd>;
+			status = "disabled";
+		};
+
 		crc32: crc32@4000e830 {
 			compatible = "ambiq,hw-crc32";
 			reg = <0x4000e830 0x4>;

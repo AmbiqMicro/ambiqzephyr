@@ -206,6 +206,14 @@
 			status = "disabled";
 		};
 
+		cc312_chacha: chacha@400c0000 {
+			compatible = "ambiq,crypto-chacha";
+			reg = <0x400c0000 0x1f30>;
+			interrupts = <24 0>;
+			power-domains = <&crypto_pd>;
+			status = "disabled";
+		};
+
 		stimer0: stimer@STIMER_BASE_NAME {
 			compatible = "ambiq,stimer";
 			reg = <STIMER_REG_BASE STIMER_REG_SIZE>;
