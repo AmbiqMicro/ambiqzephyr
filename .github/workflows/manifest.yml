@@ -31,6 +31,7 @@ jobs:
           cd "zephyr"
           git fetch origin "${BASE_REF}"
           git fetch origin "${GIT_REF}"
+          git fetch --unshallow origin 2>/dev/null || true
           git reset --hard "${GIT_REF}"
           git clean -fdx
 
