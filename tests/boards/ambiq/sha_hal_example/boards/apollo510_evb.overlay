@@ -1,0 +1,21 @@
+/*
+ * Copyright (c) 2026 Ambiq Micro, Inc.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * All CC312 engines share IRQ 24. The SHA HAL polls for DMA completion, so a
+ * sibling driver that connects an ISR would consume and clear the status the
+ * poll is waiting on.
+ */
+&cc312_aes {
+	status = "disabled";
+};
+
+&cc312_chacha {
+	status = "disabled";
+};
+
+&cc312_sha {
+	status = "okay";
+};
