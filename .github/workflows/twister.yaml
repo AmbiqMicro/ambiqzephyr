@@ -491,7 +491,7 @@ jobs:
       checks: write
       contents: read
 
-    if: success() || failure()
+    if: ${{ always() && needs.twister-build.result != 'skipped' }}
 
     steps:
       - name: Set event variables
@@ -552,8 +552,16 @@ jobs:
           path: artifacts
 
       - name: Merge Test Results
+        id: merge
         run: |
-          find artifacts -name twister.xml -print0 | xargs -0 -I{} python3 -m junitparser merge {} junit.xml
+          mapfile -d '' -t xmls < <(find artifacts -name twister.xml -print0 2>/dev/null)
+          if [ ${#xmls[@]} -eq 0 ]; then
+            echo "No twister.xml found; nothing to publish."
+            echo "found=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "found=${#xmls[@]}" >> "$GITHUB_OUTPUT"
+          python3 -m junitparser merge "${xmls[@]}" junit.xml
           junit2html junit.xml junit.html
 
       - name: Upload Unit Test Results
@@ -567,6 +575,7 @@ jobs:
             junit.xml
 
       - name: Publish Unit Test Results
+        if: steps.merge.outputs.found != '0'
         uses: EnricoMi/publish-unit-test-result-action/linux@3a74b2957438d0b6e2e61d67b05318aa25c9e6c6 # v2.20.0
         with:
           check_name: Unit Test Results
