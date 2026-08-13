@@ -56,14 +56,16 @@ config SOC_APOLLO330P
 	select SOC_AMBIQ_HAS_RSS
 
 config SOC_AMBIQ_APOLLO5X_BLE_LP
-	bool "AmbiqSuite ble_freertos_fit_lp style early SoC init (330P/510L)"
-	depends on SOC_APOLLO330P || SOC_APOLLO510L
+	bool "AmbiqSuite ble_freertos_fit_lp style early SoC init"
+	depends on SOC_APOLLO330P || SOC_APOLLO510L || SOC_APOLLO510B
 	help
 	  Align Zephyr early boot with boards/.../power/ble_freertos_fit_lp: LFRC for RTC,
-	  XTAL power-down in deep sleep, DBGCTRL cleared, IOSFD0..NETAOL-1 peripheral power
-	  gating (NETAOL/RSS kept), DTCM128K + NVM + ROM auto, SRAM 0.75M active/retain,
-	  MRAM low-power bits, I/D cache off with CPDLP/cache power-down. Intended for
-	  BLE + tickless idle; not for throughput-focused builds.
+	  XTAL power-down in deep sleep, DBGCTRL cleared, peripheral power gating, DTCM128K
+	  + ROM auto, MRAM low-power bits, I/D cache off with CPDLP/cache power-down.
+	  330P/510L: IOSFD0..NETAOL-1 gated (NETAOL/RSS kept), SRAM 0.75M retain.
+	  510B (EM9305): ITCM32K/DTCM128K, NVM0 only, SSRAM 2M active/retain (LP overlay),
+	  IOM6/CRYPTO/OTP kept for HCI SPI and TRNG.
+	  Intended for BLE + tickless idle; not for throughput-focused builds.
 
 if SOC_SERIES_APOLLO5X
 

@@ -1,0 +1,135 @@
+/*
+ * Copyright (c) 2026 Ambiq Micro Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * peripheral_hr low-power devicetree overlay for apollo510b_evb (SIP EM9305 over SPI).
+ *
+ * Apply only with prj_apollo510b_ble_lp.conf (or equivalent), not with default prj.conf or
+ * console harness builds. Example:
+ *
+ *   west build -b apollo510b_evb samples/bluetooth/peripheral_hr \\
+ *     -- -DCONF_FILE=prj_apollo510b_ble_lp.conf \\
+ *        -DDTC_OVERLAY_FILE=boards/apollo510b_evb_ble_lp.overlay
+ *
+ * Twister: sample.bluetooth.peripheral_hr.ble_lp.apollo510b_evb
+ *
+ * Reference: AmbiqSuite boards/apollo510b_evb/examples/power/ble_freertos_fit_lp
+ * (AM_PART_APOLLO510, apollo510-system-config.yaml). That example runs from MRAM +
+ * DTCM only (SRAM_NONE); this overlay keeps SSRAM @0x20184000 because the Zephyr
+ * BT stack needs more RAM than fit_lp's ~120 KiB DTCM budget.
+ *
+ * Active during advertising (sample needs): flash/MRAM, stimer, IOM6+SPI (EM9305 HCI), TRNG,
+ * EM9305 GPIO/CLKREQ, kernel tick/timer — not LEDs/buttons, UART, USB, SDIO, MSPI/PSRAM, CRC,
+ * WDT, or unused GPIO banks.
+ *
+ * SoC: CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP keeps IOM6 powered for HCI while gating other blocks.
+ */
+
+&dtcm {
+	reg = <0x20000000 0x20000>;
+};
+
+&cpu0 {
+	cpu-power-states = <&idle &suspend_to_ram>;
+};
+
+&stimer0 {
+	clk-source = <6>;
+};
+
+/* SWO is unused with CONFIG_CONSOLE=n; drop pinmux so the trace pin can stay low-leakage. */
+&itm {
+	status = "disabled";
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-names;
+};
+
+/delete-node/ &sram0;
+
+/ {
+	sram: sram0: memory@20184000 {
+		compatible = "mmio-sram";
+		reg = <0x20184000 0x74000>;
+	};
+};
+
+/* MSPI/PSRAM off: drop unused nocache window (fit_lp uses SRAM_NONE; keep SSRAM budget in app RAM). */
+/delete-node/ &sram_no_cache;
+
+/ {
+	chosen {
+		/delete-property/ zephyr,console;
+		/delete-property/ zephyr,uart-mcumgr;
+		/delete-property/ zephyr,shell-uart;
+		/delete-property/ zephyr,uart-pipe;
+		/delete-property/ zephyr,crc;
+		/delete-property/ ambiq,psram;
+		/delete-property/ ambiq,external-ram-region;
+	};
+
+	leds {
+		status = "disabled";
+	};
+
+	buttons {
+		status = "disabled";
+	};
+};
+
+&cc312_aes {
+	status = "disabled";
+};
+
+&audadc0 {
+	status = "disabled";
+};
+
+&crc32 {
+	status = "disabled";
+};
+
+&uart1 {
+	status = "disabled";
+};
+
+&wdt0 {
+	status = "disabled";
+};
+
+&mspi0 {
+	status = "disabled";
+};
+
+&aps51216ba {
+	status = "disabled";
+};
+
+&usb {
+	status = "disabled";
+};
+
+&sdio0 {
+	status = "disabled";
+
+	mmc {
+		status = "disabled";
+	};
+};
+
+&sdio1 {
+	status = "disabled";
+};
+
+/* EM9305 HCI: CM on gpio0_31; reset gpio64_95; IRQ gpio96_127; CS/CLKREQ gpio128_159. */
+&gpio32_63 {
+	status = "disabled";
+};
+
+&gpio160_191 {
+	status = "disabled";
+};
+
+&gpio192_223 {
+	status = "disabled";
+};

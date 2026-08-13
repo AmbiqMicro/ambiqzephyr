@@ -202,7 +202,7 @@
 			spi-max-frequency = <DT_FREQ_M(16)>;
 			irq-gpios = <&gpio96_127 21 GPIO_ACTIVE_HIGH>;
 			reset-gpios = <&gpio64_95 29 GPIO_ACTIVE_LOW>;
-			clkreq-gpios = <&gpio128_159 10 GPIO_ACTIVE_HIGH>;
+			clkreq-gpios = <&gpio128_159 8 GPIO_ACTIVE_HIGH>; /* pin 136 AP5_12M_CLKREQ */
 			cm-gpios = <&gpio0_31 15 GPIO_ACTIVE_HIGH>;
 			status = "okay";
 		};

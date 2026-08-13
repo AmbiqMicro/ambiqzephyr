@@ -102,7 +102,8 @@ LOG_MODULE_REGISTER(bt_apollox_driver);
  */
 #define EM9305_HEARTBEAT_INTERVAL_MS 10000U
 
-#if (CONFIG_SOC_APOLLO510B) && !defined(CONFIG_BT_HCI_RAW)
+#if (CONFIG_SOC_APOLLO510B) && !defined(CONFIG_BT_HCI_RAW) && \
+	!IS_ENABLED(CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP)
 #define EM9305_HEARTBEAT_ENABLED 1
 #else
 #define EM9305_HEARTBEAT_ENABLED 0
@@ -716,7 +717,13 @@ int bt_hci_transport_setup(const struct device *dev)
 	/* Configure the interrupt edge for IRQ pin */
 	gpio_pin_interrupt_configure_dt(&irq_gpio, GPIO_INT_EDGE_RISING);
 
-	bt_em9305_hsclk_req(true);
+	{
+		int clkreq_ret = gpio_pin_configure_dt(&clkreq_gpio, GPIO_OUTPUT_INACTIVE);
+
+		if (clkreq_ret != 0) {
+			return clkreq_ret;
+		}
+	}
 #elif (CONFIG_SOC_SERIES_APOLLO4X)
 	/* Configure the XO32MHz and XO32kHz clocks.*/
 	clock_control_configure(clk32k_dev, NULL, NULL);
@@ -1136,14 +1143,22 @@ int bt_apollo_vnd_setup(void)
 		ret = bt_em9305_set_tx_power(EM9305_TX_POWER_DEFAULT);
 	}
 	if (ret == 0) {
-		const uint8_t sleep_disable = 0x00;
+#if IS_ENABLED(CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP)
+		const uint8_t sleep_opt = 0x01;
+#else
+		const uint8_t sleep_opt = 0x00;
+#endif
 
 		ret = bt_em9305_send_vsc(HCI_VSC_SET_SLEEP_OPTION_CMD_OPCODE,
-					 HCI_VSC_SET_SLEEP_OPTION_CMD_LENGTH, &sleep_disable);
+					 HCI_VSC_SET_SLEEP_OPTION_CMD_LENGTH, &sleep_opt);
 		if (ret != 0) {
-			LOG_WRN("EM9305: sleep disable VSC failed (%d), continuing", ret);
-			ret = 0; /* non-fatal — proceed without sleep disable */
+			LOG_WRN("EM9305: sleep option VSC failed (%d), continuing", ret);
+			ret = 0; /* non-fatal */
 		}
+#if IS_ENABLED(CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP)
+		/* fit_lp keeps CLKREQ de-asserted when EXTREF is not in use */
+		bt_em9305_hsclk_req(false);
+#endif
 	}
 	if (ret == 0) {
 #if EM9305_HEARTBEAT_ENABLED
@@ -1193,12 +1208,6 @@ int bt_apollo_dev_init(void)
 		return -ENODEV;
 	}
 
-#if IS_ENABLED(CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT)
-	/* Board EXTREF init already asserted CLKREQ; do not de-assert it here. */
-#else
-	/* Drive CLKREQ low (de-asserted) until bt_hci_transport_setup asserts
-	 * it; configure the pin as output before any SPI activity.
-	 */
 	{
 		int ret = gpio_pin_configure_dt(&clkreq_gpio, GPIO_OUTPUT_INACTIVE);
 
@@ -1206,7 +1215,6 @@ int bt_apollo_dev_init(void)
 			return ret;
 		}
 	}
-#endif /* CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT */
 #endif /* CONFIG_SOC_SERIES_APOLLO4X */
 
 	return 0;

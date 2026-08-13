@@ -156,6 +156,77 @@ static void ambiq_apollo5x_ble_lp_fit_early_init(void)
 }
 #endif
 
+#if IS_ENABLED(CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP) && defined(CONFIG_SOC_APOLLO510B)
+/*
+ * Apollo510 Blue + SIP EM9305 (ble_freertos_fit_lp non-510L path): LFRC RTC, XTAL pwdn,
+ * caches off, ITCM32K/DTCM128K, minimal SRAM retain — keep IOM6 for EM9305 HCI SPI.
+ */
+static void ambiq_apollo510b_ble_lp_fit_early_init(void)
+{
+	am_hal_pwrctrl_periph_e periph;
+
+	am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_RTC_SEL_LFRC, NULL);
+	am_hal_rtc_osc_select(AM_HAL_RTC_OSC_LFRC);
+	am_hal_pwrctrl_control(AM_HAL_PWRCTRL_CONTROL_XTAL_PWDN_DEEPSLEEP, NULL);
+	MCUCTRL->XTALCTRL = 0;
+	am_hal_rtc_osc_disable();
+
+	for (periph = (am_hal_pwrctrl_periph_e)0; periph < AM_HAL_PWRCTRL_PERIPH_MAX; periph++) {
+		switch (periph) {
+		case AM_HAL_PWRCTRL_PERIPH_IOM6:
+		case AM_HAL_PWRCTRL_PERIPH_CRYPTO:
+		case AM_HAL_PWRCTRL_PERIPH_OTP:
+			continue;
+		default:
+			am_hal_pwrctrl_periph_disable(periph);
+			break;
+		}
+	}
+
+	MCUCTRL->DBGCTRL = 0;
+
+	am_hal_pwrctrl_mcu_memory_config_t mcu_mem = {
+		.eROMMode = AM_HAL_PWRCTRL_ROM_AUTO,
+		.eDTCMCfg = AM_HAL_PWRCTRL_ITCM32K_DTCM128K,
+		.eRetainDTCM = AM_HAL_PWRCTRL_MEMRETCFG_TCMPWDSLP_RETAIN,
+		.eNVMCfg = AM_HAL_PWRCTRL_NVM0_ONLY,
+		.bKeepNVMOnInDeepSleep = false,
+	};
+
+	am_hal_pwrctrl_mcu_memory_config(&mcu_mem);
+
+	MCUCTRL->MRAMCRYPTOPWRCTRL_b.MRAM0LPREN = 1;
+	MCUCTRL->MRAMCRYPTOPWRCTRL_b.MRAM0SLPEN = 0;
+	MCUCTRL->MRAMCRYPTOPWRCTRL_b.MRAM0PWRCTRL = 1;
+
+	am_hal_cachectrl_icache_disable();
+	am_hal_cachectrl_dcache_disable();
+
+	am_hal_pwrctrl_pwrmodctl_cpdlp_t cpdlp = {
+		.eRlpConfig = AM_HAL_PWRCTRL_RLP_OFF,
+		.eElpConfig = AM_HAL_PWRCTRL_ELP_OFF,
+		.eClpConfig = AM_HAL_PWRCTRL_CLP_OFF,
+	};
+
+	am_hal_pwrctrl_pwrmodctl_cpdlp_config(cpdlp);
+	am_hal_cachectrl_caches_power_control(false);
+
+	am_hal_pwrctrl_sram_memcfg_t sram_mem = {
+		/*
+		 * Overlay maps zephyr,sram to 0x20184000 (464 KiB) in SSRAM group1.
+		 * NONE powers off all banks and the kernel RAM region is inaccessible.
+		 */
+		.eSRAMCfg = AM_HAL_PWRCTRL_SRAM_2M,
+		.eActiveWithMCU = AM_HAL_PWRCTRL_SRAM_NONE,
+		.eActiveWithGFX = AM_HAL_PWRCTRL_SRAM_NONE,
+		.eActiveWithDISP = AM_HAL_PWRCTRL_SRAM_NONE,
+		.eSRAMRetain = AM_HAL_PWRCTRL_SRAM_2M,
+	};
+
+	am_hal_pwrctrl_sram_config(&sram_mem);
+}
+#endif
+
 void soc_early_init_hook(void)
 {
 	/* Enable Loop and branch info cache */
@@ -186,9 +257,12 @@ void soc_early_init_hook(void)
 
 	am_hal_pwrctrl_temp_update(25.0f, &dummy);
 
-#if IS_ENABLED(CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP) &&                                                \
-	(defined(CONFIG_SOC_APOLLO330P) || defined(CONFIG_SOC_APOLLO510L))
+#if IS_ENABLED(CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP)
+#if defined(CONFIG_SOC_APOLLO330P) || defined(CONFIG_SOC_APOLLO510L)
 	ambiq_apollo5x_ble_lp_fit_early_init();
+#elif defined(CONFIG_SOC_APOLLO510B)
+	ambiq_apollo510b_ble_lp_fit_early_init();
+#endif
 #elif (CONFIG_COREMARK == 1)
 	/* Enable Icache*/
 	sys_cache_instr_enable();

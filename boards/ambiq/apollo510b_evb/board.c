@@ -12,8 +12,10 @@
  *   info (including EXTREF frequency), HFRC/HFRC2 defaults, SIP GPIO 136, and
  *   optional USB PHY tuning.
  * - When CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT is enabled, POST_KERNEL
- *   SYS_INIT wakes the SIP EM9305 over SPI and sends HCI VSC 0xFD09 (sleep on)
+ *   SYS_INIT wakes the SIP EM9305 over SPI and sends HCI VSC 0xFC49 (set sleep option)
  *   so CLKMGR can use the ~12 MHz EXTREF without CONFIG_BT.
+ * - GPIO 136 (AP5_12M_CLKREQ) is preconfigured output-low in board_early_init_hook;
+ *   clkmgr asserts it only when EXTREF_CLK is requested (not at boot).
  */
 
 #include <zephyr/devicetree.h>
@@ -34,7 +36,7 @@
 LOG_MODULE_REGISTER(apollo510b_evb, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define EM9305_HCI_CMD_PKT       0x01U
-#define EM9305_HCI_VSC_SET_SLEEP 0xFD09U
+#define EM9305_HCI_VSC_SET_SLEEP 0xFC49U
 #endif
 
 #if defined(CONFIG_AMBIQ_HAL_USE_USB)
@@ -194,6 +196,11 @@ static int em9305_enable_sleep(void)
 
 static int board_em9305_extref_init(void)
 {
+#if IS_ENABLED(CONFIG_BT)
+	/* HCI driver owns EM9305 when Bluetooth is enabled. */
+	return 0;
+#endif
+
 	am_devices_em9305_callback_t cb;
 	uint32_t st;
 
@@ -265,9 +272,13 @@ void board_early_init_hook(void)
 	am_hal_clkmgr_board_info_set(&sClkmgrBoardInfo);
 
 #if IS_ENABLED(CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT)
-	/* SIP EXTREF path: enable EM9305 clock output via GPIO 136 */
+	/*
+	 * Preconfigure AP5_12M_CLKREQ (GPIO 136) as output low. Clkmgr asserts it
+	 * only when EXTREF_CLK is requested; keeping it high forces EM9305 12 MHz
+	 * on continuously (see am_hal_clkmgr_request_EXTREF_CLK()).
+	 */
 	am_hal_gpio_pinconfig(136, am_hal_gpio_pincfg_output);
-	am_hal_gpio_output_set(136);
+	am_hal_gpio_output_clear(136);
 #endif
 
 	/* Default HFRC and HFRC2 to Free Running clocks */
