@@ -77,6 +77,40 @@ config SOC_AMBIQ_RSS_MGR
 	help
 	  This option includes the radio subsystem manager functions for Apollo510L.
 
+config SOC_AMBIQ_DEEPER_SLEEP_RECOVERY
+	bool "Recovery window for the deeper sleep state"
+	depends on PM && (SOC_APOLLO510L || SOC_APOLLO330P)
+	select GPIO
+	help
+	  Apollo330P and Apollo510L map suspend-to-disk onto the Ambiq deeper
+	  sleep state, which retains only NVM. A part that has entered it cannot
+	  be halted, so a board that idles early in boot can only be reflashed by
+	  racing its first idle, which is unreliable.
+
+	  Sample a recovery pin during initialisation and, while it is asserted
+	  through reset, block the state for a fixed window so a debugger can
+	  attach and erase.
+
+	  The pin is the pm-recovery alias if the board defines one, otherwise sw0.
+	  Either may name any node carrying a gpios property, and the devicetree
+	  flags decide whether asserted means low or high, so a board is free to
+	  use a jumper or test point rather than a button. A board with neither
+	  alias, such as apollo510L_eb, has no trigger and is unaffected.
+	  Apollo510 does not offer the state at all.
+
+	  Off by default. Recovering a board is a developer action, so nothing
+	  samples a pin at boot unless a build asks for it. Enable it in the
+	  configuration of a test or application that can strand a part.
+
+config SOC_AMBIQ_DEEPER_SLEEP_BOOT_WINDOW_MS
+	int "Recovery window when the recovery pin is held at boot, in ms"
+	depends on SOC_AMBIQ_DEEPER_SLEEP_RECOVERY
+	default 10000
+	help
+	  How long SOC_AMBIQ_DEEPER_SLEEP_RECOVERY blocks suspend-to-disk when it
+	  finds the recovery pin asserted at boot. The window has to outlast a
+	  debugger connecting and starting an erase.
+
 config ARMV8_1_M_PMU_EVENTCNT
 	int
 	default 8
