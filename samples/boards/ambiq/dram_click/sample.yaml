@@ -6,6 +6,11 @@ tests:
       - drivers
       - psram
     platform_allow:
+      - apollo330mP_evb
+      - apollo510_evb
+      - apollo510b_evb
+      - apollo510dL_evb
+    integration_platforms:
       - apollo510_evb
     extra_args: SHIELD="ambiq_mikrobus_spi;mikroe_dram_click"
     depends_on:

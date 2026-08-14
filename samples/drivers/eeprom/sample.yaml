@@ -29,6 +29,23 @@ tests:
       type: one_line
       regex:
         - "Reset the MCU to see the increasing boot counter."
+  sample.drivers.eeprom.ambiq_eeram_click:
+    tags:
+      - eeprom
+      - shield
+    platform_allow:
+      - apollo330mP_evb
+      - apollo510_evb
+      - apollo510b_evb
+      - apollo510dL_evb
+    integration_platforms:
+      - apollo510_evb
+    extra_args: SHIELD="ambiq_mikrobus_i2c;mikroe_eeram_33v_click"
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "Reset the MCU to see the increasing boot counter."
   sample.drivers.eeprom.shield.x_nucleo_eeprma2:
     tags:
       - eeprom
