@@ -20,6 +20,9 @@ jobs:
           GIT_REF="${{ github.event.pull_request.head.sha }}"
           CACHE_DIR="/data/ambiqzephyrcache/zephyrproject/zephyr"
           if [ -d "${CACHE_DIR}" ]; then
+            echo "Refreshing local cache (${CACHE_DIR})…"
+            flock -n "${CACHE_DIR}" \
+              git -C "${CACHE_DIR}" -c gc.auto=0 fetch --quiet origin || true
             echo "Cloning from local cache (${CACHE_DIR}) at ${GIT_REF}…"
             git clone --reference "${CACHE_DIR}" \
                       https://github.com/${{ github.repository }}.git "zephyr"
