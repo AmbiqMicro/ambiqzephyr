@@ -179,7 +179,7 @@
 		trng: trng@40009aa0 {
 			compatible = "ambiq,puf-trng";
 			reg = <0x40009aa0 0x4>;
-			power-domains = <&crypto_pd>;
+			power-domains = <&otp_pd>;
 			status = "disabled";
 		};
 
