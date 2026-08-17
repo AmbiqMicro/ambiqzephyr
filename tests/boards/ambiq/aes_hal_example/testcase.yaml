@@ -14,5 +14,7 @@ tests:
       regex:
         - "All driver checks passed"
     platform_allow:
+      - apollo330mP_evb
       - apollo510_evb
       - apollo510b_evb
+      - apollo510dL_evb
