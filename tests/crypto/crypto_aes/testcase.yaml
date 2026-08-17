@@ -15,3 +15,14 @@ tests:
       - esp32c6_devkitc/esp32c6/hpcore
       - esp32h2_devkitm
     tags: crypto
+  crypto.aes.ambiq:
+    platform_allow:
+      - apollo510_evb
+      - apollo510b_evb
+      - apollo510dL_evb
+      - apollo330mP_evb
+    integration_platforms:
+      - apollo510_evb
+    extra_configs:
+      - CONFIG_NOCACHE_MEMORY=y
+    tags: crypto

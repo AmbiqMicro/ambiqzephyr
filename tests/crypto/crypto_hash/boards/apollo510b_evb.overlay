@@ -1,0 +1,19 @@
+/*
+ * Copyright (c) 2026 Ambiq Micro, Inc.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * All CC312 engines share IRQ 24, so only the engine under test is enabled.
+ */
+&cc312_aes {
+	status = "disabled";
+};
+
+&cc312_chacha {
+	status = "disabled";
+};
+
+&cc312_sha {
+	status = "okay";
+};
