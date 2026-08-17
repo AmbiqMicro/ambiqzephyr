@@ -229,6 +229,22 @@ config MBEDTLS_SHELL
 	  Enable mbed TLS shell module, which allows to show debug information
 	  about mbed TLS library, such as heap usage.
 
+config MBEDTLS_ALT_AMBIQ_CC312_ECDSA
+	bool "Ambiq CryptoCell-312 ECDSA acceleration for mbed TLS"
+	depends on MBEDTLS_BUILTIN
+	depends on DT_HAS_AMBIQ_CRYPTO_AES_ENABLED || DT_HAS_AMBIQ_CRYPTO_SHA_ENABLED || \
+		   DT_HAS_AMBIQ_CRYPTO_CHACHA_ENABLED
+	select PM_DEVICE_RUNTIME
+	select POWER_DOMAIN
+	help
+	  Route mbedtls_ecdsa_sign() and mbedtls_ecdsa_verify() to the
+	  CryptoCell-312 PKA engine. Only secp256r1 is implemented; enabling
+	  this replaces the software implementation, so ECDSA on any other
+	  curve returns MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE.
+
+	  The ephemeral scalar comes from the CryptoCell TRNG rather than the
+	  f_rng callback passed by the caller.
+
 config MBEDTLS_ZEROIZE_ALT
 	bool "mbed TLS alternate mbedtls_platform_zeroize implementation"
 	help

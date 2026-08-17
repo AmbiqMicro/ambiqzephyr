@@ -123,6 +123,11 @@ zephyr_interface_library_named(mbedTLS)
 
     zephyr_library_sources_ifdef(CONFIG_MBEDTLS_DEBUG debug.c)
     zephyr_library_sources_ifdef(CONFIG_MBEDTLS_SHELL shell.c)
+    zephyr_library_sources_ifdef(CONFIG_MBEDTLS_ALT_AMBIQ_CC312_ECDSA alt_ambiq_cc312_ecdsa.c)
+    zephyr_compile_definitions_ifdef(CONFIG_MBEDTLS_ALT_AMBIQ_CC312_ECDSA
+        MBEDTLS_ECDSA_SIGN_ALT
+        MBEDTLS_ECDSA_VERIFY_ALT
+    )
 
     zephyr_library_app_memory(k_mbedtls_partition)
     if(CONFIG_ARCH_POSIX AND CONFIG_ASAN AND NOT CONFIG_64BIT AND NOT CONFIG_NO_OPTIMIZATIONS)
