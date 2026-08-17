@@ -174,7 +174,7 @@ static int spi_config(const struct device *dev, const struct spi_config *config)
 	data->ios_cfg.pui8SRAMBuffer = ambiq_spid_sram_buffer,
 	data->ios_cfg.ui32SRAMBufferCap = AMBIQ_SPID_TX_BUFSIZE_MAX,
 
-	ctx->config = config;
+	ctx->config = NULL;
 
 	/* Disable IOS instance as it cannot be configured when enabled */
 	ret = am_hal_ios_disable(data->ios_handler);
@@ -198,6 +198,8 @@ static int spi_config(const struct device *dev, const struct spi_config *config)
 	am_hal_ios_interrupt_clear(data->ios_handler, AM_HAL_IOS_INT_ALL);
 	am_hal_ios_interrupt_enable(data->ios_handler, AMBIQ_SPID_INT_ERR | AM_HAL_IOS_INT_IOINTW |
 							       AMBIQ_SPID_XCMP_INT);
+
+	ctx->config = config;
 
 	return 0;
 }
