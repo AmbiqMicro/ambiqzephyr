@@ -22,6 +22,7 @@ config AUDADC_AMBIQ_HANDLE_CACHE
 config AUDADC_AMBIQ_BUFFER_ALIGNMENT
 	int "Set the AUDADC DMA TCB buffer alignment"
 	default DCACHE_LINE_SIZE if DCACHE
+	default 4
 	help
 	  AUDADC buffer should be 32bytes aligned when placed in cachable region.
 
