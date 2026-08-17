@@ -46,8 +46,9 @@ enum cipher_mode {
 	CRYPTO_CIPHER_MODE_CTR = 3,
 	CRYPTO_CIPHER_MODE_CCM = 4,
 	CRYPTO_CIPHER_MODE_GCM = 5,
-	CRYPTO_CIPHER_MODE_XTS = 6,
+	CRYPTO_CIPHER_MODE_CFB = 6,
 	CRYPTO_CIPHER_MODE_OFB = 7,
+	CRYPTO_CIPHER_MODE_XTS = 8,
 };
 
 /* Forward declarations */
@@ -68,9 +69,11 @@ typedef int (*ccm_op_t)(struct cipher_ctx *ctx, struct cipher_aead_pkt *pkt, uin
 
 typedef int (*gcm_op_t)(struct cipher_ctx *ctx, struct cipher_aead_pkt *pkt, uint8_t *nonce);
 
-typedef int (*xts_op_t)(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint8_t *data_unit);
+typedef int (*cfb_op_t)(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint8_t *iv);
 
 typedef int (*ofb_op_t)(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint8_t *iv);
+
+typedef int (*xts_op_t)(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint8_t *data_unit);
 
 struct cipher_ops {
 
@@ -82,8 +85,9 @@ struct cipher_ops {
 		ctr_op_t ctr_crypt_hndlr;
 		ccm_op_t ccm_crypt_hndlr;
 		gcm_op_t gcm_crypt_hndlr;
-		xts_op_t xts_crypt_hndlr;
+		cfb_op_t cfb_crypt_hndlr;
 		ofb_op_t ofb_crypt_hndlr;
+		xts_op_t xts_crypt_hndlr;
 	};
 };
 
