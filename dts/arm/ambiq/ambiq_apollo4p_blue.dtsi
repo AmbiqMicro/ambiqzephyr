@@ -689,6 +689,34 @@
 			status = "disabled";
 		};
 
+		pdm0: pdm@40201000 {
+			compatible = "ambiq,pdm";
+			reg = <0x40201000 0x254>;
+			interrupts = <48 0>;
+			status = "disabled";
+		};
+
+		audadc0: audadc@40210000 {
+			compatible = "ambiq,audadc";
+			reg = <0x40210000 0x294>;
+			interrupts = <42 0>;
+			status = "disabled";
+		};
+
+		i2s0: i2s0@40208000 {
+			compatible = "ambiq,i2s";
+			reg = <0x40208000 0x404>;
+			interrupts = <44 0>;
+			status = "disabled";
+		};
+
+		i2s1: i2s1@40209000 {
+			compatible = "ambiq,i2s";
+			reg = <0x40209000 0x404>;
+			interrupts = <45 0>;
+			status = "disabled";
+		};
+
 		pinctrl: pin-controller@40010000 {
 			compatible = "ambiq,apollo4-pinctrl";
 			reg = <0x40010000 0x800>;
