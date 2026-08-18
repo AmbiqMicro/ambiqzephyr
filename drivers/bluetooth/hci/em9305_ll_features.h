@@ -8,17 +8,13 @@
  * @file em9305_ll_features.h
  * @brief LE Local Supported Features bit table for the EM9305 BLE radio.
  *
- * Layout, naming, per-byte grouping and BT_53 / BT_54 guards mirror the
- * AmbiqSuite Cordio EM9305 driver reference
- * (third_party/cordio/ble-host/sources/hci/ambiq/em9305/hci_drv_em9305.h)
- * so that this header can be compared 1:1 with the upstream source.
+ * Layout, naming, per-byte grouping and BT_53 / BT_54 guards follow Bluetooth
+ * Core Specification 5.4 Vol 6 Part B, Table 4-5 (64-bit LE feature field).
  *
  * Each ``HCI_LE_SUP_FEAT_*`` macro is the absolute bit position in the
- * 64-bit LE feature field per Bluetooth Core Spec 5.4 Vol 6 Part B,
- * Table 4-5. ``UINT64_C`` is used so the ``>>32`` / ``>>40`` shifts in
- * the caller's array assembly are well-defined regardless of ``int``
- * width (AmbiqSuite relies on Cordio's ``hci_defs.h`` providing 64-bit
- * literals for the same reason).
+ * 64-bit LE feature field. ``UINT64_C`` is used so the ``>>32`` / ``>>40``
+ * shifts in the caller's array assembly are well-defined regardless of ``int``
+ * width.
  *
  * To opt in to BT 5.3 / 5.4 host-support feature bits when the EM9305
  * firmware in use advertises them, define ``EM9305_BT_53`` and / or
@@ -42,9 +38,7 @@ extern "C" {
 #define EM9305_BT_54 0
 #endif
 
-/* Individual LE feature bits (absolute position in the 64-bit feature
- * field). Names mirror Cordio hci_defs.h.
- */
+/* Individual LE feature bits (absolute position in the 64-bit feature field). */
 #define HCI_LE_SUP_FEAT_ENCRYPTION           UINT64_C(0x0000000000000001) /* bit  0 */
 #define HCI_LE_SUP_FEAT_CONN_PARAM_REQ_PROC  UINT64_C(0x0000000000000002) /* bit  1 */
 #define HCI_LE_SUP_FEAT_EXT_REJECT_IND       UINT64_C(0x0000000000000004) /* bit  2 */
@@ -86,7 +80,7 @@ extern "C" {
 #define HCI_LE_SUP_FEAT_PER_ADV_WITH_RESP_ADVERTISER      UINT64_C(0x0000080000000000) /* bit 43 */
 #define HCI_LE_SUP_FEAT_PER_ADV_WITH_RESP_SCANNER         UINT64_C(0x0000100000000000) /* bit 44 */
 
-/* Per-byte feature composites. Mirror AmbiqSuite hci_drv_em9305.h. */
+/* Per-byte feature composites for VSC 0xFFF2 (set local supported features). */
 #define LL_FEATURES_BYTE0                                                                          \
 	(HCI_LE_SUP_FEAT_ENCRYPTION | HCI_LE_SUP_FEAT_CONN_PARAM_REQ_PROC |                        \
 	 HCI_LE_SUP_FEAT_EXT_REJECT_IND | HCI_LE_SUP_FEAT_SLV_INIT_FEAT_EXCH |                     \

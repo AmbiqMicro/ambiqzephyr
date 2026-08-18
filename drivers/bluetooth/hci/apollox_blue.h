@@ -174,12 +174,12 @@ void bt_apollo_vsc_cc_observe(uint16_t opcode, uint8_t status);
  *
  * Submits a system-workqueue item that calls bt_disable() + bt_enable(),
  * cleanly tearing down the BT host stack and re-initializing the EM9305
- * controller.  Safe to call from any context including ISR.
+ * controller. Safe to call from any context including ISR.
  *
- * Matches AmbiqSuite's ERROR_RECOVER pattern:
- * HciDrvRadioShutdown() + HciDrvRadioBoot() + DmDevReset().
+ * Used when the controller reports a hardware error, an unexpected active-state
+ * reset, or an unrecoverable SPI transmit fault.
  *
- * No-op on SoCs other than Apollo510B.
+ * No-op on SoCs other than Apollo510B (or when CONFIG_BT_HCI_RAW is enabled).
  */
 void bt_apollo_schedule_radio_recovery(void);
 
@@ -187,11 +187,11 @@ void bt_apollo_schedule_radio_recovery(void);
  * @brief Restart the EM9305 heartbeat countdown.
  *
  * Call this on every successful SPI TX or RX to defer the next heartbeat
- * ping by a full interval from the most recent activity.  The ping is only
- * sent after EM9305_HEARTBEAT_INTERVAL_MS of complete HCI silence, matching
- * AmbiqSuite's BLE_HEARTBEAT_RESTART() pattern.
+ * ping by a full interval from the most recent activity. The ping is only
+ * sent after EM9305_HEARTBEAT_INTERVAL_MS of complete HCI silence.
  *
- * No-op on SoCs other than Apollo510B.
+ * Disabled when CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP is enabled. No-op on SoCs
+ * other than Apollo510B (or when CONFIG_BT_HCI_RAW is enabled).
  */
 void bt_apollo_heartbeat_restart(void);
 
@@ -199,9 +199,8 @@ void bt_apollo_heartbeat_restart(void);
  * @brief Check if the EM9305 IRQ (RDY) pin is still asserted after a
  * receive burst, indicating that more data is pending.
  *
- * Used by the RX thread to re-arm the IRQ semaphore when
- * bt_apollo_spi_rcv() returned early due to the per-burst packet limit
- * (GAP5 / AmbiqSuite HCI_DRV_MAX_READ_PACKET), so the thread does not
+ * Used by the RX thread to re-arm the IRQ semaphore when bt_apollo_spi_rcv()
+ * returned early due to the per-burst packet limit, so the thread does not
  * miss residual data without waiting for a new hardware edge.
  *
  * @return true if the IRQ pin is high (data pending), false otherwise.

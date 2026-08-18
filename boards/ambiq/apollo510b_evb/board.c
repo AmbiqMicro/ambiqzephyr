@@ -12,7 +12,7 @@
  *   info (including EXTREF frequency), HFRC/HFRC2 defaults, SIP GPIO 136, and
  *   optional USB PHY tuning.
  * - When CONFIG_SOC_APOLLO510B_EM9305_EXTREF_INIT is enabled, POST_KERNEL
- *   SYS_INIT wakes the SIP EM9305 over SPI and sends HCI VSC 0xFC49 (set sleep option)
+ *   SYS_INIT wakes the SIP EM9305 over SPI and calls am_devices_em9305_sleep_set(true)
  *   so CLKMGR can use the ~12 MHz EXTREF without CONFIG_BT.
  * - GPIO 136 (AP5_12M_CLKREQ) is preconfigured output-low in board_early_init_hook;
  *   clkmgr asserts it only when EXTREF_CLK is requested (not at boot).
@@ -35,8 +35,6 @@
 
 LOG_MODULE_REGISTER(apollo510b_evb, CONFIG_LOG_DEFAULT_LEVEL);
 
-#define EM9305_HCI_CMD_PKT       0x01U
-#define EM9305_HCI_VSC_SET_SLEEP 0xFC49U
 #endif
 
 #if defined(CONFIG_AMBIQ_HAL_USE_USB)
@@ -179,21 +177,6 @@ static int em9305_spi_transceive(void *tx, uint32_t tx_len, void *rx, uint32_t r
 	return spi_transceive_dt(&em9305_spi, &em9305_spi_tx, &em9305_spi_rx);
 }
 
-static int em9305_enable_sleep(void)
-{
-	uint8_t cmd[5];
-	int st;
-
-	cmd[0] = EM9305_HCI_CMD_PKT;
-	sys_put_le16(EM9305_HCI_VSC_SET_SLEEP, &cmd[1]);
-	cmd[3] = 1U;
-	cmd[4] = 1U;
-
-	st = am_devices_em9305_blocking_write(cmd, sizeof(cmd), em9305_spi_transceive);
-
-	return (st == AM_DEVICES_EM9305_STATUS_SUCCESS) ? 0 : -EIO;
-}
-
 static int board_em9305_extref_init(void)
 {
 #if IS_ENABLED(CONFIG_BT)
@@ -247,7 +230,7 @@ static int board_em9305_extref_init(void)
 		return -EIO;
 	}
 
-	if (em9305_enable_sleep() != 0) {
+	if (am_devices_em9305_sleep_set(true) != AM_DEVICES_EM9305_STATUS_SUCCESS) {
 		LOG_WRN("EM9305 sleep enable failed");
 	}
 
@@ -288,9 +271,8 @@ void board_early_init_hook(void)
 				   AM_HAL_CLKMGR_HFRC2_FREQ_FREE_RUN_APPROX_250MHZ, NULL);
 
 #if defined(CONFIG_AMBIQ_HAL_USE_USB)
-	/* USB PHY electrical tuning. Mirrors what the AmbiqSuite BSP does in
-	 * am_bsp_low_power_init() — sets the on-die termination resistance so
-	 * the high/full-speed signaling matches the board trace impedance.
+	/* USB PHY electrical tuning: set on-die termination resistance so
+	 * high/full-speed signaling matches the board trace impedance.
 	 * Must run before am_hal_usb_initialize().
 	 */
 	am_hal_usb_phy_elec_tuning_param_val_t usb_rodt = {

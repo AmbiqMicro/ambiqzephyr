@@ -80,8 +80,6 @@ LOG_MODULE_REGISTER(bt_apollox_driver);
 #define HCI_VSC_SET_TX_POWER_LEVEL_CMD_LENGTH 1U
 #define HCI_VSC_SET_DEV_PUB_ADDR_CMD_OPCODE   0xFC43U
 #define HCI_VSC_SET_DEV_PUB_ADDR_CMD_LENGTH   6U
-#define HCI_VSC_SET_SLEEP_OPTION_CMD_OPCODE   0xFC49U
-#define HCI_VSC_SET_SLEEP_OPTION_CMD_LENGTH   1U
 #define HCI_VSC_SET_ADV_TX_POWER_CMD_OPCODE   0xFFF5U
 #define HCI_VSC_SET_ADV_TX_POWER_CMD_LENGTH   1U
 #define HCI_VSC_SET_CONN_TX_POWER_CMD_OPCODE  0xFFF6U
@@ -107,6 +105,12 @@ LOG_MODULE_REGISTER(bt_apollox_driver);
 #define EM9305_HEARTBEAT_ENABLED 1
 #else
 #define EM9305_HEARTBEAT_ENABLED 0
+#endif
+
+#if (CONFIG_SOC_APOLLO510B) && !defined(CONFIG_BT_HCI_RAW)
+#define EM9305_RADIO_RECOVERY_ENABLED 1
+#else
+#define EM9305_RADIO_RECOVERY_ENABLED 0
 #endif
 
 #if !defined(CONFIG_BT_TRANSMIT_POWER_CONTROL)
@@ -172,7 +176,7 @@ void bt_apollo_heartbeat_restart(void)
 }
 #endif /* EM9305_HEARTBEAT_ENABLED */
 
-#if EM9305_HEARTBEAT_ENABLED
+#if EM9305_RADIO_RECOVERY_ENABLED
 /* Radio-level recovery work item.
  *
  * Runs from the system workqueue so it executes in thread context — required
@@ -213,10 +217,12 @@ static K_WORK_DEFINE(em9305_recovery_work, bt_em9305_radio_recovery_handler);
 
 void bt_apollo_schedule_radio_recovery(void)
 {
+#if EM9305_HEARTBEAT_ENABLED
 	/* Cancel any pending heartbeat — it will be restarted after bt_enable
 	 * completes and bt_apollo_vnd_setup() runs again.
 	 */
 	k_work_cancel_delayable(&em9305_heartbeat_work);
+#endif
 	/* Submit to system workqueue; safe to call from any thread/ISR. */
 	k_work_submit(&em9305_recovery_work);
 }
@@ -225,7 +231,7 @@ void bt_apollo_schedule_radio_recovery(void)
 {
 	/* NO-OP */
 }
-#endif /* EM9305_HEARTBEAT_ENABLED */
+#endif /* EM9305_RADIO_RECOVERY_ENABLED */
 
 static void bt_em9305_hsclk_req(bool enable)
 {
@@ -1144,20 +1150,21 @@ int bt_apollo_vnd_setup(void)
 	}
 	if (ret == 0) {
 #if IS_ENABLED(CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP)
-		const uint8_t sleep_opt = 0x01;
-#else
-		const uint8_t sleep_opt = 0x00;
-#endif
+		uint32_t st = am_devices_em9305_sleep_set(true);
 
-		ret = bt_em9305_send_vsc(HCI_VSC_SET_SLEEP_OPTION_CMD_OPCODE,
-					 HCI_VSC_SET_SLEEP_OPTION_CMD_LENGTH, &sleep_opt);
-		if (ret != 0) {
-			LOG_WRN("EM9305: sleep option VSC failed (%d), continuing", ret);
-			ret = 0; /* non-fatal */
+		if (st != AM_DEVICES_EM9305_STATUS_SUCCESS) {
+			LOG_ERR("EM9305: sleep_set(true) failed (%u)", st);
+			ret = -EIO;
+		} else {
+			/* Keeps CLKREQ de-asserted when EXTREF is not in use */
+			bt_em9305_hsclk_req(false);
 		}
-#if IS_ENABLED(CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP)
-		/* fit_lp keeps CLKREQ de-asserted when EXTREF is not in use */
-		bt_em9305_hsclk_req(false);
+#else
+		uint32_t st = am_devices_em9305_sleep_set(false);
+
+		if (st != AM_DEVICES_EM9305_STATUS_SUCCESS) {
+			LOG_WRN("EM9305: sleep_set(false) failed (%u), continuing", st);
+		}
 #endif
 	}
 	if (ret == 0) {

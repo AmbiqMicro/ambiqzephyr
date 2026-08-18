@@ -20,6 +20,8 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(bt_hci_driver);
 
+#include <soc.h>
+
 #include "apollox_blue.h"
 #if (CONFIG_SOC_APOLLO510B)
 #include "am_devices_em9305.h"
@@ -703,8 +705,11 @@ static int bt_apollo_setup(const struct device *dev, const struct bt_hci_setup_p
 #endif /* CONFIG_SOC_APOLLO510B */
 
 	ret = bt_apollo_vnd_setup();
+	if (ret != 0) {
+		return ret;
+	}
 
-	return ret;
+	return 0;
 }
 
 static DEVICE_API(bt_hci, drv) = {
