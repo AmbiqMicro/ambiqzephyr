@@ -14,18 +14,18 @@
  *
  * Twister: sample.bluetooth.peripheral_hr.ble_lp.apollo510b_evb
  *
- * Reference: AmbiqSuite boards/apollo510b_evb/examples/power/ble_freertos_fit_lp
- * (AM_PART_APOLLO510, apollo510-system-config.yaml). That example runs from MRAM +
- * DTCM only (SRAM_NONE); this overlay keeps SSRAM @0x20184000 because the Zephyr
- * BT stack needs more RAM than fit_lp's ~120 KiB DTCM budget.
+ * Default layout maps application RAM to 0x20184000 SSRAM (2 MiB retain in soc.c)
+ * so the Zephyr Bluetooth stack boots reliably on apollo510b_evb. For DTCM-only
+ * RAM with no SSRAM retain, enable CONFIG_SOC_AMBIQ_APOLLO510B_BLE_LP_SRAM_NONE
+ * and set chosen zephyr,sram = &dtcm in this overlay.
  *
- * Active during advertising (sample needs): flash/MRAM, stimer, IOM6+SPI (EM9305 HCI), TRNG,
- * EM9305 GPIO/CLKREQ, kernel tick/timer — not LEDs/buttons, UART, USB, SDIO, MSPI/PSRAM, CRC,
- * WDT, or unused GPIO banks.
+ * Active during advertising (sample needs): flash/MRAM, stimer, IOM6+SPI (EM9305 BLE HCI), TRNG
+ * until ambiq_apollo510b_ble_lp_runtime_init(), EM9305 GPIO/CLKREQ, kernel tick/timer — not
+ * LEDs/buttons, UART, USB, SDIO, MSPI/PSRAM, CRC, WDT, or unused GPIO banks.
  *
- * SoC: CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP keeps IOM6 powered for HCI while gating other blocks.
+ * SoC: CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP — early gating, then runtime init after
+ * bt_enable() in main.c (no DIS_PERIPHS_ALL — see soc.c).
  */
-
 &dtcm {
 	reg = <0x20000000 0x20000>;
 };
@@ -54,7 +54,6 @@
 	};
 };
 
-/* MSPI/PSRAM off: drop unused nocache window (fit_lp uses SRAM_NONE; keep SSRAM budget in app RAM). */
 /delete-node/ &sram_no_cache;
 
 / {
