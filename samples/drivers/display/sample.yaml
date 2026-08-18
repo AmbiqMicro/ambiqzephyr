@@ -134,6 +134,7 @@ tests:
   sample.display.shield.test.dsi:
     <<: *display-shield-test
     extra_args:
+      - platform:apollo4p_evb/apollo4p:SHIELD=ap4_evb_disp_shield_rev2
       - platform:apollo510_evb/apollo510:SHIELD=ap510_disp
       - platform:apollo510b_evb/apollo510b:SHIELD=ap510_disp
       - platform:apollo510dL_evb/apollo510L:SHIELD=ap510_disp

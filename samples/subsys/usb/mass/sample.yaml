@@ -118,6 +118,7 @@ tests:
     min_ram: 32
     filter: dt_compat_enabled("zephyr,mmc-disk")
     platform_allow:
+      - apollo4p_evb
       - apollo510_evb
       - apollo510_eb
     modules:
