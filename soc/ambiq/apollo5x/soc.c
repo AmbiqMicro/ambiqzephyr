@@ -24,6 +24,12 @@
 #endif
 
 #include <zephyr/dt-bindings/power/ambiq_power.h>
+#if IS_ENABLED(CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP) && defined(CONFIG_SOC_APOLLO510B) && \
+	IS_ENABLED(CONFIG_ENTROPY)
+#include <zephyr/devicetree.h>
+#include <zephyr/device.h>
+#include <zephyr/drivers/entropy.h>
+#endif
 
 #include <soc.h>
 
@@ -91,9 +97,8 @@ int apollo5x_set_performance_mode(uint32_t mode)
 #if IS_ENABLED(CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP) &&                                                \
 	(defined(CONFIG_SOC_APOLLO330P) || defined(CONFIG_SOC_APOLLO510L))
 /*
- * Mirrors AmbiqSuite boards/apollo330mP_evb/examples/power/ble_freertos_fit_lp
- * after am_hal_pwrctrl_low_power_init(): MCU sleeps deeply between BLE events while
- * RSS (NETAOL) and retained SRAM stay configured for IPC/stack.
+ * Apollo330P / Apollo510L BLE low-power early init: MCU sleeps deeply between
+ * BLE events while RSS (NETAOL) and retained SRAM stay configured for IPC/stack.
  */
 static void ambiq_apollo5x_ble_lp_fit_early_init(void)
 {
@@ -158,20 +163,25 @@ static void ambiq_apollo5x_ble_lp_fit_early_init(void)
 
 #if IS_ENABLED(CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP) && defined(CONFIG_SOC_APOLLO510B)
 /*
- * Apollo510 Blue + SIP EM9305 (ble_freertos_fit_lp non-510L path): LFRC RTC, XTAL pwdn,
+ * Apollo510B + SIP EM9305 BLE low-power early init: LFRC RTC, XTAL pwdn,
  * caches off, ITCM32K/DTCM128K, minimal SRAM retain — keep IOM6 for EM9305 HCI SPI.
  */
 static void ambiq_apollo510b_ble_lp_fit_early_init(void)
 {
-	am_hal_pwrctrl_periph_e periph;
-
 	am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_RTC_SEL_LFRC, NULL);
 	am_hal_rtc_osc_select(AM_HAL_RTC_OSC_LFRC);
 	am_hal_pwrctrl_control(AM_HAL_PWRCTRL_CONTROL_XTAL_PWDN_DEEPSLEEP, NULL);
 	MCUCTRL->XTALCTRL = 0;
 	am_hal_rtc_osc_disable();
 
-	for (periph = (am_hal_pwrctrl_periph_e)0; periph < AM_HAL_PWRCTRL_PERIPH_MAX; periph++) {
+	/*
+	 * Gate unused blocks individually. DIS_PERIPHS_ALL is unsafe here because
+	 * Zephyr drivers may already be running; re-enabling IOM6/TRNG alone is
+	 * not enough after a full peripheral shutdown. Keep IOM6 for EM9305 HCI SPI
+	 * and CRYPTO/OTP when host TRNG is enabled.
+	 */
+	for (am_hal_pwrctrl_periph_e periph = (am_hal_pwrctrl_periph_e)0;
+	     periph < AM_HAL_PWRCTRL_PERIPH_MAX; periph++) {
 		switch (periph) {
 		case AM_HAL_PWRCTRL_PERIPH_IOM6:
 		case AM_HAL_PWRCTRL_PERIPH_CRYPTO:
@@ -211,19 +221,65 @@ static void ambiq_apollo510b_ble_lp_fit_early_init(void)
 	am_hal_pwrctrl_pwrmodctl_cpdlp_config(cpdlp);
 	am_hal_cachectrl_caches_power_control(false);
 
+#if IS_ENABLED(CONFIG_SOC_AMBIQ_APOLLO510B_BLE_LP_SRAM_NONE)
 	am_hal_pwrctrl_sram_memcfg_t sram_mem = {
-		/*
-		 * Overlay maps zephyr,sram to 0x20184000 (464 KiB) in SSRAM group1.
-		 * NONE powers off all banks and the kernel RAM region is inaccessible.
-		 */
+		.eSRAMCfg = AM_HAL_PWRCTRL_SRAM_NONE,
+		.eActiveWithMCU = AM_HAL_PWRCTRL_SRAM_NONE,
+		.eActiveWithGFX = AM_HAL_PWRCTRL_SRAM_NONE,
+		.eActiveWithDISP = AM_HAL_PWRCTRL_SRAM_NONE,
+		.eSRAMRetain = AM_HAL_PWRCTRL_SRAM_NONE,
+	};
+#else
+	am_hal_pwrctrl_sram_memcfg_t sram_mem = {
 		.eSRAMCfg = AM_HAL_PWRCTRL_SRAM_2M,
 		.eActiveWithMCU = AM_HAL_PWRCTRL_SRAM_NONE,
 		.eActiveWithGFX = AM_HAL_PWRCTRL_SRAM_NONE,
 		.eActiveWithDISP = AM_HAL_PWRCTRL_SRAM_NONE,
 		.eSRAMRetain = AM_HAL_PWRCTRL_SRAM_2M,
 	};
+#endif
 
 	am_hal_pwrctrl_sram_config(&sram_mem);
+}
+
+#if IS_ENABLED(CONFIG_ENTROPY)
+static void ambiq_apollo510b_ble_lp_seed_entropy(void)
+{
+	const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_entropy));
+	uint8_t buf[32];
+
+	if (!device_is_ready(dev)) {
+		return;
+	}
+
+	(void)entropy_get_entropy(dev, buf, sizeof(buf));
+}
+#endif
+
+/*
+ * Called from application code after bt_enable(). Gate unused blocks like early
+ * init; do not use DIS_PERIPHS_ALL — that power-cycles IOM6 after the Zephyr SPI
+ * driver has already initialized it and breaks EM9305 HCI.
+ */
+void ambiq_apollo510b_ble_lp_runtime_init(void)
+{
+#if IS_ENABLED(CONFIG_ENTROPY)
+	ambiq_apollo510b_ble_lp_seed_entropy();
+#endif
+
+	for (am_hal_pwrctrl_periph_e periph = (am_hal_pwrctrl_periph_e)0;
+	     periph < AM_HAL_PWRCTRL_PERIPH_MAX; periph++) {
+		switch (periph) {
+		case AM_HAL_PWRCTRL_PERIPH_IOM6:
+			continue;
+		default:
+			am_hal_pwrctrl_periph_disable(periph);
+			break;
+		}
+	}
+
+	am_hal_pwrctrl_control(AM_HAL_PWRCTRL_CONTROL_CRYPTO_POWERDOWN, NULL);
+	am_hal_pwrctrl_periph_disable(AM_HAL_PWRCTRL_PERIPH_OTP);
 }
 #endif
 

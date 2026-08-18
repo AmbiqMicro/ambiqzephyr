@@ -72,9 +72,16 @@ void pm_state_set(enum pm_state state, uint8_t substate_id)
 
 	switch (state) {
 	case PM_STATE_SUSPEND_TO_IDLE: {
-		/* Put ARM core to normal sleep. */
 		sys_trace_idle();
+#if IS_ENABLED(CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP) && defined(CONFIG_SOC_APOLLO510B)
+		/*
+		 * Apollo510B BLE LP: use deep sleep for PM_STATE_SUSPEND_TO_IDLE
+		 * instead of normal sleep.
+		 */
+		am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_DEEP);
+#else
 		am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_NORMAL);
+#endif
 		sys_trace_idle_exit();
 		break;
 	}

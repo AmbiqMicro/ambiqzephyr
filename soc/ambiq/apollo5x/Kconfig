@@ -56,16 +56,43 @@ config SOC_APOLLO330P
 	select SOC_AMBIQ_HAS_RSS
 
 config SOC_AMBIQ_APOLLO5X_BLE_LP
-	bool "AmbiqSuite ble_freertos_fit_lp style early SoC init"
+	bool "Apollo5x BLE low-power early SoC configuration"
 	depends on SOC_APOLLO330P || SOC_APOLLO510L || SOC_APOLLO510B
 	help
-	  Align Zephyr early boot with boards/.../power/ble_freertos_fit_lp: LFRC for RTC,
-	  XTAL power-down in deep sleep, DBGCTRL cleared, peripheral power gating, DTCM128K
-	  + ROM auto, MRAM low-power bits, I/D cache off with CPDLP/cache power-down.
-	  330P/510L: IOSFD0..NETAOL-1 gated (NETAOL/RSS kept), SRAM 0.75M retain.
-	  510B (EM9305): ITCM32K/DTCM128K, NVM0 only, SSRAM 2M active/retain (LP overlay),
-	  IOM6/CRYPTO/OTP kept for HCI SPI and TRNG.
-	  Intended for BLE + tickless idle; not for throughput-focused builds.
+	  Apply a low-power SoC profile during early boot for BLE applications that
+	  use tickless idle and system PM. This configures LFRC for RTC, powers down
+	  the crystal in deep sleep, clears DBGCTRL, gates unused peripherals, sets
+	  DTCM128K with ROM auto and MRAM low-power bits, and disables I/D cache with
+	  CPDLP and cache power-down.
+
+	  Apollo330P / Apollo510L (integrated radio):
+	  IOSFD0 through NETAOL-1 are gated while NETAOL (RSS) stays powered; 0.75 MiB
+	  SSRAM is retained in deep sleep.
+
+	  Apollo510B (SIP EM9305 over SPI):
+	  ITCM32K / DTCM128K and NVM0 only; selective peripheral gating keeps IOM6
+	  for the HCI SPI link. After bt_enable(), applications may call
+	  ambiq_apollo510b_ble_lp_runtime_init() to gate remaining blocks and power
+	  down CRYPTO/OTP (do not use DIS_PERIPHS_ALL once the Zephyr SPI driver has
+	  initialized IOM6). SSRAM 2 MiB retain is the default; optional DTCM-only
+	  mapping is available via SOC_AMBIQ_APOLLO510B_BLE_LP_SRAM_NONE.
+
+	  Intended for BLE samples with PM enabled; disable for throughput-oriented
+	  builds.
+
+config SOC_AMBIQ_APOLLO510B_BLE_LP_SRAM_NONE
+	bool "Apollo510B BLE LP: DTCM-only RAM (no SSRAM retain)"
+	depends on SOC_AMBIQ_APOLLO5X_BLE_LP && SOC_APOLLO510B
+	default n
+	help
+	  Map application RAM to 128 KiB DTCM and power off all SSRAM banks in deep
+	  sleep. Requires a devicetree overlay that sets chosen zephyr,sram = &dtcm
+	  and a trimmed application configuration (see
+	  samples/bluetooth/peripheral_hr/prj_apollo510b_ble_lp.conf).
+
+	  Disabled by default: the Zephyr Bluetooth stack on apollo510b_evb does not
+	  boot reliably with DTCM-only RAM without further memory tuning. Enable only
+	  after validating the overlay and Kconfig on target hardware.
 
 if SOC_SERIES_APOLLO5X
 

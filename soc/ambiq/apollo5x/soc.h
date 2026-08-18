@@ -13,6 +13,15 @@ int apollo5x_set_performance_mode(uint32_t mode);
 
 bool buf_in_nocache(uintptr_t buf, size_t len_bytes);
 
+#if defined(CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP) && defined(CONFIG_SOC_APOLLO510B)
+/*
+ * fit_lp-style peripheral gating after bt_enable() (see peripheral_hr main.c).
+ * Do not use DIS_PERIPHS_ALL here — IOM6 is already active via the Zephyr SPI
+ * driver; fit_lp runs DIS_PERIPHS before radio init, which is not our boot order.
+ */
+void ambiq_apollo510b_ble_lp_runtime_init(void);
+#endif
+
 /* Return true if the buffer intersects the DTCM address range. */
 static inline bool ambiq_buf_in_dtcm(uintptr_t buf, size_t len_bytes)
 {
