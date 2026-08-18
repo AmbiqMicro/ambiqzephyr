@@ -24,3 +24,8 @@ tests:
       - DTC_OVERLAY_FILE=boards/apard32690_max32690_m4_max32.overlay
     platform_allow:
       - apard32690/max32690/m4
+  sample.driver.adc_stream.apollo510-stream:
+    extra_args:
+      - EXTRA_CONF_FILE=apollo510-stream.conf
+    platform_allow:
+      - apollo510_evb

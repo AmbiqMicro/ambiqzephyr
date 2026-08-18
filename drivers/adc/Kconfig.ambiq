@@ -41,6 +41,24 @@ config ADC_AMBIQ_DMA_MIN_SAMPLES
 	  used. This allows both DMA and interrupt modes to coexist based on
 	  the workload size.
 
+config ADC_AMBIQ_STREAM
+	bool "Ambiq ADC RTIO streaming support"
+	select ADC_STREAM
+	select RTIO
+	select RTIO_WORKQ
+	select RTIO_SYS_MEM_BLOCKS
+	help
+	  Enable native RTIO submit and streaming support for the Ambiq ADC.
+
+	  Streaming uses the ADC DMA engine together with the internal repeat
+	  trigger timer to continuously sample the configured channels into RTIO
+	  memory-pool buffers, which are then decoded through the ADC decoder
+	  API. One-shot RTIO reads are serviced on the RTIO work queue.
+
+	  This depends on ADC_AMBIQ_DMA. When disabled, RTIO reads still work
+	  through the generic work-queue fallback (CONFIG_ADC_DEFAULT_RTIO), but
+	  continuous streaming is not available.
+
 endif # ADC_AMBIQ_DMA
 
 endif # ADC_AMBIQ
