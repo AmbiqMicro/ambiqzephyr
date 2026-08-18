@@ -22,8 +22,8 @@
  *
  * Active during advertising (sample needs): flash/MRAM, stimer, IPC+mbox (HCI), TRNG (entropy),
  * kernel tick/timer — not LEDs/buttons, UART, USB, SDIO, MSPI/PSRAM, CRC, WDT, or GPIO blocks.
- * SoC: enable CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP (prj_330mP.conf) to align with AmbiqSuite
- * ble_freertos_fit_lp (LFRC RTC, XTAL pwdn in sleep, SRAM 0.75M retain, caches off, NETAOL kept).
+ * SoC: enable CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP (prj_330mP.conf) for low-power early init
+ * (LFRC RTC, XTAL pwdn in sleep, SRAM 0.75M retain, caches off, NETAOL kept).
  * SoC also powers down IOM/UART/MSPI/USB/SDIO/etc. so pads are not held active by those blocks
  * (BTDM RXEN/TXEN are still driven by the radio after bt_enable).
  */

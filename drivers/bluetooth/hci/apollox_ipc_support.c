@@ -28,7 +28,7 @@
 LOG_MODULE_REGISTER(bt_hci_apollox_ipc_support);
 
 #if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
-/* CEVA/RSS 510L vendor opcodes (AmbiqSuite hci_vs_510L_radio / hci_drv_510L_radio) */
+/* CEVA/RSS Apollo330P/510L vendor-specific HCI opcodes */
 #define AMBIQ_HCI_OP_VS_510L_UPDATE_NVDS       BT_OP(BT_OGF_VS, 0x0080)
 #define AMBIQ_HCI_OP_VS_510L_SET_BD_ADDR       BT_OP(BT_OGF_VS, 0x0081)
 #define AMBIQ_HCI_OP_VS_510L_UPDATE_LL_FEATURE BT_OP(BT_OGF_VS, 0x0082)
@@ -43,7 +43,7 @@ LOG_MODULE_REGISTER(bt_hci_apollox_ipc_support);
 #define APOLLO_330P_510L_RM_WAKEUP_TIME_US  800U
 #define APOLLO_330P_510L_POST_NVDS_DELAY_MS 1U
 
-/* NVDS parameter tags (CEVA/RSS 510L; align with AmbiqSuite NVDS / hci_vs_510L_radio) */
+/* NVDS parameter tags consumed by the CEVA/RSS controller firmware */
 #define AMBIQ_NVDS_PARAM_ID_BD_ADDRESS       0x01
 #define AMBIQ_NVDS_PARAM_ID_LPCLK_DRIFT      0x07
 #define AMBIQ_NVDS_PARAM_ID_EXT_WAKEUP_TIME  0x0d
@@ -114,7 +114,7 @@ static int apollo_330p_510l_get_bd_address(const struct bt_hci_setup_params *par
 	addr->val[5] = (device.ui32ChipID0 >> 16) & 0xff;
 
 	/*
-	 * Match AmbiqSuite: clear U/L and I/G bits for Android compatibility.
+	 * Clear U/L and I/G bits of the public address for Android compatibility.
 	 */
 	addr->val[5] &= 0xfc;
 
@@ -126,12 +126,11 @@ static void apollo_330p_510l_build_nvds_cfg(uint8_t *p, const bt_addr_t *addr)
 	size_t o = 0;
 
 	/*
-	 * NVDS payload signature: same byte sequence as NVDS_PARAMETER_MAGIC_NUMBER in
-	 * Ambiq applet_configuration.c (0x4e, 0x56, 0x44, 0x53) = ASCII "NVDS".
+	 * NVDS payload signature: ASCII "NVDS" (0x4e, 0x56, 0x44, 0x53).
 	 * Marks the start of a controller NVDS configuration block for vendor HCI
-	 * update (here: 510L VS 0xFC80; AmbiqSuite: HCI_DBG_UPDATE_NVDS_CFG_CMD_OPCODE).
-	 * Tags that follow carry boot/runtime parameters (e.g. LP drift, wakeup times,
-	 * sleep enable) consumed by the CEVA controller firmware.
+	 * update (VS 0xFC80). Tags that follow carry boot/runtime parameters
+	 * (LP drift, wakeup times, sleep enable) consumed by the CEVA controller
+	 * firmware.
 	 */
 	p[o++] = 0x4e;
 	p[o++] = 0x56;
@@ -257,8 +256,8 @@ static int apollo_330p_510l_send_nvds_and_pre_reset_vs(const struct device *dev,
 	k_sleep(K_MSEC(APOLLO_330P_510L_POST_NVDS_DELAY_MS));
 
 	/*
-	 * Mirror hci_vs_510L_radio ordering before HCI_Reset. Payloads must match
-	 * AmbiqSuite hci_vs_510L_radio.c if the controller rejects these defaults.
+	 * Send remaining vendor commands in controller-required order before HCI_Reset.
+	 * Adjust payloads if the controller rejects these defaults.
 	 */
 	err = apollo_330p_510l_vsc_update_link_layer_feature();
 	if (err != 0) {
