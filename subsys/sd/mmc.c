@@ -388,9 +388,9 @@ static int mmc_set_bus_width(struct sd_card *card)
 	int ret;
 	struct sdhc_command cmd = {0};
 
-#if defined(MMC_CARD_8BIT_WIDTH)
+#if defined(CONFIG_MMC_CARD_8BIT_WIDTH)
 	card->bus_width = 8;
-#elif defined(MMC_CARD_4BIT_WIDTH)
+#elif defined(CONFIG_MMC_CARD_4BIT_WIDTH)
 	card->bus_width = 4;
 #endif
 
