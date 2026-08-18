@@ -100,7 +100,7 @@ LOG_MODULE_REGISTER(bt_apollox_driver);
  */
 #define EM9305_HEARTBEAT_INTERVAL_MS 10000U
 
-#if (CONFIG_SOC_APOLLO510B) && !defined(CONFIG_BT_HCI_RAW) && \
+#if (CONFIG_SOC_APOLLO510B) && !defined(CONFIG_BT_HCI_RAW) &&                                      \
 	!IS_ENABLED(CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP)
 #define EM9305_HEARTBEAT_ENABLED 1
 #else

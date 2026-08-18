@@ -24,8 +24,8 @@
 #endif
 
 #include <zephyr/dt-bindings/power/ambiq_power.h>
-#if IS_ENABLED(CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP) && defined(CONFIG_SOC_APOLLO510B) && \
-	IS_ENABLED(CONFIG_ENTROPY)
+#if IS_ENABLED(CONFIG_SOC_AMBIQ_APOLLO5X_BLE_LP) && defined(CONFIG_SOC_APOLLO510B) &&              \
+	IS_ENABLED(CONFIG_ENTROPY_GENERATOR)
 #include <zephyr/devicetree.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/entropy.h>
@@ -35,7 +35,7 @@
 
 LOG_MODULE_REGISTER(soc, CONFIG_SOC_LOG_LEVEL);
 
-#if (defined(CONFIG_BOARD_APOLLO510DL_EVB) || defined(CONFIG_BOARD_APOLLO330MP_EVB)) && \
+#if (defined(CONFIG_BOARD_APOLLO510DL_EVB) || defined(CONFIG_BOARD_APOLLO330MP_EVB)) &&            \
 	defined(CONFIG_LOG_BACKEND_SWO)
 #error "LOG_BACKEND_SWO is not supported on this board configuration"
 #endif
@@ -242,7 +242,7 @@ static void ambiq_apollo510b_ble_lp_fit_early_init(void)
 	am_hal_pwrctrl_sram_config(&sram_mem);
 }
 
-#if IS_ENABLED(CONFIG_ENTROPY)
+#if IS_ENABLED(CONFIG_ENTROPY_GENERATOR)
 static void ambiq_apollo510b_ble_lp_seed_entropy(void)
 {
 	const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_entropy));
@@ -263,7 +263,7 @@ static void ambiq_apollo510b_ble_lp_seed_entropy(void)
  */
 void ambiq_apollo510b_ble_lp_runtime_init(void)
 {
-#if IS_ENABLED(CONFIG_ENTROPY)
+#if IS_ENABLED(CONFIG_ENTROPY_GENERATOR)
 	ambiq_apollo510b_ble_lp_seed_entropy();
 #endif
 
