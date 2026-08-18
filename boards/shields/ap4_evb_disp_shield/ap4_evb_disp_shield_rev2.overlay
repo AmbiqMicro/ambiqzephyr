@@ -46,11 +46,13 @@
 		pixel-format = <PANEL_PIXEL_FORMAT_RGB_888>;
 		rotation = <0>;
 		mode-flags = <0>;
-		width = <228>;	/*Its value should be an integer multiple of 4.*/
+		width = <456>;	/*Its value should be an integer multiple of 4.*/
+		x-offset = <14>;
 		hfp = <4>;	/*Please use this recommended value.*/
 		hbp = <10>;	/*Please use this recommended value.*/
 		hsync = <10>;	/*Please use this recommended value.*/
-		height = <228>;	/**/
+		height = <456>;	/**/
+		y-offset = <0>;
 		vfp = <10>;	/*Please use this recommended value.*/
 		vbp = <50>;	/*Please use this recommended value.*/
 		vsync = <10>;	/*Please use this recommended value.*/

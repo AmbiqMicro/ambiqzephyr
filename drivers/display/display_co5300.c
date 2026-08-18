@@ -30,6 +30,8 @@ struct co5300_config {
 #endif
 	const struct gpio_dt_spec reset;
 	uint32_t rotation;
+	uint16_t x_offset;
+	uint16_t y_offset;
 };
 struct co5300_data {
 	uint16_t xstart;
@@ -132,7 +134,10 @@ static int co5300_blanking_off(const struct device *dev)
 static int co5300_write(const struct device *dev, uint16_t x, uint16_t y,
 			const struct display_buffer_descriptor *desc, const void *buf)
 {
+	const struct co5300_config *config = dev->config;
 	struct co5300_data *data = dev->data;
+	uint16_t col_start = x + config->x_offset;
+	uint16_t row_start = y + config->y_offset;
 	uint8_t cmd[4];
 
 #if (DT_HAS_COMPAT_ON_BUS_STATUS_OKAY(chipone_co5300, mipi_dsi))
@@ -145,20 +150,20 @@ static int co5300_write(const struct device *dev, uint16_t x, uint16_t y,
 		data->xstart = x;
 		data->width = desc->width;
 
-		cmd[0] = data->xstart >> 8U;
-		cmd[1] = data->xstart & 0xFFU;
-		cmd[2] = (data->xstart + data->width - 1) >> 8U;
-		cmd[3] = (data->xstart + data->width - 1) & 0xFFU;
+		cmd[0] = col_start >> 8U;
+		cmd[1] = col_start & 0xFFU;
+		cmd[2] = (col_start + data->width - 1) >> 8U;
+		cmd[3] = (col_start + data->width - 1) & 0xFFU;
 		co5300_dcs_write(dev, MIPI_DCS_SET_COLUMN_ADDRESS, cmd, 4);
 	}
 	if (data->ystart != y || data->height != desc->height) {
 		data->ystart = y;
 		data->height = desc->height;
 
-		cmd[0] = data->ystart >> 8U;
-		cmd[1] = data->ystart & 0xFFU;
-		cmd[2] = (data->ystart + data->height - 1) >> 8U;
-		cmd[3] = (data->ystart + data->height - 1) & 0xFFU;
+		cmd[0] = row_start >> 8U;
+		cmd[1] = row_start & 0xFFU;
+		cmd[2] = (row_start + data->height - 1) >> 8U;
+		cmd[3] = (row_start + data->height - 1) & 0xFFU;
 		co5300_dcs_write(dev, MIPI_DCS_SET_PAGE_ADDRESS, cmd, 4);
 	}
 
@@ -211,6 +216,7 @@ static DEVICE_API(display, co5300_api) = {
 
 static int co5300_configure(const struct device *dev)
 {
+	const struct co5300_config *config = dev->config;
 	struct co5300_data *data = dev->data;
 	uint8_t cmd[4];
 	int ret;
@@ -302,19 +308,19 @@ static int co5300_configure(const struct device *dev)
 	data->xstart = 0;
 	data->width = DT_INST_PROP_OR(0, width, 0);
 
-	cmd[0] = data->xstart >> 8U;
-	cmd[1] = data->xstart & 0xFFU;
-	cmd[2] = (data->xstart + data->width - 1) >> 8U;
-	cmd[3] = (data->xstart + data->width - 1) & 0xFFU;
+	cmd[0] = config->x_offset >> 8U;
+	cmd[1] = config->x_offset & 0xFFU;
+	cmd[2] = (config->x_offset + data->width - 1) >> 8U;
+	cmd[3] = (config->x_offset + data->width - 1) & 0xFFU;
 	ret = co5300_dcs_write(dev, MIPI_DCS_SET_COLUMN_ADDRESS, cmd, 4);
 
 	data->ystart = 0;
 	data->height = DT_INST_PROP_OR(0, height, 0);
 
-	cmd[0] = data->ystart >> 8U;
-	cmd[1] = data->ystart & 0xFFU;
-	cmd[2] = (data->ystart + data->height - 1) >> 8U;
-	cmd[3] = (data->ystart + data->height - 1) & 0xFFU;
+	cmd[0] = config->y_offset >> 8U;
+	cmd[1] = config->y_offset & 0xFFU;
+	cmd[2] = (config->y_offset + data->height - 1) >> 8U;
+	cmd[3] = (config->y_offset + data->height - 1) & 0xFFU;
 	ret = co5300_dcs_write(dev, MIPI_DCS_SET_PAGE_ADDRESS, cmd, 4);
 
 	return 0;
@@ -390,6 +396,8 @@ static int co5300_init(const struct device *dev)
 		.channel = 0,                                                                      \
 		.reset = GPIO_DT_SPEC_GET_OR(node_id, reset_gpios, {0}),                           \
 		.rotation = DT_PROP(node_id, rotation),                                            \
+		.x_offset = DT_PROP_OR(node_id, x_offset, 0),                                      \
+		.y_offset = DT_PROP_OR(node_id, y_offset, 0),                                      \
 		.device =                                                                          \
 			{                                                                          \
 				.data_lanes = DT_PROP_BY_IDX(node_id, data_lanes, 0),              \
@@ -429,6 +437,8 @@ static int co5300_init(const struct device *dev)
 		.spi = SPI_DT_SPEC_GET(node_id, SPI_WORD_SET(8) | CO5300_GET_DATA_LINES(node_id)), \
 		.reset = GPIO_DT_SPEC_GET_OR(node_id, reset_gpios, {0}),                           \
 		.rotation = DT_PROP(node_id, rotation),                                            \
+		.x_offset = DT_PROP_OR(node_id, x_offset, 0),                                      \
+		.y_offset = DT_PROP_OR(node_id, y_offset, 0),                                      \
 	};                                                                                         \
 	static struct co5300_data co5300_data_##node_id;                                           \
 	DEVICE_DT_DEFINE(node_id, co5300_init, NULL, &co5300_data_##node_id,                       \

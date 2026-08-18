@@ -28,3 +28,17 @@ properties:
       - 270
     description: |
       Display rotation (CW) in degrees.
+
+  x-offset:
+    type: int
+    default: 0
+    description: |
+      Column offset in pixels between the controller GRAM origin and the
+      visible panel area.
+
+  y-offset:
+    type: int
+    default: 0
+    description: |
+      Row offset in pixels between the controller GRAM origin and the
+      visible panel area.
