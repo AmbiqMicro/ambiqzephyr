@@ -12,12 +12,9 @@
    <a href="https://scorecard.dev/viewer/?uri=github.com/zephyrproject-rtos/zephyr"><img src="https://api.securityscorecards.dev/projects/github.com/zephyrproject-rtos/zephyr/badge"></a>
    <a href="https://github.com/zephyrproject-rtos/zephyr/actions/workflows/twister.yaml?query=branch%3Amain"><img src="https://github.com/zephyrproject-rtos/zephyr/actions/workflows/twister.yaml/badge.svg?event=push"></a>
 
-Ambiq® is an Austin-based SoC vendor who at the forefront of enabling ambient intelligence on billions of
-devices with the unique SPOT platform and extreme-low power semiconductor solutions.
+Ambiq is an Austin-based semiconductor company with a mission to enable intelligence (artificial intelligence (AI) and beyond) everywhere by delivering the lowest power semiconductor solutions. Built on its patented Subthreshold Power Optimized Technology (SPOT®) and the HELIA™ AI platform, Ambiq empowers manufacturers to bring more capable AI to the edge, where power, memory, and energy efficiency are most critical.
 
-Whether it's the Real Time Clock (RTC) IC, or a System-on-a-Chip (SoC), Ambiq® is committed to enabling the
-lowest power consumption with the highest computing performance possible for our customers to make the most
-innovative battery-power endpoint devices for their end-users. `Ambiq Products`_
+Built for intelligent, always-on edge devices across healthcare, wearables, industrial automation, smart environments, and other emerging AI applications, Ambiq continues to shape the future of always-on Edge AI globally. For more information, visit www.ambiq.com.
 
 Ambiq release branch
 ********************
