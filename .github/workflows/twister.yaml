@@ -288,7 +288,7 @@ jobs:
       BSIM_COMPONENTS_PATH: /data/bsim_west/bsim/components
       TWISTER_COMMON: ' --test-config tests/test_config_ci.yaml --no-detailed-test-id --force-color --inline-logs -v -N -M --retry-failed 3 --timeout-multiplier 2 '
       WEEKLY_OPTIONS: ' --clobber-output -M --all --show-footprint --report-filtered -j 12'
-      PR_OPTIONS: ' --clobber-output --integration -j 12'
+      PR_OPTIONS: ' --clobber-output --runtime-artifact-cleanup --integration -j 12'
       PUSH_OPTIONS: ' --clobber-output -M --show-footprint --report-filtered -j 12'
       LLVM_TOOLCHAIN_PATH: /usr/lib/llvm-20
       VENDOR_OPTIONS: ' --vendor ambiq'
@@ -459,6 +459,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
+          retention-days: 14
           name: Unit Test Results ${{ matrix.job.group }}(Subset ${{ matrix.job.subset }})
           if-no-files-found: ignore
           path: |
@@ -482,6 +483,7 @@ jobs:
         name: Upload the list of Python packages
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
+          retention-days: 14
           name: Frozen PIP package set
           path: |
             zephyr/frozen-requirements.txt
@@ -572,6 +574,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
+          retention-days: 14
           name: Unit Test Results
           if-no-files-found: ignore
           path: |
@@ -599,6 +602,7 @@ jobs:
         if: needs.twister-build.result == 'failure'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
+          retention-days: 14
           name: Twister Analysis Results
           if-no-files-found: ignore
           path: |
