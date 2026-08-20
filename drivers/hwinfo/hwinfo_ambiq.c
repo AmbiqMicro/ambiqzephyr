@@ -29,8 +29,15 @@ ssize_t z_impl_hwinfo_get_device_id(uint8_t *buffer, size_t length)
 #if (CONFIG_SOC_SERIES_APOLLO5X)
 	am_hal_info1_read(AM_HAL_INFO_INFOSPACE_CURRENT_INFO1, AM_REG_OTP_INFO1_TRIM_REV_O / 4, 1,
 			  &dev_hw_info.factory_trim_version);
-#else
+#elif (CONFIG_SOC_SERIES_APOLLO4X)
 	am_hal_mram_info_read(1, AM_REG_INFO1_TRIM_REV_O / 4, 1, &dev_hw_info.factory_trim_version);
+#else
+	am_hal_security_info_t sec_info;
+
+	if ((am_hal_security_get_info(&sec_info) == AM_HAL_STATUS_SUCCESS) &&
+	    sec_info.bInfo0Valid) {
+		dev_hw_info.factory_trim_version = sec_info.info0Version;
+	}
 #endif
 	am_hal_mcuctrl_info_get(AM_HAL_MCUCTRL_INFO_DEVICEID, &mcu_ctrl_device);
 
@@ -115,10 +122,17 @@ int z_impl_hwinfo_get_reset_cause(uint32_t *cause)
 		flags |= RESET_HARDWARE;
 	}
 
+#if !defined(CONFIG_SOC_SERIES_APOLLO3X)
 	/* BOHPMEM */
 	if (reset_status & AM_HAL_RESET_STATUS_BOHPMEM) {
 		flags |= RESET_HARDWARE;
 	}
+#else
+	/* BOBLE */
+	if (reset_status & AM_HAL_RESET_STATUS_BOBLE) {
+		flags |= RESET_HARDWARE;
+	}
+#endif
 
 #if (CONFIG_SOC_SERIES_APOLLO5X)
 	/* AIRCR */

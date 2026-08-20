@@ -20,6 +20,7 @@ supported:
   - uart
   - watchdog
   - logging
+  - hwinfo
 testing:
   ignore_tags:
     - net
