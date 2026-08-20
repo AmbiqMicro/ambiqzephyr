@@ -208,8 +208,11 @@ static int wdt_ambiq_install_timeout(const struct device *dev, const struct wdt_
 		break;
 	case WDT_FLAG_RESET_CPU_CORE:
 	case WDT_FLAG_RESET_SOC:
-		data->interrupt_enable = false;
+		data->interrupt_enable = (cfg->callback != NULL);
 		data->reset = true;
+		if (data->interrupt_enable && data->bite_count < UINT8_MAX) {
+			data->bite_count++;
+		}
 		break;
 	default:
 		LOG_ERR("Unsupported watchdog config flag");
