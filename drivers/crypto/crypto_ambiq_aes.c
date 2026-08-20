@@ -663,10 +663,10 @@ static int ambiq_aes_ctr_ofb_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, 
 		}
 		iv_copy_len = AMBIQ_AES_BLOCK_SIZE - (ctr_len_bits / 8U);
 		/*
-		 * CTR split-counter mode: caller provides only IV prefix and
-		 * driver manages the counter field. Start with counter value 1.
+		 * CTR split-counter mode: the caller supplies only the IV
+		 * prefix and the driver owns the counter field, which starts
+		 * at zero. iv_local is already zeroed above.
 		 */
-		iv_local[AMBIQ_AES_BLOCK_SIZE - 1U] = 1U;
 	}
 	if (iv_copy_len > 0U) {
 		memcpy(iv_local, iv, iv_copy_len);
