@@ -1,0 +1,15 @@
+/*
+ * Copyright (c) 2026 Ambiq Micro Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Center the 384x384 GPU framebuffer on the 468x468 ap510_disp panel.
+ * Offsets are applied in the CO5300 driver via chipone,co5300 x-offset/y-offset
+ * (see commit 6ce4ab0b09fc1408a0bf6511579c7a2884e7a724).
+ */
+&co5300 {
+	x-offset = <42>;
+	y-offset = <42>;
+};

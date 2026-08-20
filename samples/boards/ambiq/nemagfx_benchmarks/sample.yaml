@@ -1,0 +1,21 @@
+sample:
+  name: NemaGFX Benchmarks
+  description: NemaGFX GPU performance benchmarking suite
+tests:
+  sample.boards.ambiq.nemagfx_benchmarks:
+    tags:
+      - display
+      - gpu
+    platform_allow:
+      - apollo510_evb
+      - apollo510b_evb
+      - apollo510dL_evb
+    extra_args: SHIELD=ap510_disp
+    filter: dt_chosen_enabled("zephyr,display") and dt_chosen_enabled("ambiq,gpu")
+    harness: console
+    harness_config:
+      fixture: fixture_display
+      type: one_line
+      regex:
+        - "NemaGFX benchmarks complete"
+    timeout: 300
