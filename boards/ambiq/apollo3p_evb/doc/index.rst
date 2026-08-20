@@ -89,7 +89,6 @@ release test. Paths are relative to the workspace root.
 * ``tests/drivers/mspi/flash``
 * ``tests/drivers/pwm/pwm_api``
 * ``tests/drivers/rtc/rtc_api``
-* ``tests/drivers/spi/spi_loopback``
 * ``tests/drivers/watchdog/wdt_basic_api``
 * ``tests/kernel/common``
 * ``tests/kernel/context``

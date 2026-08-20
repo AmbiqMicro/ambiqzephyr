@@ -103,7 +103,6 @@ release test. Paths are relative to the workspace root.
 * ``tests/drivers/pwm/pwm_api``
 * ``tests/drivers/retained_mem/api``
 * ``tests/drivers/rtc/rtc_api``
-* ``tests/drivers/spi/spi_loopback``
 * ``tests/kernel/common``
 * ``tests/kernel/context``
 * ``tests/kernel/fifo/fifo_api``
