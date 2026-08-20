@@ -18,7 +18,7 @@ config MAIN_STACK_SIZE
 	default 2048
 
 config BT_BUF_ACL_TX_COUNT
-	default 14
+	default 4
 
 config BT_BUF_EVT_RX_COUNT
 	default 15
