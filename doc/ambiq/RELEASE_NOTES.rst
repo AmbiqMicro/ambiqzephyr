@@ -5,7 +5,7 @@
 Release Notes
 =============
 
-Release Version: 5.2.alpha.1
+Release Version: 4.3.0
 
 Release Date: 2025-09-10
 

@@ -65,7 +65,7 @@ MSPI FLASH Test
 
 .. code-block:: bash
 
-   west build -p always -b your_board_here samples/drivers/mspi/flash
+   west build -p always -b your_board_here samples/drivers/mspi/mspi_flash
 
 MSPI Timing Scan Example
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -82,3 +82,11 @@ MSPI Timing Scan Example
 **Note:**
 
 If you are using a different variant of the APS Z8 PSRAM than the one listed, you need to manually change the ``extra_configs`` in ``sample.yaml``.
+
+Board Notes
+-----------
+
+1. The apollo510dL_evb supports MSPI hex psram device only by default and flash devices are disabled in the DTS.
+   Board rework is required to run octal psram and octal flash in parallel as the MSPI hardware interface is limited.
+
+2. The CELatency is forced to 1 for apollo510L SoCs temporarily and will be updated in the future so that it is configurable per device in the DTS.

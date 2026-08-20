@@ -27,19 +27,16 @@ The serial console boot banner should show::
 Zephyr SDK matrix
 *****************
 
-+---------------+---------------------------+-----------------------------------+
-| Ambiq release | Recommended SDK           | Notes                             |
-+===============+===========================+===================================+
-| 4.3.x         | Zephyr SDK 0.17.x (host)  | Default ``ZEPHYR_TOOLCHAIN_VARIANT |
-|               |                           | = zephyr``                        |
-+---------------+---------------------------+-----------------------------------+
-| 4.3.x         | GCC 14 from SDK 1.0.x     | Cross-compile only; SDK 1.0.x     |
-| (optional)    |                           | cannot be the host Zephyr SDK     |
-|               |                           | package for 4.3 builds            |
-+---------------+---------------------------+-----------------------------------+
-| 4.4.x         | Zephyr SDK 1.0.x          | Set ``ZEPHYR_SDK_INSTALL_DIR`` to |
-|               |                           | the 1.0.x install                 |
-+---------------+---------------------------+-----------------------------------+
++---------------+---------------------------+------------------------------------+
+| Ambiq release | Recommended SDK           | Notes                              |
++===============+===========================+====================================+
+| 4.3.x         | Zephyr SDK 0.17.x (host)  | Default toolchain variant is       |
+|               |                           | ``zephyr``                         |
++---------------+---------------------------+------------------------------------+
+| 4.3.x         | GCC 14 from SDK 1.0.x     | Cross-compile only; SDK 1.0.x      |
+| (optional)    |                           | cannot be the host Zephyr SDK      |
+|               |                           | package for 4.3 builds             |
++---------------+---------------------------+------------------------------------+
 
 Environment variables
 ***********************

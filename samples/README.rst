@@ -1,8 +1,15 @@
 Ambiq Sample Build Commands
 ###########################
 
-This file lists simple sample and module build commands for the Ambiq boards
-checked from these board DTS files:
+This file lists simple sample and module build commands. They apply to every
+Ambiq board in this tree, not just the newest parts: the commands use the
+generic ``west build -b your_board_here ... -p always`` form, and where a
+sample depends on the board exposing particular peripherals or chosen nodes,
+the selected board has to provide them.
+
+The full board list is in `../doc/ambiq/Supported_Features.rst
+<../doc/ambiq/Supported_Features.rst>`_. The commands below were checked
+against these board DTS files:
 
 - ``boards/ambiq/apollo510_evb/apollo510_evb.dts``
 - ``boards/ambiq/apollo510_eb/apollo510_eb.dts``
@@ -12,13 +19,14 @@ checked from these board DTS files:
 - ``boards/ambiq/apollo330mP_evb/apollo330mP_evb.dts``
 
 Only sample and module paths that exist in this tree are listed here.
-Where a sample depends on the selected board exposing the needed peripherals or
-chosen nodes, the regular ``west build -b your_board_here ... -p always`` form is used.
 
 Related Ambiq Docs
 ******************
 
-- `../README.rst <../README.rst>`_ — Ambiq Zephyr hub (branch, toolchain, index)
+- `../README.rst <../README.rst>`_ — repository landing page
+- `../doc/ambiq/README.rst <../doc/ambiq/README.rst>`_ — Ambiq documentation index
+- `../doc/ambiq/Supported_Features.rst <../doc/ambiq/Supported_Features.rst>`_
+- `../doc/ambiq/How_to_Build_and_Flash.rst <../doc/ambiq/How_to_Build_and_Flash.rst>`_
 - `../doc/ambiq/How_to_Setup_Toolchain.rst <../doc/ambiq/How_to_Setup_Toolchain.rst>`_
 - `../doc/ambiq/How_to_Run_Zephyr_USB_Samples.rst <../doc/ambiq/How_to_Run_Zephyr_USB_Samples.rst>`_
 - `../doc/ambiq/How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst <../doc/ambiq/How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst>`_
@@ -34,7 +42,7 @@ Common Samples
    west build -b your_board_here samples/subsys/mgmt/mcumgr/smp_svr -p always
 
 MCUboot and DFU Samples
-**********************
+***********************
 
 From the Ambiq MCUboot guide:
 

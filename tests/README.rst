@@ -1,8 +1,15 @@
 Ambiq Test Build Commands
 #########################
 
-This file lists simple test build commands for the Ambiq boards checked from
-these board DTS files:
+This file lists simple test build commands. They apply to every Ambiq board in
+this tree, not just the newest parts: the commands use the generic ``west build
+-b your_board_here ... -p always`` form, and where a test depends on the board
+exposing the required devicetree nodes, aliases, or sysbuild wiring, the
+selected board has to provide them.
+
+The full board list is in `../doc/ambiq/Supported_Features.rst
+<../doc/ambiq/Supported_Features.rst>`_. The commands below were checked
+against these board DTS files:
 
 - ``boards/ambiq/apollo510_evb/apollo510_evb.dts``
 - ``boards/ambiq/apollo510_eb/apollo510_eb.dts``
@@ -12,14 +19,14 @@ these board DTS files:
 - ``boards/ambiq/apollo330mP_evb/apollo330mP_evb.dts``
 
 Only test paths that exist in this tree are listed here.
-Where a test depends on the selected board exposing the required devicetree
-nodes, aliases, or sysbuild wiring, the regular ``west build -b your_board_here ...
--p always`` form is used.
 
 Related Ambiq Docs
 ******************
 
-- `../README.rst <../README.rst>`_ — Ambiq Zephyr hub (branch, toolchain, index)
+- `../README.rst <../README.rst>`_ — repository landing page
+- `../doc/ambiq/README.rst <../doc/ambiq/README.rst>`_ — Ambiq documentation index
+- `../doc/ambiq/Supported_Features.rst <../doc/ambiq/Supported_Features.rst>`_
+- `../doc/ambiq/How_to_Build_and_Flash.rst <../doc/ambiq/How_to_Build_and_Flash.rst>`_
 - `../doc/ambiq/How_to_Setup_Toolchain.rst <../doc/ambiq/How_to_Setup_Toolchain.rst>`_
 - `../doc/ambiq/How_to_Run_MCUBoot_Samples_and_Tests.rst <../doc/ambiq/How_to_Run_MCUBoot_Samples_and_Tests.rst>`_
 - `../doc/ambiq/How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst <../doc/ambiq/How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst>`_
@@ -112,7 +119,7 @@ Benchmark Tests
    west build -b your_board_here tests/benchmarks/mbedtls -p always
 
 MCUboot, DFU, and Retention
-**************************
+***************************
 
 From the Ambiq MCUboot guide:
 

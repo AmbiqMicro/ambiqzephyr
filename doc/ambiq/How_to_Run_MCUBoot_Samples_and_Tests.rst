@@ -208,10 +208,10 @@ The test requires installing the ``mcumgr`` CLI: ``apache/mynewt-mcumgr-cli``.
 .. code-block:: console
 
    # Ubuntu build
-   west build -b your_board_here -p=always ./samples/subsys/mgmt/mcumgr/smp_svr/ --sysbuild -d ../build/samples/susys/mgmt-mcumgr-smp-svr/serial -T sample.mcumgr.smp_svr.serial
+   west build -b your_board_here -p=always ./samples/subsys/mgmt/mcumgr/smp_svr/ --sysbuild -d ../build/samples/subsys/mgmt-mcumgr-smp-svr/serial -T sample.mcumgr.smp_svr.serial
 
    # flash
-   west flash -d ../build/samples/susys/mgmt-mcumgr-smp-svr/serial
+   west flash -d ../build/samples/subsys/mgmt-mcumgr-smp-svr/serial
 
 Connect to the AuTerm via serial.
 
