@@ -44,6 +44,8 @@ jobs:
     env:
       BSIM_OUT_PATH: /data/bsim_west/bsim/
       BSIM_COMPONENTS_PATH: /data/bsim_west/bsim/components
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TWISTER_WORKFLOW_ID: twister.yaml
       TESTS_PER_BUILDER: 500
       VENDOR_OPTIONS: ' --vendor ambiq'
       GROUP_AP5: "apollo510_evb/apollo510 apollo510_eb/apollo510 apollo510b_evb/apollo510b apollo510L_eb/apollo510L"
@@ -251,9 +253,15 @@ jobs:
               TWISTER_NODES=1
             fi
 
+            TIMEOUT=$(python3 ./scripts/ci/twister_timeout.py \
+                        --group "$group" \
+                        --nodes "$TWISTER_NODES" \
+                        --platforms "${group_platforms[*]}")
+            echo "${group}: ${TWISTER_TESTS} configs over ${TWISTER_NODES} node(s), timeout ${TIMEOUT}m"
+
             # Add one matrix entry per chunk
             for i in $(seq 1 $TWISTER_NODES); do
-              matrix+=("{\"group\":\"$group\",\"platforms\":$platforms_json,\"runner\":$runner,\"subset\":$i,\"total\":$TWISTER_NODES}")
+              matrix+=("{\"group\":\"$group\",\"platforms\":$platforms_json,\"runner\":$runner,\"subset\":$i,\"total\":$TWISTER_NODES,\"timeout\":$TIMEOUT}")
             done
 
             rm -f testplan.json .testplan
@@ -279,8 +287,8 @@ jobs:
       matrix:
         job: ${{ fromJSON(needs.twister-build-prep.outputs.matrix) }}
     runs-on: ${{ matrix.job.runner }}
-    name: twister-build (${{ matrix.job.group }} ${{ matrix.job.subset }})
-    timeout-minutes: 180
+    name: twister-build (${{ matrix.job.group }} ${{ matrix.job.subset }}/${{ matrix.job.total }})
+    timeout-minutes: ${{ matrix.job.timeout }}
     env:
       CCACHE_DIR: /data/ccache-zephyr
       CCACHE_IGNOREOPTIONS: '-specs=* --specs=*'
