@@ -174,7 +174,7 @@
 
 	pwm2_default: pwm2_default {
 		group1 {
-			pinmux = <CTIM9_P29>; /* channel@0 */
+			pinmux = <GPIO_P30>;
 		};
 	};
 
