@@ -216,6 +216,104 @@ static void amotas_reply_to_client(eAmotaCommand cmd, eAmotaStatus status, uint8
 	amotas_send_data(buf, len + 4);
 }
 
+#if CONFIG_BT_AMOTA_IDLE_TIMEOUT > 0 || CONFIG_BT_AMOTA_PARTIAL_PKT_TIMEOUT > 0
+
+static struct k_work_delayable amotas_timeout_work;
+
+static void amotas_reset_pkt(void)
+{
+	amota.data.pkt.offset = 0;
+	amota.data.pkt.len = 0;
+	amota.data.pkt.type = AMOTA_CMD_UNKNOWN;
+}
+
+static void amotas_timeout_cancel(void)
+{
+	(void)k_work_cancel_delayable(&amotas_timeout_work);
+}
+
+static bool amotas_timeout_period(k_timeout_t *period)
+{
+	if (amota.data.pkt.offset > 0) {
+#if CONFIG_BT_AMOTA_PARTIAL_PKT_TIMEOUT > 0
+		*period = K_SECONDS(CONFIG_BT_AMOTA_PARTIAL_PKT_TIMEOUT);
+		return true;
+#elif CONFIG_BT_AMOTA_IDLE_TIMEOUT > 0 && amota.data.state == AMOTA_STATE_GETTING_FW
+		*period = K_SECONDS(CONFIG_BT_AMOTA_IDLE_TIMEOUT);
+		return true;
+#else
+		return false;
+#endif
+	}
+
+#if CONFIG_BT_AMOTA_IDLE_TIMEOUT > 0
+	if (amota.data.state == AMOTA_STATE_GETTING_FW) {
+		*period = K_SECONDS(CONFIG_BT_AMOTA_IDLE_TIMEOUT);
+		return true;
+	}
+#endif
+
+	return false;
+}
+
+static void amotas_timeout_schedule(void);
+
+static void amotas_timeout_work_handler(struct k_work *work)
+{
+	ARG_UNUSED(work);
+
+#if CONFIG_BT_AMOTA_PARTIAL_PKT_TIMEOUT > 0
+	if (amota.data.pkt.offset > 0) {
+		eAmotaCommand cmd = amota.data.pkt.type;
+
+		LOG_WRN("Partial AMOTA packet timed out (%u/%u bytes)",
+			amota.data.pkt.offset, amota.data.pkt.len);
+		amotas_reset_pkt();
+		if (amota.conn != NULL) {
+			amotas_reply_to_client(cmd, AMOTA_STATUS_TIMEOUT, NULL, 0);
+		}
+		amotas_timeout_schedule();
+		return;
+	}
+#endif
+
+#if CONFIG_BT_AMOTA_IDLE_TIMEOUT > 0
+	if (amota.data.state == AMOTA_STATE_GETTING_FW) {
+		uint8_t data[4];
+
+		LOG_WRN("AMOTA transfer idle timeout at offset 0x%x",
+			amota.data.newFwFlashInfo.offset);
+		data[0] = (amota.data.newFwFlashInfo.offset) & 0xff;
+		data[1] = (amota.data.newFwFlashInfo.offset >> 8) & 0xff;
+		data[2] = (amota.data.newFwFlashInfo.offset >> 16) & 0xff;
+		data[3] = (amota.data.newFwFlashInfo.offset >> 24) & 0xff;
+		amotas_reset_pkt();
+		if (amota.conn != NULL) {
+			amotas_reply_to_client(AMOTA_CMD_FW_DATA, AMOTA_STATUS_TIMEOUT, data,
+					       sizeof(data));
+#if CONFIG_BT_AMOTA_IDLE_DISCONNECT
+			(void)bt_conn_disconnect(amota.conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+#endif
+		}
+		return;
+	}
+#endif
+}
+
+static void amotas_timeout_schedule(void)
+{
+	k_timeout_t period;
+
+	if (!amotas_timeout_period(&period)) {
+		amotas_timeout_cancel();
+		return;
+	}
+
+	(void)k_work_reschedule(&amotas_timeout_work, period);
+}
+
+#endif /* CONFIG_BT_AMOTA_IDLE_TIMEOUT > 0 || CONFIG_BT_AMOTA_PARTIAL_PKT_TIMEOUT > 0 */
+
 static bool amotas_set_fw_addr(void)
 {
 	bool bResult = false;
@@ -673,6 +771,10 @@ static ssize_t write_callback(struct bt_conn *conn, const struct bt_gatt_attr *a
 		amota.data.pkt.len = 0;
 	}
 
+#if CONFIG_BT_AMOTA_IDLE_TIMEOUT > 0 || CONFIG_BT_AMOTA_PARTIAL_PKT_TIMEOUT > 0
+	amotas_timeout_schedule();
+#endif
+
 	return len;
 }
 
@@ -690,6 +792,10 @@ static int bt_amota_init(void)
 	amotas_init_ota();
 
 	bt_gatt_cb_register(&gatt_callbacks);
+
+#if CONFIG_BT_AMOTA_IDLE_TIMEOUT > 0 || CONFIG_BT_AMOTA_PARTIAL_PKT_TIMEOUT > 0
+	k_work_init_delayable(&amotas_timeout_work, amotas_timeout_work_handler);
+#endif
 
 	return 0;
 }
@@ -714,11 +820,19 @@ int bt_amota_conn_init(struct bt_conn *conn)
 	amota.data.pkt.len = 0;
 	amota.data.pkt.type = AMOTA_CMD_UNKNOWN;
 
+#if CONFIG_BT_AMOTA_IDLE_TIMEOUT > 0 || CONFIG_BT_AMOTA_PARTIAL_PKT_TIMEOUT > 0
+	amotas_timeout_cancel();
+#endif
+
 	return 0;
 }
 
 void bt_amota_conn_deinit(void)
 {
+#if CONFIG_BT_AMOTA_IDLE_TIMEOUT > 0 || CONFIG_BT_AMOTA_PARTIAL_PKT_TIMEOUT > 0
+	amotas_timeout_cancel();
+#endif
+
 	amota.conn = NULL;
 	amotasFlash.bufferIndex = 0;
 	amota.data.pkt.offset = 0;

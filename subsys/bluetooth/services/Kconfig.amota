@@ -10,6 +10,35 @@ menuconfig BT_AMOTA
 
 if BT_AMOTA
 
+config BT_AMOTA_IDLE_TIMEOUT
+	int "OTA idle timeout in seconds"
+	default 60
+	range 0 600
+	help
+	  Maximum time without any AMOTA GATT write while a firmware transfer
+	  is in progress (AMOTA_STATE_GETTING_FW). On expiry the device notifies
+	  the client with AMOTA_STATUS_TIMEOUT and the current flash offset.
+	  Set to 0 to disable.
+
+config BT_AMOTA_PARTIAL_PKT_TIMEOUT
+	int "Partial packet reassembly timeout in seconds"
+	default 10
+	range 0 120
+	help
+	  Maximum time to wait for remaining chunks of a partially received
+	  AMOTA packet. On expiry the partial reassembly buffer is discarded
+	  and the client is notified so it can retry the packet. Set to 0 to
+	  disable (falls back to the idle timeout when that is enabled).
+
+config BT_AMOTA_IDLE_DISCONNECT
+	bool "Disconnect BLE link on OTA idle timeout"
+	default y
+	depends on BT_AMOTA_IDLE_TIMEOUT > 0
+	help
+	  When the OTA idle timeout fires, disconnect the BLE link after
+	  notifying the client. This helps phone apps that do not handle
+	  AMOTA_STATUS_TIMEOUT recover by reconnecting.
+
 module = BT_AMOTA
 module-str = amota
 source "subsys/logging/Kconfig.template.log_config"
