@@ -102,10 +102,10 @@ release test. Paths are relative to the workspace root.
 * ``tests/drivers/flash/erase_blocks``
 * ``tests/drivers/gpio/gpio_basic_api``
 * ``tests/drivers/hwinfo/api``
-* ``tests/drivers/i2c/i2c_api``
 * ``tests/drivers/pwm/pwm_api``
 * ``tests/drivers/retained_mem/api``
 * ``tests/drivers/rtc/rtc_api``
+* ``tests/drivers/watchdog/wdt_basic_api``
 * ``tests/kernel/common``
 * ``tests/kernel/context``
 * ``tests/kernel/fifo/fifo_api``

@@ -84,7 +84,6 @@ release test. Paths are relative to the workspace root.
 * ``tests/drivers/counter/counter_basic_api``
 * ``tests/drivers/gpio/gpio_basic_api``
 * ``tests/drivers/hwinfo/api``
-* ``tests/drivers/i2c/i2c_api``
 * ``tests/drivers/mspi/api`` (``-T drivers.mspi.api.ambiq``)
 * ``tests/drivers/mspi/flash``
 * ``tests/drivers/pwm/pwm_api``

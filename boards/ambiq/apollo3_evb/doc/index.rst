@@ -83,7 +83,6 @@ release test. Paths are relative to the workspace root.
 * ``tests/drivers/counter/counter_basic_api``
 * ``tests/drivers/gpio/gpio_basic_api``
 * ``tests/drivers/hwinfo/api``
-* ``tests/drivers/i2c/i2c_api``
 * ``tests/drivers/pwm/pwm_api``
 * ``tests/drivers/rtc/rtc_api``
 * ``tests/drivers/watchdog/wdt_basic_api``

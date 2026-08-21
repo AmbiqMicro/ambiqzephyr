@@ -91,6 +91,7 @@ release test. Paths are relative to the workspace root.
 * ``tests/drivers/pwm/pwm_api``
 * ``tests/drivers/rtc/rtc_api``
 * ``tests/drivers/watchdog/wdt_basic_api``
+* ``tests/drivers/watchdog/wdt_basic_api`` (``-T drivers.watchdog.pm``)
 * ``tests/kernel/common``
 * ``tests/kernel/context``
 * ``tests/kernel/fifo/fifo_api``
