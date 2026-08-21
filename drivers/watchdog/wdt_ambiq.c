@@ -12,6 +12,10 @@
 #include <errno.h>
 #include <soc.h>
 
+#ifdef CONFIG_PM
+#include <zephyr/pm/pm.h>
+#endif
+
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(wdt_ambiq, CONFIG_WDT_LOG_LEVEL);
 
@@ -45,6 +49,54 @@ uint32_t wdt_ambiq_clk_select[] =
 	{112, 14};
 #endif
 
+static inline void wdt_ambiq_hw_start(void)
+{
+#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+	am_hal_wdt_start();
+#else
+	am_hal_wdt_start(AM_HAL_WDT_MCU, false);
+#endif
+}
+
+static inline void wdt_ambiq_hw_stop(void)
+{
+#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+	am_hal_wdt_halt();
+#else
+	am_hal_wdt_stop(AM_HAL_WDT_MCU);
+#endif
+}
+
+#ifdef CONFIG_PM
+static bool wdt_ambiq_pause_in_sleep;
+static bool wdt_ambiq_paused;
+
+static void wdt_ambiq_pm_state_entry(enum pm_state state)
+{
+	ARG_UNUSED(state);
+
+	if (wdt_ambiq_pause_in_sleep && !wdt_ambiq_paused) {
+		wdt_ambiq_hw_stop();
+		wdt_ambiq_paused = true;
+	}
+}
+
+static void wdt_ambiq_pm_state_exit(enum pm_state state)
+{
+	ARG_UNUSED(state);
+
+	if (wdt_ambiq_paused) {
+		wdt_ambiq_hw_start();
+		wdt_ambiq_paused = false;
+	}
+}
+
+static struct pm_notifier wdt_ambiq_pm_notifier = {
+	.state_entry = wdt_ambiq_pm_state_entry,
+	.state_exit = wdt_ambiq_pm_state_exit,
+};
+#endif /* CONFIG_PM */
+
 static void wdt_ambiq_isr(void *arg)
 {
 	const struct device *dev = (const struct device *)arg;
@@ -69,6 +121,19 @@ static int wdt_ambiq_setup(const struct device *dev, uint8_t options)
 	struct wdt_ambiq_data *data = dev->data;
 	am_hal_wdt_config_t cfg;
 
+	if (options & WDT_OPT_PAUSE_HALTED_BY_DBG) {
+		return -ENOTSUP;
+	}
+
+#ifdef CONFIG_PM
+	wdt_ambiq_pause_in_sleep = (options & WDT_OPT_PAUSE_IN_SLEEP) != 0;
+	wdt_ambiq_paused = false;
+#else
+	if (options & WDT_OPT_PAUSE_IN_SLEEP) {
+		return -ENOTSUP;
+	}
+#endif
+
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
 	uint32_t ui32ClockSource = AM_HAL_WDT_LFRC_CLK_DEFAULT;
 
@@ -89,7 +154,7 @@ static int wdt_ambiq_setup(const struct device *dev, uint8_t options)
 	if (data->interrupt_enable) {
 		am_hal_wdt_int_enable();
 	}
-	am_hal_wdt_start();
+	wdt_ambiq_hw_start();
 #else
 #if !defined(CONFIG_SOC_APOLLO510L) && !defined(CONFIG_SOC_APOLLO330P)
 	if (dev_cfg->clk_freq == 128) {
@@ -126,7 +191,7 @@ static int wdt_ambiq_setup(const struct device *dev, uint8_t options)
 	if (data->interrupt_enable) {
 		am_hal_wdt_interrupt_enable(AM_HAL_WDT_MCU, AM_HAL_WDT_INTERRUPT_MCU);
 	}
-	am_hal_wdt_start(AM_HAL_WDT_MCU, false);
+	wdt_ambiq_hw_start();
 #endif
 	return 0;
 }
@@ -135,11 +200,13 @@ static int wdt_ambiq_disable(const struct device *dev)
 {
 	ARG_UNUSED(dev);
 
-#if defined(CONFIG_SOC_SERIES_APOLLO3X)
-	am_hal_wdt_halt();
-#else
-	am_hal_wdt_stop(AM_HAL_WDT_MCU);
+#ifdef CONFIG_PM
+	wdt_ambiq_pause_in_sleep = false;
+	wdt_ambiq_paused = false;
 #endif
+
+	wdt_ambiq_hw_stop();
+
 	return 0;
 }
 
@@ -250,6 +317,10 @@ static int wdt_ambiq_init(const struct device *dev)
 			return -ENOTSUP;
 		}
 	}
+
+#ifdef CONFIG_PM
+	pm_notifier_register(&wdt_ambiq_pm_notifier);
+#endif
 
 	NVIC_ClearPendingIRQ(dev_cfg->irq_num);
 
