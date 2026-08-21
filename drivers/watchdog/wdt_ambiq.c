@@ -121,10 +121,13 @@ static int wdt_ambiq_setup(const struct device *dev, uint8_t options)
 	struct wdt_ambiq_data *data = dev->data;
 	am_hal_wdt_config_t cfg;
 
-	if (options & WDT_OPT_PAUSE_HALTED_BY_DBG) {
-		return -ENOTSUP;
-	}
-
+	/*
+	 * WDT_OPT_PAUSE_HALTED_BY_DBG has no hardware behind it here: neither
+	 * WDT_CFG nor MCUCTRL DBGCTRL gates the counter on a debug halt, and
+	 * software cannot act while the core is stopped. It is accepted and has
+	 * no effect rather than failing the call, so that a caller asking for
+	 * both pause options still gets the one this part can honour.
+	 */
 #ifdef CONFIG_PM
 	wdt_ambiq_pause_in_sleep = (options & WDT_OPT_PAUSE_IN_SLEEP) != 0;
 	wdt_ambiq_paused = false;
