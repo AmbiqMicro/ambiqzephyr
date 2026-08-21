@@ -1,0 +1,19 @@
+/*
+ * Copyright (c) 2026 Ambiq Micro, Inc.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* CC312 shares one interrupt across its engines, so only the engine under
+ * measurement is enabled.
+ */
+&cc312_aes {
+	status = "disabled";
+};
+
+&cc312_sha {
+	status = "disabled";
+};
+
+&cc312_chacha {
+	status = "okay";
+};

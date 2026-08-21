@@ -1,0 +1,33 @@
+# Copyright (c) 2026 Ambiq Micro, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+common:
+  harness: console
+  harness_config:
+    type: one_line
+    regex:
+      - "Done"
+  tags:
+    - ambiq
+    - crypto
+    - benchmark
+  platform_allow:
+    - apollo510_evb
+    - apollo510b_evb
+    - apollo510dL_evb
+    - apollo330mP_evb
+  integration_platforms:
+    - apollo510_evb
+tests:
+  benchmark.crypto.cc312.aes:
+    extra_args: DTC_OVERLAY_FILE=aes.overlay
+    extra_configs:
+      - CONFIG_NOCACHE_MEMORY=y
+  benchmark.crypto.cc312.sha:
+    extra_args: DTC_OVERLAY_FILE=sha.overlay
+    extra_configs:
+      - CONFIG_NOCACHE_MEMORY=n
+  benchmark.crypto.cc312.chacha:
+    extra_args: DTC_OVERLAY_FILE=chacha.overlay
+    extra_configs:
+      - CONFIG_NOCACHE_MEMORY=n
