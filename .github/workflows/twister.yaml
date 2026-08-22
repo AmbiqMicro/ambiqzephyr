@@ -396,6 +396,7 @@ jobs:
         run: |
           sudo mkdir -p "${CCACHE_DIR}"
           sudo chown -R "$(id -u):$(id -g)" "${CCACHE_DIR}"
+          sudo chmod -R a+rwx "${CCACHE_DIR}"
           ccache -M 40G
 
       - name: Check Environment
