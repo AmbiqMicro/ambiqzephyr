@@ -396,8 +396,9 @@ jobs:
       - name: Prepare ccache
         run: |
           sudo mkdir -p "${CCACHE_DIR}"
-          sudo chown -R "$(id -u):$(id -g)" "${CCACHE_DIR}"
-          sudo chmod -R a+rwx "${CCACHE_DIR}"
+          sudo chown "$(id -u):$(id -g)" "${CCACHE_DIR}" || true
+          sudo chmod -R a+rwX "${CCACHE_DIR}" 2>/dev/null || true
+          ccache -o umask=000 || true
           ccache -M 40G
 
       - name: Check Environment
