@@ -219,6 +219,7 @@ static void amotas_reply_to_client(eAmotaCommand cmd, eAmotaStatus status, uint8
 #if CONFIG_BT_AMOTA_IDLE_TIMEOUT > 0 || CONFIG_BT_AMOTA_PARTIAL_PKT_TIMEOUT > 0
 
 static struct k_work_delayable amotas_timeout_work;
+static K_MUTEX_DEFINE(amotas_pkt_mutex);
 
 static void amotas_reset_pkt(void)
 {
@@ -262,6 +263,8 @@ static void amotas_timeout_work_handler(struct k_work *work)
 {
 	ARG_UNUSED(work);
 
+	k_mutex_lock(&amotas_pkt_mutex, K_FOREVER);
+
 #if CONFIG_BT_AMOTA_PARTIAL_PKT_TIMEOUT > 0
 	if (amota.data.pkt.offset > 0) {
 		eAmotaCommand cmd = amota.data.pkt.type;
@@ -273,6 +276,7 @@ static void amotas_timeout_work_handler(struct k_work *work)
 			amotas_reply_to_client(cmd, AMOTA_STATUS_TIMEOUT, NULL, 0);
 		}
 		amotas_timeout_schedule();
+		k_mutex_unlock(&amotas_pkt_mutex);
 		return;
 	}
 #endif
@@ -295,9 +299,12 @@ static void amotas_timeout_work_handler(struct k_work *work)
 			(void)bt_conn_disconnect(amota.conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
 #endif
 		}
+		k_mutex_unlock(&amotas_pkt_mutex);
 		return;
 	}
 #endif
+
+	k_mutex_unlock(&amotas_pkt_mutex);
 }
 
 static void amotas_timeout_schedule(void)
@@ -703,12 +710,18 @@ static ssize_t write_callback(struct bt_conn *conn, const struct bt_gatt_attr *a
 	uint32_t peerCrc = 0;
 	uint32_t calDataCrc = 0;
 	uint8_t *pValue = (uint8_t *)buf;
+	ssize_t ret = len;
+
+#if CONFIG_BT_AMOTA_IDLE_TIMEOUT > 0 || CONFIG_BT_AMOTA_PARTIAL_PKT_TIMEOUT > 0
+	k_mutex_lock(&amotas_pkt_mutex, K_FOREVER);
+#endif
 
 	if (amota.data.pkt.offset == 0 && len < AMOTA_HEADER_SIZE_IN_PKT) {
 		LOG_ERR("Invalid packet!!!");
 		amotas_reply_to_client(AMOTA_CMD_FW_HEADER, AMOTA_STATUS_INVALID_PKT_LENGTH, NULL,
 				       0);
-		return BT_GATT_ERR(BT_ATT_ERR_INVALID_PDU);
+		ret = BT_GATT_ERR(BT_ATT_ERR_INVALID_PDU);
+		goto out;
 	}
 
 	/* This is a new packet. */
@@ -722,7 +735,8 @@ static ssize_t write_callback(struct bt_conn *conn, const struct bt_gatt_attr *a
 
 		if (dataIdx > amota.data.pkt.len) {
 			LOG_ERR("packet length is wrong since it's smaller than 3!");
-			return BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
+			ret = BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
+			goto out;
 		}
 	}
 
@@ -731,7 +745,8 @@ static ssize_t write_callback(struct bt_conn *conn, const struct bt_gatt_attr *a
 		LOG_ERR("not enough buffer size!!!");
 		amotas_reply_to_client(amota.data.pkt.type, AMOTA_STATUS_INSUFFICIENT_BUFFER, NULL,
 				       0);
-		return BT_GATT_ERR(BT_ATT_ERR_INSUFFICIENT_RESOURCES);
+		ret = BT_GATT_ERR(BT_ATT_ERR_INSUFFICIENT_RESOURCES);
+		goto out;
 	}
 
 	/* copy new data into buffer and also save crc into it if it's the last frame in a packet
@@ -756,26 +771,26 @@ static ssize_t write_callback(struct bt_conn *conn, const struct bt_gatt_attr *a
 			amota.data.pkt.offset = 0;
 			amota.data.pkt.type = AMOTA_CMD_UNKNOWN;
 			amota.data.pkt.len = 0;
+		} else {
 
-			/* Return len to indicate write was accepted, error handled via reply */
-			return len;
+			LOG_INF("Packet received correctly, OTA is ongoing...");
+
+			amotas_packet_handler(amota.data.pkt.type,
+					      amota.data.pkt.len - AMOTA_CRC_SIZE_IN_PKT,
+					      amota.data.pkt.data);
+			amota.data.pkt.offset = 0;
+			amota.data.pkt.type = AMOTA_CMD_UNKNOWN;
+			amota.data.pkt.len = 0;
 		}
-
-		LOG_INF("Packet received correctly, OTA is ongoing...");
-
-		amotas_packet_handler(amota.data.pkt.type,
-				      amota.data.pkt.len - AMOTA_CRC_SIZE_IN_PKT,
-				      amota.data.pkt.data);
-		amota.data.pkt.offset = 0;
-		amota.data.pkt.type = AMOTA_CMD_UNKNOWN;
-		amota.data.pkt.len = 0;
 	}
 
+out:
 #if CONFIG_BT_AMOTA_IDLE_TIMEOUT > 0 || CONFIG_BT_AMOTA_PARTIAL_PKT_TIMEOUT > 0
 	amotas_timeout_schedule();
+	k_mutex_unlock(&amotas_pkt_mutex);
 #endif
 
-	return len;
+	return ret;
 }
 
 static int bt_amota_init(void)
@@ -816,12 +831,18 @@ int bt_amota_conn_init(struct bt_conn *conn)
 	amota.data.state = AMOTA_STATE_INIT;
 	amota.conn = conn;
 	amotasFlash.bufferIndex = 0;
+
+#if CONFIG_BT_AMOTA_IDLE_TIMEOUT > 0 || CONFIG_BT_AMOTA_PARTIAL_PKT_TIMEOUT > 0
+	k_mutex_lock(&amotas_pkt_mutex, K_FOREVER);
+	amotas_timeout_cancel();
 	amota.data.pkt.offset = 0;
 	amota.data.pkt.len = 0;
 	amota.data.pkt.type = AMOTA_CMD_UNKNOWN;
-
-#if CONFIG_BT_AMOTA_IDLE_TIMEOUT > 0 || CONFIG_BT_AMOTA_PARTIAL_PKT_TIMEOUT > 0
-	amotas_timeout_cancel();
+	k_mutex_unlock(&amotas_pkt_mutex);
+#else
+	amota.data.pkt.offset = 0;
+	amota.data.pkt.len = 0;
+	amota.data.pkt.type = AMOTA_CMD_UNKNOWN;
 #endif
 
 	return 0;
@@ -830,14 +851,20 @@ int bt_amota_conn_init(struct bt_conn *conn)
 void bt_amota_conn_deinit(void)
 {
 #if CONFIG_BT_AMOTA_IDLE_TIMEOUT > 0 || CONFIG_BT_AMOTA_PARTIAL_PKT_TIMEOUT > 0
+	k_mutex_lock(&amotas_pkt_mutex, K_FOREVER);
 	amotas_timeout_cancel();
+	amota.data.pkt.offset = 0;
+	amota.data.pkt.len = 0;
+	amota.data.pkt.type = AMOTA_CMD_UNKNOWN;
+	k_mutex_unlock(&amotas_pkt_mutex);
+#else
+	amota.data.pkt.offset = 0;
+	amota.data.pkt.len = 0;
+	amota.data.pkt.type = AMOTA_CMD_UNKNOWN;
 #endif
 
 	amota.conn = NULL;
 	amotasFlash.bufferIndex = 0;
-	amota.data.pkt.offset = 0;
-	amota.data.pkt.len = 0;
-	amota.data.pkt.type = AMOTA_CMD_UNKNOWN;
 }
 
 SYS_INIT(bt_amota_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
