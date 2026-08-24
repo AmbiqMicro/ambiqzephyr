@@ -311,6 +311,12 @@ config BT_AMBIQ_HCI_IPC
 	help
 	  Supports Ambiq Bluetooth SoC using IPC as the communication protocol.
 
+config BT_AMBIQ_RSS_LP
+	bool
+	default y
+	help
+	  Enable low-power operation in the RSS Bluetooth.
+
 config BT_HCI_INIT_PRIORITY
 	int "BT HCI init priority"
 	default 75 if BT_AMBIQ_HCI

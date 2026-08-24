@@ -53,6 +53,9 @@ LOG_MODULE_REGISTER(bt_hci_apollox_ipc_support);
 #define AMBIQ_NVDS_PARAM_ID_TRACER_CONFIG    0x2f
 #define AMBIQ_NVDS_PARAM_ID_MEM_WRITE_ENABLE 0x50
 #define AMBIQ_NVDS_PARAM_ID_LE_QOS_ENABLE    0x51
+#if defined(CONFIG_BT_AMBIQ_RSS_LP)
+#define AMBIQ_NVDS_PARAM_ID_LP_ENABLE        0x10
+#endif
 
 #define APOLLO_330P_510L_TRACER_CONFIG 0x00080000U
 
@@ -150,7 +153,11 @@ static void apollo_330p_510l_build_nvds_cfg(uint8_t *p, const bt_addr_t *addr)
 	apollo_330p_510l_nvds_add_u8(p, &o, AMBIQ_NVDS_PARAM_ID_LE_QOS_ENABLE, 0);
 	apollo_330p_510l_nvds_add_le32(p, &o, AMBIQ_NVDS_PARAM_ID_TRACER_CONFIG,
 				       APOLLO_330P_510L_TRACER_CONFIG);
-
+#if defined(CONFIG_BT_AMBIQ_RSS_LP)
+	apollo_330p_510l_nvds_add_u8(p, &o, AMBIQ_NVDS_PARAM_ID_LP_ENABLE, 1);
+#else
+	apollo_330p_510l_nvds_add_u8(p, &o, AMBIQ_NVDS_PARAM_ID_LP_ENABLE, 0);
+#endif
 	__ASSERT_NO_MSG(o <= AMBIQ_NVDS_CFG_PAYLOAD_LEN);
 	memset(&p[o], 0, AMBIQ_NVDS_CFG_PAYLOAD_LEN - o);
 }
