@@ -67,6 +67,15 @@ static inline void wdt_ambiq_hw_stop(void)
 #endif
 }
 
+static inline void wdt_ambiq_hw_resume(void)
+{
+#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+	WDT->CFG |= WDT_CFG_WDTEN_Msk;
+#else
+	WDT->CFG_b.WDTEN = 1;
+#endif
+}
+
 #ifdef CONFIG_PM
 static bool wdt_ambiq_pause_in_sleep;
 static bool wdt_ambiq_paused;
@@ -86,7 +95,7 @@ static void wdt_ambiq_pm_state_exit(enum pm_state state)
 	ARG_UNUSED(state);
 
 	if (wdt_ambiq_paused) {
-		wdt_ambiq_hw_start();
+		wdt_ambiq_hw_resume();
 		wdt_ambiq_paused = false;
 	}
 }
