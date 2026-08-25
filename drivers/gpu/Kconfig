@@ -1,0 +1,11 @@
+# GPU drivers
+
+# Copyright (c) 2025 Ambiq Micro Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config GPU
+	bool "GPU drivers"
+	help
+	  Enable GPU drivers
+
+source "drivers/gpu/Kconfig.ambiq"

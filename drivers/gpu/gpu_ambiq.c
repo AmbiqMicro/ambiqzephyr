@@ -12,12 +12,12 @@
 #include <zephyr/kernel.h>
 #include <zephyr/irq.h>
 #include <zephyr/sys/atomic.h>
-
-#include "nema_regs.h"
-
-#include "gpu.h"
 #include <zephyr/sys/util.h>
 #include <zephyr/cache.h>
+#include <zephyr/drivers/gpu/gpu_ambiq.h>
+
+#include <soc.h>
+#include <nema_regs.h>
 
 LOG_MODULE_REGISTER(gpu_ambiq, CONFIG_GPU_AMBIQ_LOG_LEVEL);
 

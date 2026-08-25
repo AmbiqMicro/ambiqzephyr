@@ -4,10 +4,32 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_SOC_AMBIQ_APOLLO5X_GPU_H_
-#define ZEPHYR_SOC_AMBIQ_APOLLO5X_GPU_H_
+/**
+ * @file
+ * @brief Header file for Ambiq GPU driver
+ * @ingroup gpu_ambiq_interface
+ */
+
+#ifndef ZEPHYR_DRIVERS_GPU_GPU_AMBIQ_H_
+#define ZEPHYR_DRIVERS_GPU_GPU_AMBIQ_H_
+
+/**
+ * @brief Ambiq GPU driver is provided by drivers/gpu (not soc/).
+ *
+ * NemaGFX HAL uses this to enable behavior that depends on the drivers/gpu
+ * implementation, such as PM device runtime resume in nema_sys_init().
+ */
+#define GPU_AMBIQ_ZEPHYR_DRIVER 1
+
+/**
+ * @defgroup gpu_ambiq_interface Ambiq
+ * @ingroup gpu_interface_ext
+ * @brief Ambiq Nema GPU controller
+ * @{
+ */
 
 #include <zephyr/device.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -72,4 +94,6 @@ void gpu_ambiq_cache_invalidate_range(void *addr, size_t size);
 }
 #endif
 
-#endif /* ZEPHYR_SOC_AMBIQ_APOLLO5X_GPU_H_ */
+/** @} */
+
+#endif /* ZEPHYR_DRIVERS_GPU_GPU_AMBIQ_H_ */

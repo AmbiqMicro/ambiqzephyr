@@ -166,7 +166,7 @@ manifest:
     - name: hal_ambiq_internal
       remote: github_ambiqmicro
       path: modules/hal/ambiq
-      revision: 46c76063bf4140032e0cbf75363685d1eed88382
+      revision: ad77779591c345510a36e28a3b4889f3a83f952d
       groups:
         - hal
     - name: hal_atmel
