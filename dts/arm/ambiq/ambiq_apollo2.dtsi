@@ -84,6 +84,13 @@
 			};
 		};
 
+		stimer0: stimer@40008140 {
+			compatible = "ambiq,stimer";
+			reg = <0x40008140 0x80>;
+			interrupts = <APOLLO2_STIMER_CMPR0_IRQ 0>;
+			status = "okay";
+		};
+
 		uart0: uart@APOLLO2_UART0 {
 			compatible = "ambiq,uart";
 			reg = <APOLLO2_UART0_BASE APOLLO2_UART0_SIZE>;

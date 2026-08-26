@@ -62,3 +62,7 @@
 	pinctrl-names = "default";
 	status = "okay";
 };
+
+&stimer0 {
+	clk-source = <3>;
+};

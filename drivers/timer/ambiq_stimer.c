@@ -144,7 +144,7 @@ void sys_clock_set_timeout(int32_t ticks, bool idle)
 	uint32_t delta;
 	uint64_t delta_cycles = (uint64_t)ticks * (uint64_t)CYC_PER_TICK;
 
-#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+#if defined(CONFIG_SOC_SERIES_APOLLO2X) || defined(CONFIG_SOC_SERIES_APOLLO3X)
 	uint32_t now = am_hal_stimer_counter_get();
 
 	update_tick_counter_with_now(now);
@@ -202,7 +202,11 @@ static int stimer_init(void)
 	am_hal_stimer_counter_clear();
 	am_hal_stimer_int_disable(0xFFFFFFFF);
 	am_hal_stimer_int_clear(0xFFFFFFFF);
-#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+#if defined(CONFIG_SOC_SERIES_APOLLO2X)
+	am_hal_stimer_config((oldCfg & ~(AM_HAL_STIMER_CFG_FREEZE | AM_REG_CTIMER_STCFG_CLKSEL_M)) |
+			     TIMER_CLKSRC | AM_HAL_STIMER_CFG_COMPARE_A_ENABLE |
+			     AM_HAL_STIMER_CFG_COMPARE_B_ENABLE);
+#elif defined(CONFIG_SOC_SERIES_APOLLO3X)
 	am_hal_stimer_config((oldCfg & ~(AM_HAL_STIMER_CFG_FREEZE | CTIMER_STCFG_CLKSEL_Msk)) |
 			     TIMER_CLKSRC | AM_HAL_STIMER_CFG_COMPARE_A_ENABLE |
 			     AM_HAL_STIMER_CFG_COMPARE_B_ENABLE);
