@@ -8,10 +8,6 @@
  * sibling driver that connects an ISR would consume and clear the status the
  * poll is waiting on.
  */
-&cc312_aes {
-	status = "disabled";
-};
-
 &cc312_chacha {
 	status = "disabled";
 };

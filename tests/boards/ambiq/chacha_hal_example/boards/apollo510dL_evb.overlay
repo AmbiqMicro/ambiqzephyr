@@ -4,10 +4,6 @@
  */
 
 /* Disable the AES node so its ISR doesn't conflict with ChaCha on IRQ 24 */
-&cc312_aes {
-	status = "disabled";
-};
-
 &cc312_chacha {
 	status = "okay";
 };

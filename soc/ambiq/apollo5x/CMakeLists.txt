@@ -30,3 +30,5 @@ endif()
 set(SOC_LINKER_SCRIPT ${ZEPHYR_BASE}/include/zephyr/arch/arm/cortex_m/scripts/linker.ld CACHE INTERNAL "")
 
 add_subdirectory_ifdef(CONFIG_SOC_AMBIQ_RSS_MGR rss_mgr)
+
+zephyr_library_sources_ifdef(CONFIG_AMBIQ_CC312_ARBITER cc312_arbiter.c)

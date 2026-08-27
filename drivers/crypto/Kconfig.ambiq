@@ -7,6 +7,7 @@ config CRYPTO_AMBIQ_AES
 	depends on DT_HAS_AMBIQ_CRYPTO_AES_ENABLED
 	select AMBIQ_HAL
 	select POWER_DOMAIN
+	select AMBIQ_CC312_ARBITER
 	help
 		Enable the Ambiq CryptoCell-312 AES cipher driver.
 
@@ -24,6 +25,7 @@ config CRYPTO_AMBIQ_CHACHA
 	depends on DT_HAS_AMBIQ_CRYPTO_CHACHA_ENABLED
 	select AMBIQ_HAL
 	select POWER_DOMAIN
+	select AMBIQ_CC312_ARBITER
 	help
 		Enable the Ambiq CryptoCell-312 ChaCha20 stream cipher driver.
 
@@ -36,6 +38,7 @@ config CRYPTO_AMBIQ_SHA
 	depends on DT_HAS_AMBIQ_CRYPTO_SHA_ENABLED
 	select AMBIQ_HAL
 	select POWER_DOMAIN
+	select AMBIQ_CC312_ARBITER
 	help
 		Enable the Ambiq CryptoCell-312 SHA hash driver.
 

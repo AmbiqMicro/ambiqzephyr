@@ -15,6 +15,7 @@
 #include <string.h>
 
 #include <soc.h>
+#include <cc312_arbiter.h>
 
 LOG_MODULE_REGISTER(crypto_ambiq_sha, CONFIG_CRYPTO_LOG_LEVEL);
 
@@ -38,7 +39,6 @@ struct ambiq_sha_session {
 };
 
 struct ambiq_sha_data {
-	struct k_mutex lock;
 	struct ambiq_sha_session sessions[CONFIG_CRYPTO_AMBIQ_SHA_MAX_SESSION];
 };
 
@@ -83,7 +83,7 @@ static struct ambiq_sha_session *ambiq_sha_session_alloc(struct ambiq_sha_data *
 {
 	struct ambiq_sha_session *s = NULL;
 
-	k_mutex_lock(&data->lock, K_FOREVER);
+	k_mutex_lock(ambiq_cc312_arbiter_lock(), K_FOREVER);
 
 	for (int i = 0; i < ARRAY_SIZE(data->sessions); i++) {
 		if (!data->sessions[i].in_use) {
@@ -94,7 +94,7 @@ static struct ambiq_sha_session *ambiq_sha_session_alloc(struct ambiq_sha_data *
 		}
 	}
 
-	k_mutex_unlock(&data->lock);
+	k_mutex_unlock(ambiq_cc312_arbiter_lock());
 	return s;
 }
 
@@ -142,7 +142,7 @@ static int ambiq_sha_handler(struct hash_ctx *hctx, struct hash_pkt *pkt, bool f
 		return -EINVAL;
 	}
 
-	k_mutex_lock(&data->lock, K_FOREVER);
+	k_mutex_lock(ambiq_cc312_arbiter_lock(), K_FOREVER);
 
 	if (!hctx->started) {
 		status = am_hal_cc312_sha_context_init(&s->hal, ambiq_sha_hal_mode(s->algo));
@@ -179,7 +179,7 @@ out:
 		}
 	}
 
-	k_mutex_unlock(&data->lock);
+	k_mutex_unlock(ambiq_cc312_arbiter_lock());
 	return ret;
 }
 
@@ -233,10 +233,10 @@ static int ambiq_sha_free_session(const struct device *dev, struct hash_ctx *hct
 	data = dev->data;
 
 	if (s != NULL) {
-		k_mutex_lock(&data->lock, K_FOREVER);
+		k_mutex_lock(ambiq_cc312_arbiter_lock(), K_FOREVER);
 		(void)am_hal_cc312_sha_free(&s->hal);
 		s->in_use = false;
-		k_mutex_unlock(&data->lock);
+		k_mutex_unlock(ambiq_cc312_arbiter_lock());
 	}
 
 	hctx->drv_sessn_state = NULL;
@@ -271,10 +271,6 @@ static int ambiq_sha_pm_action(const struct device *dev, enum pm_device_action a
 
 static int ambiq_sha_init(const struct device *dev)
 {
-	struct ambiq_sha_data *data = dev->data;
-
-	k_mutex_init(&data->lock);
-
 	return pm_device_runtime_enable(dev);
 }
 

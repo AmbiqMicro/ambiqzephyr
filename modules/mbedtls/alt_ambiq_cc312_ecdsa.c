@@ -17,6 +17,7 @@
 #include <mbedtls/platform_util.h>
 
 #include <soc.h>
+#include <cc312_arbiter.h>
 
 #define CC312_PD DEVICE_DT_GET(DT_NODELABEL(crypto_pd))
 
@@ -27,7 +28,6 @@
 #define P256_BYTES 32U
 #define P256_WORDS (P256_BYTES / 4U)
 
-static K_MUTEX_DEFINE(cc312_ecdsa_lock);
 
 static void be_bytes_to_le_words(const uint8_t be[P256_BYTES], uint32_t out[P256_WORDS])
 {
@@ -93,10 +93,10 @@ static int cc312_acquire(const am_hal_cc312_ecc_domain_t **domain)
 		return MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE;
 	}
 
-	k_mutex_lock(&cc312_ecdsa_lock, K_FOREVER);
+	k_mutex_lock(ambiq_cc312_arbiter_lock(), K_FOREVER);
 
 	if (pm_device_runtime_get(CC312_PD) < 0) {
-		k_mutex_unlock(&cc312_ecdsa_lock);
+		k_mutex_unlock(ambiq_cc312_arbiter_lock());
 		return MBEDTLS_ERR_ECP_BAD_INPUT_DATA;
 	}
 
@@ -106,7 +106,7 @@ static int cc312_acquire(const am_hal_cc312_ecc_domain_t **domain)
 static void cc312_release(void)
 {
 	(void)pm_device_runtime_put(CC312_PD);
-	k_mutex_unlock(&cc312_ecdsa_lock);
+	k_mutex_unlock(ambiq_cc312_arbiter_lock());
 }
 
 int mbedtls_ecdsa_sign(mbedtls_ecp_group *grp, mbedtls_mpi *r, mbedtls_mpi *s,

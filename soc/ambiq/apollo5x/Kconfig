@@ -145,3 +145,6 @@ config ARMV8_1_M_PMU_EVENTCNT
 	default 8
 
 endif
+
+config AMBIQ_CC312_ARBITER
+	bool

@@ -21,6 +21,7 @@
 
 /* ambiq-sdk includes */
 #include <soc.h>
+#include <cc312_arbiter.h>
 
 LOG_MODULE_REGISTER(crypto_ambiq_aes, CONFIG_CRYPTO_LOG_LEVEL);
 
@@ -53,70 +54,23 @@ struct ambiq_aes_dma_data {
 };
 
 struct ambiq_aes_data {
-	struct k_mutex lock;
-	struct k_sem irq_sem;
-	uint32_t irq_num;
-	atomic_t irq_seen;
-	atomic_t irq_wait_mask;
 	struct ambiq_aes_dma_data *dma;
 };
 
 struct ambiq_aes_config {
-	uint32_t irq_num;
-	void (*irq_config_func)(void);
 	struct ambiq_aes_dma_data *dma;
 };
 
 static void ambiq_aes_prepare_irq_wait(struct ambiq_aes_data *data, uint32_t wait_mask)
 {
-	irq_disable(data->irq_num);
-	k_sem_reset(&data->irq_sem);
-	(void)atomic_set(&data->irq_seen, 0U);
-	(void)atomic_set(&data->irq_wait_mask, wait_mask);
+	ARG_UNUSED(data);
+	ambiq_cc312_arbiter_prepare(wait_mask);
 }
 
 static void ambiq_aes_finish_irq_wait(struct ambiq_aes_data *data)
 {
-	irq_disable(data->irq_num);
-	(void)atomic_set(&data->irq_wait_mask, 0U);
-}
-
-static void ambiq_cc312_isr(const void *arg)
-{
-	const struct device *dev = arg;
-	struct ambiq_aes_data *data;
-	uint32_t irr_val;
-	uint32_t clear_mask;
-	uint32_t irq_seen;
-	uint32_t irq_wait_mask;
-
-	if (dev == NULL) {
-		return;
-	}
-
-	data = dev->data;
-	if (data == NULL) {
-		return;
-	}
-
-	irr_val = CRYPTO->HOSTRGFIRR;
-	if (irr_val == 0U) {
-		return;
-	}
-
-	clear_mask = irr_val;
-	if ((irr_val & CRYPTO_HOSTRGFIRR_AHBERRINT_Msk) != 0U) {
-		clear_mask |= CRYPTO_HOSTRGFICR_AXIERRCLEAR_Msk;
-	}
-	CRYPTO->HOSTRGFICR = clear_mask;
-
-	irq_seen = (uint32_t)atomic_or(&data->irq_seen, irr_val) | irr_val;
-	irq_wait_mask = (uint32_t)atomic_get(&data->irq_wait_mask);
-
-	if (((irq_seen & irq_wait_mask) != 0U) ||
-	    ((irr_val & CRYPTO_HOSTRGFIRR_AHBERRINT_Msk) != 0U)) {
-		k_sem_give(&data->irq_sem);
-	}
+	ARG_UNUSED(data);
+	ambiq_cc312_arbiter_finish();
 }
 
 static int ambiq_aes_data_from_ctx(struct cipher_ctx *ctx, struct ambiq_aes_data **data_out)
@@ -315,21 +269,20 @@ static uint32_t ambiq_cc312_flush_dummy_dlli(struct ambiq_aes_data *data, uint32
 	am_hal_cc312_set_dma_destination(AM_HAL_CC312_DMA_DLLI_ADDR,
 					 POINTER_TO_UINT(data->dma->dlli_flush_scratch), flush_len);
 	am_hal_cc312_clear_interrupt(0xFFFFFFFFU);
-	irq_enable(data->irq_num);
 	am_hal_cc312_set_dma_source(AM_HAL_CC312_DMA_DLLI_ADDR, src_tail_addr, flush_len);
 
-	ret = k_sem_take(&data->irq_sem, K_MSEC(AMBIQ_AES_IRQ_WAIT_TIMEOUT_MS));
+	ret = ambiq_cc312_arbiter_wait(K_MSEC(AMBIQ_AES_IRQ_WAIT_TIMEOUT_MS));
 	if (ret != 0) {
 		status = AM_HAL_STATUS_TIMEOUT;
 		goto flush_exit;
 	}
 
-	if (((uint32_t)atomic_get(&data->irq_seen) & CRYPTO_HOSTRGFIRR_AHBERRINT_Msk) != 0U) {
+	if ((ambiq_cc312_arbiter_seen() & CRYPTO_HOSTRGFIRR_AHBERRINT_Msk) != 0U) {
 		status = AM_HAL_STATUS_HW_ERR;
 		goto flush_exit;
 	}
 
-	if (((uint32_t)atomic_get(&data->irq_seen) & irr_mask) == 0U) {
+	if ((ambiq_cc312_arbiter_seen() & irr_mask) == 0U) {
 		status = AM_HAL_STATUS_TIMEOUT;
 		goto flush_exit;
 	}
@@ -419,23 +372,22 @@ static uint32_t ambiq_cc312_aes_process(struct ambiq_aes_data *data,
 	am_hal_cc312_set_dma_destination((am_hal_cc312_dma_addr_type_e)ctx->outputDataAddrType,
 					 output_info->ui32DataAddr, length);
 	am_hal_cc312_clear_interrupt(0xFFFFFFFFU);
-	irq_enable(data->irq_num);
 	am_hal_cc312_set_dma_source((am_hal_cc312_dma_addr_type_e)ctx->inputDataAddrType,
 				    input_info->ui32DataAddr, length);
 
 	irr_val |= CRYPTO_HOSTRGFIRR_SYMDMACOMPLETED_Msk;
-	ret = k_sem_take(&data->irq_sem, K_MSEC(AMBIQ_AES_IRQ_WAIT_TIMEOUT_MS));
+	ret = ambiq_cc312_arbiter_wait(K_MSEC(AMBIQ_AES_IRQ_WAIT_TIMEOUT_MS));
 	if (ret != 0) {
 		status = AM_HAL_STATUS_TIMEOUT;
 		goto process_exit;
 	}
 
-	if (((uint32_t)atomic_get(&data->irq_seen) & CRYPTO_HOSTRGFIRR_AHBERRINT_Msk) != 0U) {
+	if ((ambiq_cc312_arbiter_seen() & CRYPTO_HOSTRGFIRR_AHBERRINT_Msk) != 0U) {
 		status = AM_HAL_STATUS_HW_ERR;
 		goto process_exit;
 	}
 
-	if (((uint32_t)atomic_get(&data->irq_seen) & irr_val) == 0U) {
+	if ((ambiq_cc312_arbiter_seen() & irr_val) == 0U) {
 		status = AM_HAL_STATUS_TIMEOUT;
 		goto process_exit;
 	}
@@ -580,7 +532,7 @@ static int ambiq_aes_ecb_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, int3
 	}
 	dma = data->dma;
 
-	k_mutex_lock(&data->lock, K_FOREVER);
+	k_mutex_lock(ambiq_cc312_arbiter_lock(), K_FOREVER);
 
 	status = ambiq_aes_prepare_op_ctx(&dma->op_ctx, ctx, hal_mode);
 	if (status != AM_HAL_STATUS_SUCCESS) {
@@ -614,7 +566,7 @@ cleanup:
 	/* Clear DMA scratch buffers */
 	ambiq_aes_clear_dma_scratch(dma);
 
-	k_mutex_unlock(&data->lock);
+	k_mutex_unlock(ambiq_cc312_arbiter_lock());
 	return ret;
 }
 
@@ -678,7 +630,7 @@ static int ambiq_aes_ctr_ofb_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, 
 	}
 	dma = data->dma;
 
-	k_mutex_lock(&data->lock, K_FOREVER);
+	k_mutex_lock(ambiq_cc312_arbiter_lock(), K_FOREVER);
 
 	status = ambiq_aes_prepare_op_ctx(&dma->op_ctx, ctx, AM_HAL_AES_ENCRYPT);
 	if (status != AM_HAL_STATUS_SUCCESS) {
@@ -721,7 +673,7 @@ cleanup:
 	/* Clear DMA scratch buffers */
 	ambiq_aes_clear_dma_scratch(dma);
 
-	k_mutex_unlock(&data->lock);
+	k_mutex_unlock(ambiq_cc312_arbiter_lock());
 	return ret;
 }
 
@@ -769,7 +721,7 @@ static int ambiq_aes_xts_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint
 	}
 
 	dma = data->dma;
-	k_mutex_lock(&data->lock, K_FOREVER);
+	k_mutex_lock(ambiq_cc312_arbiter_lock(), K_FOREVER);
 
 	key1 = ctx->key.bit_stream;
 	key2 = ctx->key.bit_stream + (ctx->keylen / 2U);
@@ -970,7 +922,7 @@ cleanup:
 	/* Clear DMA scratch buffers */
 	ambiq_aes_clear_dma_scratch(dma);
 
-	k_mutex_unlock(&data->lock);
+	k_mutex_unlock(ambiq_cc312_arbiter_lock());
 	return ret;
 }
 
@@ -1045,21 +997,20 @@ static uint32_t ambiq_cc312_ccm_process(struct ambiq_aes_data *data,
 	}
 
 	am_hal_cc312_clear_interrupt(0xFFFFFFFFU);
-	irq_enable(data->irq_num);
 	am_hal_cc312_set_dma_source(AM_HAL_CC312_DMA_DLLI_ADDR, input_info.ui32DataAddr, length);
 
-	ret = k_sem_take(&data->irq_sem, K_MSEC(AMBIQ_AES_IRQ_WAIT_TIMEOUT_MS));
+	ret = ambiq_cc312_arbiter_wait(K_MSEC(AMBIQ_AES_IRQ_WAIT_TIMEOUT_MS));
 	if (ret != 0) {
 		status = AM_HAL_STATUS_TIMEOUT;
 		goto process_exit;
 	}
 
-	if (((uint32_t)atomic_get(&data->irq_seen) & CRYPTO_HOSTRGFIRR_AHBERRINT_Msk) != 0U) {
+	if ((ambiq_cc312_arbiter_seen() & CRYPTO_HOSTRGFIRR_AHBERRINT_Msk) != 0U) {
 		status = AM_HAL_STATUS_HW_ERR;
 		goto process_exit;
 	}
 
-	if (((uint32_t)atomic_get(&data->irq_seen) & CRYPTO_HOSTRGFIRR_SYMDMACOMPLETED_Msk) == 0U) {
+	if ((ambiq_cc312_arbiter_seen() & CRYPTO_HOSTRGFIRR_SYMDMACOMPLETED_Msk) == 0U) {
 		status = AM_HAL_STATUS_TIMEOUT;
 		goto process_exit;
 	}
@@ -1317,7 +1268,7 @@ static uint32_t ambiq_cc312_ccm_auth_crypt(struct ambiq_aes_data *data,
 		return AM_HAL_STATUS_INVALID_ARG;
 	}
 
-	k_mutex_lock(&data->lock, K_FOREVER);
+	k_mutex_lock(ambiq_cc312_arbiter_lock(), K_FOREVER);
 	status = ambiq_aes_prepare_ccm_ctx(ctx, key, key_bits);
 	if (status != AM_HAL_STATUS_SUCCESS) {
 		goto cleanup_unlock;
@@ -1351,7 +1302,7 @@ static uint32_t ambiq_cc312_ccm_auth_crypt(struct ambiq_aes_data *data,
 cleanup:
 	am_hal_aes_ccm_free(ctx);
 cleanup_unlock:
-	k_mutex_unlock(&data->lock);
+	k_mutex_unlock(ambiq_cc312_arbiter_lock());
 	return status;
 }
 
@@ -1549,23 +1500,22 @@ static uint32_t ambiq_aes_gcm_process(struct ambiq_aes_data *data, const uint8_t
 	ambiq_aes_cache_clean_invalidate_region(input, (size_t)length);
 
 	am_hal_cc312_clear_interrupt(0xFFFFFFFFU);
-	irq_enable(data->irq_num);
 	/* Configure DMA source and kick operation */
 	am_hal_cc312_set_dma_source(AM_HAL_CC312_DMA_DLLI_ADDR, (uint32_t)input, length);
 
 	/* Wait for DMA completion interrupt */
-	ret = k_sem_take(&data->irq_sem, K_MSEC(AMBIQ_AES_IRQ_WAIT_TIMEOUT_MS));
+	ret = ambiq_cc312_arbiter_wait(K_MSEC(AMBIQ_AES_IRQ_WAIT_TIMEOUT_MS));
 	if (ret != 0) {
 		status = AM_HAL_STATUS_TIMEOUT;
 		goto process_exit;
 	}
 
-	if (((uint32_t)atomic_get(&data->irq_seen) & CRYPTO_HOSTRGFIRR_AHBERRINT_Msk) != 0U) {
+	if ((ambiq_cc312_arbiter_seen() & CRYPTO_HOSTRGFIRR_AHBERRINT_Msk) != 0U) {
 		status = AM_HAL_STATUS_HW_ERR;
 		goto process_exit;
 	}
 
-	if (((uint32_t)atomic_get(&data->irq_seen) & irr_mask) == 0U) {
+	if ((ambiq_cc312_arbiter_seen() & irr_mask) == 0U) {
 		status = AM_HAL_STATUS_TIMEOUT;
 		goto process_exit;
 	}
@@ -1738,7 +1688,7 @@ static uint32_t ambiq_aes_gcm_crypt_and_tag(struct ambiq_aes_data *data, int mod
 		return AM_HAL_STATUS_INVALID_ARG;
 	}
 
-	k_mutex_lock(&data->lock, K_FOREVER);
+	k_mutex_lock(ambiq_cc312_arbiter_lock(), K_FOREVER);
 	ctx = &data->dma->gcm_ctx;
 	status = ambiq_aes_prepare_gcm_ctx(ctx, key, key_bits);
 	if (status != AM_HAL_STATUS_SUCCESS) {
@@ -1792,7 +1742,7 @@ cleanup:
 	am_hal_cc312_clock_disable(AM_HAL_CC312_CLK_HASH);
 	am_hal_cc312_aes_disable_clocks();
 cleanup_unlock:
-	k_mutex_unlock(&data->lock);
+	k_mutex_unlock(ambiq_cc312_arbiter_lock());
 
 	return status;
 }
@@ -2006,18 +1956,18 @@ static int ambiq_aes_begin_session(const struct device *dev, struct cipher_ctx *
 	}
 
 	data = dev->data;
-	k_mutex_lock(&data->lock, K_FOREVER);
+	k_mutex_lock(ambiq_cc312_arbiter_lock(), K_FOREVER);
 	ambiq_aes_clear_session_ops(ctx);
 	ret = ambiq_aes_set_session_ops(ctx, mode, op_type);
 	if (ret != 0) {
-		k_mutex_unlock(&data->lock);
+		k_mutex_unlock(ambiq_cc312_arbiter_lock());
 		(void)pm_device_runtime_put(dev);
 		return ret;
 	}
 
 	ctx->drv_sessn_state = NULL;
 	ctx->ops.cipher_mode = mode;
-	k_mutex_unlock(&data->lock);
+	k_mutex_unlock(ambiq_cc312_arbiter_lock());
 	return 0;
 }
 
@@ -2031,10 +1981,10 @@ static int ambiq_aes_free_session(const struct device *dev, struct cipher_ctx *c
 
 	data = dev->data;
 
-	k_mutex_lock(&data->lock, K_FOREVER);
+	k_mutex_lock(ambiq_cc312_arbiter_lock(), K_FOREVER);
 	ambiq_aes_clear_session_ops(ctx);
 	ctx->drv_sessn_state = NULL;
-	k_mutex_unlock(&data->lock);
+	k_mutex_unlock(ambiq_cc312_arbiter_lock());
 
 	(void)pm_device_runtime_put(dev);
 
@@ -2071,15 +2021,9 @@ static int ambiq_aes_init(const struct device *dev)
 	const struct ambiq_aes_config *cfg = dev->config;
 	struct ambiq_aes_data *data = dev->data;
 
-	k_mutex_init(&data->lock);
-	k_sem_init(&data->irq_sem, 0, 1);
-	data->irq_num = cfg->irq_num;
-	(void)atomic_set(&data->irq_seen, 0U);
-	(void)atomic_set(&data->irq_wait_mask, 0U);
+	ambiq_cc312_arbiter_connect();
 	data->dma = cfg->dma;
 
-	cfg->irq_config_func();
-	irq_disable(data->irq_num);
 
 	return pm_device_runtime_enable(dev);
 }
@@ -2091,21 +2035,10 @@ static DEVICE_API(crypto, ambiq_aes_crypto_api) = {
 	.cipher_async_callback_set = ambiq_aes_callback_set,
 };
 
-#define AMBIQ_AES_IRQ_CONFIG(inst)                                                                 \
-	static void ambiq_aes_irq_config_##inst(void)                                              \
-	{                                                                                          \
-		IRQ_CONNECT(DT_INST_IRQN(inst), DT_INST_IRQ(inst, priority), ambiq_cc312_isr,      \
-			    DEVICE_DT_INST_GET(inst), 0);                                          \
-	}
-
-DT_INST_FOREACH_STATUS_OKAY(AMBIQ_AES_IRQ_CONFIG)
-
 #define AMBIQ_AES_DEVICE_DEFINE(inst)                                                              \
 	static AMBIQ_AES_NOCACHE struct ambiq_aes_dma_data ambiq_aes_dma_##inst;                   \
 	static struct ambiq_aes_data ambiq_aes_data_##inst;                                        \
 	static const struct ambiq_aes_config ambiq_aes_cfg_##inst = {                              \
-		.irq_num = DT_INST_IRQN(inst),                                                     \
-		.irq_config_func = ambiq_aes_irq_config_##inst,                                    \
 		.dma = &ambiq_aes_dma_##inst,                                                      \
 	};                                                                                         \
 	PM_DEVICE_DT_INST_DEFINE(inst, ambiq_aes_pm_action);                                       \
