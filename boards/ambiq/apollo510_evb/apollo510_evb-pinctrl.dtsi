@@ -428,7 +428,7 @@
 
 	pwm2_default: pwm2_default {
 		group1 {
-			pinmux = <CT165_P165>;
+			pinmux = <CT92_P92>;
 			drive-open-drain;
 			drive-strength = "0.5";
 		};
