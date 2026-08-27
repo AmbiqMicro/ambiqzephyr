@@ -74,11 +74,12 @@ static void dmic_ambiq_pdm_pm_policy_state_lock_put(const struct device *dev)
 static void dmic_ambiq_dma_stop(const struct device *dev)
 {
 	struct dmic_ambiq_pdm_data *data = dev->data;
+	uint32_t ints = AM_HAL_PDM_INT_DCMP | AM_HAL_PDM_INT_DERR | AM_HAL_PDM_INT_OVF;
 
 	dmic_ambiq_pdm_pm_policy_state_lock_put(dev);
 
-	am_hal_pdm_interrupt_disable(data->pdm_handler, AM_HAL_PDM_INT_DCMP);
-	am_hal_pdm_interrupt_clear(data->pdm_handler, AM_HAL_PDM_INT_DCMP);
+	am_hal_pdm_interrupt_disable(data->pdm_handler, ints);
+	am_hal_pdm_interrupt_clear(data->pdm_handler, ints);
 	am_hal_pdm_dma_stop(data->pdm_handler);
 	am_hal_pdm_disable(data->pdm_handler);
 }
@@ -146,11 +147,6 @@ static void dmic_ambiq_rx_dmacpl_handler(const struct device *dev)
 		goto rx_exit;
 	}
 
-	if (ambiq_buf_in_dtcm((uintptr_t)item.dma_buf, data->block_size)) {
-		dmic_ambiq_pdm_pm_policy_state_lock_get(dev);
-	} else {
-		dmic_ambiq_pdm_pm_policy_state_lock_put(dev);
-	}
 
 	dmic_ambiq_dma_reload(dev, &item);
 	return;
@@ -167,6 +163,10 @@ static void dmic_ambiq_pdm_isr(const struct device *dev)
 
 	am_hal_pdm_interrupt_status_get(data->pdm_handler, &ui32Status, true);
 	am_hal_pdm_interrupt_clear(data->pdm_handler, ui32Status);
+
+	if (ui32Status & (AM_HAL_PDM_INT_DERR | AM_HAL_PDM_INT_OVF)) {
+		LOG_ERR("pdm error interrupt (status 0x%08x)", ui32Status);
+	}
 
 	if (ui32Status & AM_HAL_PDM_INT_DCMP) {
 		dmic_ambiq_rx_dmacpl_handler(dev);
@@ -212,7 +212,7 @@ static int pdm_clock_settings_derive(const struct device *dev, struct dmic_cfg *
 	uint32_t osr_table[] = {64, 96, 100, 48, 50, 32, 128};
 	uint32_t freq_table[] = {12288, 16384, 24000, 24576, 27648, 48000};
 
-	uint32_t io_freq, osr, mclk_div, pdma_div, pdm_op_freq, pll_precfg_freq;
+	uint32_t io_freq, osr, mclk_div, pdma_div, pdm_op_freq = 0, pll_precfg_freq;
 	uint32_t pcm_rate = dev_config->streams->pcm_rate;
 	uint32_t max_clk_freq = dev_config->io.max_pdm_clk_freq;
 	uint32_t min_clk_freq = dev_config->io.min_pdm_clk_freq;
@@ -283,7 +283,7 @@ static int pdm_clock_settings_derive(const struct device *dev, struct dmic_cfg *
 
 	uint32_t freq_table[] = {12288, 24576, 49152};
 
-	uint32_t io_freq, osr, mclk_div, pdma_div, pdm_op_freq, pll_precfg_freq;
+	uint32_t io_freq, osr, mclk_div, pdma_div, pdm_op_freq = 0, pll_precfg_freq;
 	uint32_t pcm_rate = dev_config->streams->pcm_rate;
 	uint32_t max_clk_freq = dev_config->io.max_pdm_clk_freq;
 	uint32_t min_clk_freq = dev_config->io.min_pdm_clk_freq;
@@ -364,7 +364,13 @@ static int dmic_ambiq_pdm_init(const struct device *dev)
 	}
 
 	am_hal_pdm_initialize(data->inst_idx, &data->pdm_handler);
-	am_hal_pdm_power_control(data->pdm_handler, AM_HAL_PDM_POWER_ON, false);
+
+	uint32_t pwr_status =
+		am_hal_pdm_power_control(data->pdm_handler, AM_HAL_PDM_POWER_ON, false);
+
+	if (pwr_status != AM_HAL_STATUS_SUCCESS) {
+		LOG_ERR("pdm power on failed (status %u)", pwr_status);
+	}
 
 	data->dmic_state = DMIC_STATE_INITIALIZED;
 
@@ -464,7 +470,11 @@ static int dmic_ambiq_pdm_configure(const struct device *dev, struct dmic_cfg *d
 	data->hal_cfg.bI2sMaster = false;
 #endif
 
-	am_hal_pdm_configure(data->pdm_handler, &data->hal_cfg);
+	uint32_t cfg_status = am_hal_pdm_configure(data->pdm_handler, &data->hal_cfg);
+
+	if (cfg_status != AM_HAL_STATUS_SUCCESS) {
+		LOG_ERR("pdm configure failed (status %u)", cfg_status);
+	}
 
 	/* Setup the FIFO threshold */
 	am_hal_pdm_fifo_threshold_setup(data->pdm_handler, 16);
@@ -485,8 +495,17 @@ static int dmic_ambiq_dma_start(const struct device *dev)
 	struct dmic_ambiq_pdm_data *data = dev->data;
 	am_hal_pdm_transfer_t dma_transfer;
 
-	if (AM_HAL_STATUS_SUCCESS != am_hal_pdm_enable(data->pdm_handler)) {
-		LOG_ERR("dmic_trigger: HAL failed to enable pdm");
+	uint32_t hal_status = am_hal_pdm_configure(data->pdm_handler, &data->hal_cfg);
+
+	if (hal_status != AM_HAL_STATUS_SUCCESS) {
+		LOG_ERR("pdm re-configure failed (status %u)", hal_status);
+		return -EIO;
+	}
+	am_hal_pdm_fifo_threshold_setup(data->pdm_handler, 16);
+
+	hal_status = am_hal_pdm_enable(data->pdm_handler);
+	if (hal_status != AM_HAL_STATUS_SUCCESS) {
+		LOG_ERR("dmic_trigger: HAL failed to enable pdm (status %u)", hal_status);
 		return -EIO;
 	}
 
@@ -501,14 +520,22 @@ static int dmic_ambiq_dma_start(const struct device *dev)
 	dma_transfer.ui32TargetAddrReverse = 0xFFFFFFFF;
 	data->rx_tip_buffer = buf;
 
-	am_hal_pdm_interrupt_enable(data->pdm_handler, AM_HAL_PDM_INT_DCMP);
+	am_hal_pdm_interrupt_enable(data->pdm_handler,
+				    AM_HAL_PDM_INT_DCMP | AM_HAL_PDM_INT_DERR | AM_HAL_PDM_INT_OVF);
 
-	if (ambiq_buf_in_dtcm((uintptr_t)buf, data->block_size)) {
-		dmic_ambiq_pdm_pm_policy_state_lock_get(dev);
-	}
+	dmic_ambiq_pdm_pm_policy_state_lock_get(dev);
+
+	am_hal_pdm_fifo_flush(data->pdm_handler);
 
 	/* Start the data transfer. */
-	am_hal_pdm_dma_start(data->pdm_handler, &dma_transfer);
+	hal_status = am_hal_pdm_dma_start(data->pdm_handler, &dma_transfer);
+
+	if (hal_status != AM_HAL_STATUS_SUCCESS) {
+		LOG_ERR("pdm dma start failed (status %u)", hal_status);
+		dmic_ambiq_dma_stop(dev);
+		dmic_ambiq_dma_queue_drop(dev);
+		return -EIO;
+	}
 
 	return 0;
 }
