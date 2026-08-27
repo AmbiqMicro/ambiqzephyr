@@ -94,6 +94,11 @@ config BT_BUF_ACL_RX_SIZE
 config BT_L2CAP_TX_MTU
 	default 247
 
+# Bonding key storage from bt_workq triggers MRAM/ROM power management via
+# spotmgr; the default 1200-byte RX stack overflows during pairing.
+config BT_RX_STACK_SIZE
+	default 2048
+
 endif # BT
 
 endif # BOARD_APOLLO510DL_EVB
