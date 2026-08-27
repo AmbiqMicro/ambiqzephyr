@@ -370,6 +370,7 @@ static int dmic_ambiq_pdm_init(const struct device *dev)
 
 	if (pwr_status != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("pdm power on failed (status %u)", pwr_status);
+		return -EIO;
 	}
 
 	data->dmic_state = DMIC_STATE_INITIALIZED;
@@ -474,6 +475,7 @@ static int dmic_ambiq_pdm_configure(const struct device *dev, struct dmic_cfg *d
 
 	if (cfg_status != AM_HAL_STATUS_SUCCESS) {
 		LOG_ERR("pdm configure failed (status %u)", cfg_status);
+		return -EIO;
 	}
 
 	/* Setup the FIFO threshold */

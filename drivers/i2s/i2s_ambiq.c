@@ -475,7 +475,7 @@ static int i2s_ambiq_configure(const struct device *dev, enum i2s_dir dir,
 
 	ret = am_hal_i2s_power_control(data->i2s_handler, AM_HAL_I2S_POWER_ON, false);
 	if (ret != AM_HAL_STATUS_SUCCESS) {
-		LOG_ERR("i2s_configure: failed to power on I2S");
+		LOG_ERR("i2s_configure: failed to power on I2S (status %d)", ret);
 		return -EIO;
 	}
 
@@ -712,7 +712,7 @@ static int i2s_ambiq_trigger(const struct device *dev, enum i2s_dir dir, enum i2
 			ret = am_hal_i2s_power_control(data->i2s_handler, AM_HAL_I2S_POWER_ON,
 						       true);
 			if (ret != AM_HAL_STATUS_SUCCESS) {
-				LOG_ERR("i2s_configure: failed to power on I2S");
+				LOG_ERR("i2s trigger: failed to power on I2S (status %d)", ret);
 				return -EIO;
 			}
 			data->i2s_power_on = true;
