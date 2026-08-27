@@ -144,7 +144,6 @@ void sys_clock_set_timeout(int32_t ticks, bool idle)
 	uint32_t delta;
 	uint64_t delta_cycles = (uint64_t)ticks * (uint64_t)CYC_PER_TICK;
 
-#if defined(CONFIG_SOC_SERIES_APOLLO2X) || defined(CONFIG_SOC_SERIES_APOLLO3X)
 	uint32_t now = am_hal_stimer_counter_get();
 
 	update_tick_counter_with_now(now);
@@ -154,7 +153,6 @@ void sys_clock_set_timeout(int32_t ticks, bool idle)
 	} else {
 		delta_cycles = MIN_DELAY;
 	}
-#endif
 	if (delta_cycles > (uint64_t)MAX_CYCLES) {
 		delta_cycles = MAX_CYCLES;
 	}
