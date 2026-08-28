@@ -49,6 +49,8 @@ struct mspi_context {
 	bool                             asynchronous;
 
 	struct k_sem                     lock;
+	struct k_sem                     done;
+	bool                             wedged;
 };
 
 struct mspi_ambiq_config {
@@ -417,6 +419,8 @@ static inline void mspi_context_unlock_unconditionally(struct mspi_context *ctx)
 {
 	mspi_context_ce_control(ctx, false);
 
+	ctx->wedged = false;
+
 	if (!k_sem_count_get(&ctx->lock)) {
 		ctx->owner = NULL;
 		k_sem_give(&ctx->lock);
@@ -432,6 +436,15 @@ static inline int mspi_context_lock(struct mspi_context          *ctx,
 {
 	int ret = 1;
 
+	/*
+	 * A timed out DMA is still posted in the HAL. Reusing the context would
+	 * let that stale completion satisfy the next transfer while its own DMA
+	 * is live, so refuse until the controller is re-configured.
+	 */
+	if (ctx->wedged) {
+		return -EIO;
+	}
+
 	if ((k_sem_count_get(&ctx->lock) == 0) && !lockon &&
 	    (ctx->owner == req)) {
 		return 0;
@@ -439,6 +452,10 @@ static inline int mspi_context_lock(struct mspi_context          *ctx,
 
 	if (k_sem_take(&ctx->lock, K_MSEC(xfer->timeout))) {
 		return -EBUSY;
+	}
+	if (ctx->wedged) {
+		k_sem_give(&ctx->lock);
+		return -EIO;
 	}
 	if (ctx->xfer.async) {
 		if ((xfer->tx_dummy == ctx->xfer.tx_dummy) &&
@@ -472,6 +489,7 @@ static inline int mspi_context_lock(struct mspi_context          *ctx,
 	ctx->xfer            = *xfer;
 	ctx->packets_done    = 0;
 	ctx->packets_left    = ctx->xfer.num_packet;
+	k_sem_reset(&ctx->done);
 	ctx->callback        = callback;
 	ctx->callback_ctx    = callback_ctx;
 	return ret;
@@ -1546,6 +1564,7 @@ static void hal_mspi_callback(void *pCallbackCtxt, uint32_t status)
 	struct mspi_ambiq_data *data       = controller->data;
 
 	data->ctx.packets_done++;
+	k_sem_give(&data->ctx.done);
 }
 
 static int mspi_pio_prepare(const struct device        *controller,
@@ -1778,8 +1797,20 @@ static int mspi_dma_transceive(const struct device          *controller,
 	}
 
 	if (!ctx->xfer.async) {
+		k_timepoint_t end = sys_timepoint_calc(
+			K_MSEC(ctx->xfer.timeout ? ctx->xfer.timeout
+			       : CONFIG_MSPI_COMPLETION_TIMEOUT_TOLERANCE));
+
 		while (ctx->packets_done < ctx->xfer.num_packet) {
-			k_busy_wait(10);
+			if (k_sem_take(&ctx->done, sys_timepoint_timeout(end))) {
+				LOG_INST_ERR(MSPI_LOG_HANDLE(controller),
+					     "%u, DMA completion timeout, %d/%d packets. "
+					     "Controller wedged until re-configured.",
+					     __LINE__, ctx->packets_done, ctx->xfer.num_packet);
+				ctx->wedged = true;
+				ret = -ETIMEDOUT;
+				break;
+			}
 		}
 	}
 
@@ -2007,6 +2038,8 @@ static DEVICE_API(mspi, mspi_ambiq_driver_api) = {
 		.hal_dqs_cfg           = MSPI_HAL_DQS_CFG(n),                                    \
 		.lock                  = Z_MUTEX_INITIALIZER(mspi_ambiq_data##n.lock),           \
 		.ctx.lock              = Z_SEM_INITIALIZER(mspi_ambiq_data##n.ctx.lock, 0, 1),   \
+		.ctx.done              = Z_SEM_INITIALIZER(mspi_ambiq_data##n.ctx.done, 0,       \
+					 K_SEM_MAX_LIMIT),                                       \
 	};                                                                                       \
 	static const struct mspi_ambiq_config mspi_ambiq_config##n = {                           \
 		.reg_base              = DT_INST_REG_ADDR(n),                                    \
