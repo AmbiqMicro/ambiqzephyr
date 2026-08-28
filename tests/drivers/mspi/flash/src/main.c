@@ -4,9 +4,11 @@
  */
 
 #include <zephyr/device.h>
+#include <zephyr/kernel.h>
 #include <zephyr/drivers/mspi.h>
 #include <zephyr/drivers/mspi_emul.h>
 #include <zephyr/drivers/flash.h>
+#include <zephyr/linker/devicetree_regions.h>
 #include <zephyr/ztest.h>
 
 #define MSPI_BUS_NODE                 DT_ALIAS(mspi0)
@@ -202,6 +204,199 @@ ZTEST(mspi_flash, test_multi_sector_rw)
 
 	}
 
+}
+
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(dtcm), okay)
+#define DTCM_SECT Z_GENERIC_SECTION(LINKER_DT_NODE_REGION_NAME(DT_NODELABEL(dtcm)))
+
+#if CONFIG_DCACHE
+static uint8_t dtcm_expected[MSPI_FLASH_TEST_SIZE] __aligned(CONFIG_DCACHE_LINE_SIZE) DTCM_SECT;
+static uint8_t dtcm_actual[MSPI_FLASH_TEST_SIZE] __aligned(CONFIG_DCACHE_LINE_SIZE) DTCM_SECT;
+#else
+static uint8_t dtcm_expected[MSPI_FLASH_TEST_SIZE] DTCM_SECT;
+static uint8_t dtcm_actual[MSPI_FLASH_TEST_SIZE] DTCM_SECT;
+#endif
+
+#define FILL_BYTE 0xEE
+
+static void report_mismatch(const uint8_t *want, const uint8_t *got)
+{
+	uint32_t matched = 0, untouched = 0, first = MSPI_FLASH_TEST_SIZE;
+
+	for (uint32_t i = 0; i < MSPI_FLASH_TEST_SIZE; i++) {
+		if (want[i] == got[i]) {
+			matched++;
+		} else if (first == MSPI_FLASH_TEST_SIZE) {
+			first = i;
+		}
+		if (got[i] == FILL_BYTE) {
+			untouched++;
+		}
+	}
+
+	TC_PRINT("  matched %u/%u, untouched %u, first mismatch at %u (line %u)\n",
+		 matched, (uint32_t)MSPI_FLASH_TEST_SIZE, untouched, first,
+		 first / CONFIG_DCACHE_LINE_SIZE);
+	TC_PRINT("  want %02x %02x %02x %02x %02x %02x %02x %02x\n",
+		 want[0], want[1], want[2], want[3], want[4], want[5], want[6], want[7]);
+	TC_PRINT("  got  %02x %02x %02x %02x %02x %02x %02x %02x\n",
+		 got[0], got[1], got[2], got[3], got[4], got[5], got[6], got[7]);
+}
+
+static void report_buffer_placement(void)
+{
+	TC_PRINT("DTCM region : 0x%08lx + 0x%lx\n",
+		 (unsigned long)DT_REG_ADDR(DT_NODELABEL(dtcm)),
+		 (unsigned long)DT_REG_SIZE(DT_NODELABEL(dtcm)));
+	TC_PRINT("dtcm_expected %p  dtcm_actual %p\n", dtcm_expected, dtcm_actual);
+	TC_PRINT("sram expected %p  actual      %p\n", expected, actual);
+}
+
+ZTEST(mspi_flash, test_dtcm_buffer_rw)
+{
+	const struct device *flash_dev = mspi_devices[0];
+	const off_t offs = MSPI_FLASH_TEST_REGION_OFFSET;
+	int wrc, rrc;
+
+	zassert_true(device_is_ready(flash_dev), "flash0 is not ready");
+
+	report_buffer_placement();
+
+	prepare_test_pattern(0, dtcm_expected, MSPI_FLASH_TEST_SIZE);
+
+	zassert_equal(flash_erase(flash_dev, offs, MSPI_FLASH_SECTOR_SIZE), 0,
+		      "flash_erase failed");
+
+	wrc = flash_write(flash_dev, offs, dtcm_expected, MSPI_FLASH_TEST_SIZE);
+	memset(dtcm_actual, FILL_BYTE, MSPI_FLASH_TEST_SIZE);
+	rrc = flash_read(flash_dev, offs, dtcm_actual, MSPI_FLASH_TEST_SIZE);
+
+	TC_PRINT("DTCM write rc=%d read rc=%d\n", wrc, rrc);
+
+	if (wrc != 0 || rrc != 0) {
+		TC_PRINT("DTCM buffers refused by the driver, as expected\n");
+		return;
+	}
+
+	if (memcmp(dtcm_expected, dtcm_actual, MSPI_FLASH_TEST_SIZE) != 0) {
+		report_mismatch(dtcm_expected, dtcm_actual);
+	}
+
+	zassert_mem_equal(dtcm_expected, dtcm_actual, MSPI_FLASH_TEST_SIZE,
+			  "DMA reported success from DTCM but moved the wrong data");
+}
+
+static bool dtcm_roundtrip_ok(const struct device *flash_dev, off_t offs,
+			      uint8_t *src, uint8_t *dst, uint32_t pattern)
+{
+	int rc;
+
+	prepare_test_pattern(pattern, src, MSPI_FLASH_TEST_SIZE);
+
+	zassert_equal(flash_erase(flash_dev, offs, MSPI_FLASH_SECTOR_SIZE), 0,
+		      "flash_erase failed");
+
+	rc = flash_write(flash_dev, offs, src, MSPI_FLASH_TEST_SIZE);
+	if (rc != 0) {
+		return true;
+	}
+
+	memset(dst, FILL_BYTE, MSPI_FLASH_TEST_SIZE);
+	rc = flash_read(flash_dev, offs, dst, MSPI_FLASH_TEST_SIZE);
+	if (rc != 0) {
+		return true;
+	}
+
+	if (memcmp(src, dst, MSPI_FLASH_TEST_SIZE) == 0) {
+		return true;
+	}
+
+	report_mismatch(src, dst);
+	return false;
+}
+
+ZTEST(mspi_flash, test_dtcm_direction_split)
+{
+	const struct device *flash_dev = mspi_devices[0];
+	const off_t offs = MSPI_FLASH_TEST_REGION_OFFSET;
+	bool into_dtcm_ok, from_dtcm_ok;
+
+	zassert_true(device_is_ready(flash_dev), "flash0 is not ready");
+
+	into_dtcm_ok = dtcm_roundtrip_ok(flash_dev, offs, expected, dtcm_actual, 0);
+	from_dtcm_ok = dtcm_roundtrip_ok(flash_dev, offs, dtcm_expected, actual, 1);
+
+	TC_PRINT("DMA into DTCM (flash read) : %s\n", into_dtcm_ok ? "OK" : "CORRUPT");
+	TC_PRINT("DMA from DTCM (flash write): %s\n", from_dtcm_ok ? "OK" : "CORRUPT");
+
+	zassert_true(into_dtcm_ok,
+		     "DMA into a DTCM destination reported success and corrupted the buffer");
+	zassert_true(from_dtcm_ok,
+		     "DMA from a DTCM source reported success and wrote the wrong data");
+}
+#endif
+
+#define SOAK_ITERATIONS  256
+#define SOAK_IDLE_MS     5
+
+/*
+ * The round trip tests above run back to back, so the idle thread never gets
+ * to run and the system never reaches a low power state. A DMA left posted
+ * across a suspend cannot be observed that way. These soak the same path with
+ * an idle gap between transfers, and under contention from a second thread.
+ */
+static int soak_read_loop(const struct device *flash_dev, off_t offs,
+			  uint8_t *buf, uint32_t iterations, uint32_t idle_ms)
+{
+	int rc;
+
+	for (uint32_t i = 0; i < iterations; i++) {
+		memset(buf, 0, MSPI_FLASH_TEST_SIZE);
+
+		rc = flash_read(flash_dev, offs, buf, MSPI_FLASH_TEST_SIZE);
+		if (rc != 0) {
+			TC_PRINT("iteration %u: flash_read rc=%d\n", i, rc);
+			return rc;
+		}
+
+		if (memcmp(expected, buf, MSPI_FLASH_TEST_SIZE) != 0) {
+			TC_PRINT("iteration %u: data mismatch\n", i);
+			return -EIO;
+		}
+
+		if (idle_ms) {
+			k_sleep(K_MSEC(idle_ms));
+		}
+	}
+
+	return 0;
+}
+
+static void soak_prepare(const struct device *flash_dev, off_t offs)
+{
+	prepare_test_pattern(0, expected, MSPI_FLASH_TEST_SIZE);
+
+	zassert_equal(flash_erase(flash_dev, offs, MSPI_FLASH_SECTOR_SIZE), 0,
+		      "flash_erase failed");
+	zassert_equal(flash_write(flash_dev, offs, expected, MSPI_FLASH_TEST_SIZE), 0,
+		      "flash_write failed");
+}
+
+ZTEST(mspi_flash, test_dma_soak_with_idle)
+{
+	const struct device *flash_dev = mspi_devices[0];
+	const off_t offs = MSPI_FLASH_TEST_REGION_OFFSET;
+	int rc;
+
+	zassert_true(device_is_ready(flash_dev), "flash0 is not ready");
+
+	soak_prepare(flash_dev, offs);
+
+	rc = soak_read_loop(flash_dev, offs, actual, SOAK_ITERATIONS, SOAK_IDLE_MS);
+
+	zassert_not_equal(rc, -ETIMEDOUT,
+			  "DMA completion was lost after an idle period");
+	zassert_equal(rc, 0, "soak with idle failed: %d", rc);
 }
 
 ZTEST_SUITE(mspi_flash, NULL, NULL, NULL, NULL, NULL);
