@@ -1,0 +1,18 @@
+sample:
+  name: Ambiq RSS IPC
+  description: Exercise the radio subsystem mailbox with real request-response
+    round trips, the shared memory handshake and the RF crystal grant, naming
+    every word the radio core sends back.
+tests:
+  sample.boards.ambiq.rss_ipc:
+    platform_allow:
+      - apollo510dL_evb/apollo510L
+      - apollo330mP_evb/apollo330P
+    tags: mbox
+    harness: console
+    harness_config:
+      type: multi_line
+      ordered: true
+      regex:
+        - "shm handshake answered"
+        - "RSS IPC sample complete"
