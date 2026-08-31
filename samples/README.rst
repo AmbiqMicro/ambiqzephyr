@@ -51,9 +51,6 @@ From the Ambiq MCUboot guide:
    west build -b your_board_here -p always --sysbuild ./samples/sysbuild/with_mcuboot -d ../build/sysbuild/with_mcuboot
    west build -b your_board_here -p always ./samples/subsys/mgmt/mcumgr/smp_svr/ --sysbuild -d ../build/samples/subsys/mgmt-mcumgr-smp-svr/serial -T sample.mcumgr.smp_svr.serial
 
-The MCUboot guide also lists ``samples/subsys/usb/dfu-next``, but no usable
-command is provided there yet.
-
 Audio
 *****
 

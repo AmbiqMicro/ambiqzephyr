@@ -67,14 +67,6 @@ The following are the subsystems and drivers related to MCUboot in Zephyr:
 
 See the Practical Guide.
 
-3.3 dfu-next
-------------
-
-**Path**: ``samples/subsys/usb/dfu-next``
-
-#TODO
-
-
 4. Tests
 ========
 

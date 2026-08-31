@@ -207,6 +207,8 @@ Get to Know Ambiq Components
   │   │   └── flash_ambiq.c
   │   ├── gpio/
   │   │   └── gpio_ambiq.c
+  │   ├── gpu/
+  │   │   └── gpu_ambiq.c
   │   ├── hwinfo/
   │   │   └── hwinfo_ambiq.c
   │   ├── i2c/
