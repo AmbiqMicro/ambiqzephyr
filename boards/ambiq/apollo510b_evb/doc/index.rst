@@ -62,16 +62,15 @@ the following message:
 Building other samples
 ----------------------
 
-The samples and tests below are built for this board as part of the Ambiq SDK
-release test. Paths are relative to the workspace root.
+The samples and tests below are built for this board as part of the Ambiq
+overnight release build set. Paths are relative to the zephyr repository.
 
 * ``samples/basic/blinky_pwm``
 * ``samples/basic/button``
 * ``samples/basic/threads``
 * ``samples/benchmarks/coremark``
 * ``samples/bluetooth/peripheral``
-* ``samples/boards/ambiq/dram_click`` (``-- -DSHIELD=ambiq_mikrobus_spi;mikroe_dram_click``)
-* ``samples/boards/ambiq/spi_serial_flash``
+* ``samples/boards/ambiq/dram_click`` (``-- -DSHIELD=ambiq_mikrobus_spi,mikroe_dram_click``)
 * ``samples/cpp/hello_world``
 * ``samples/drivers/adc/adc_dt``
 * ``samples/drivers/audio/amic``
@@ -79,6 +78,7 @@ release test. Paths are relative to the workspace root.
 * ``samples/drivers/counter/alarm``
 * ``samples/drivers/crc``
 * ``samples/drivers/display`` (``-- -DSHIELD=ap510_disp``)
+* ``samples/drivers/eeprom`` (``-- -DSHIELD=ambiq_mikrobus_i2c,mikroe_eeram_33v_click``)
 * ``samples/drivers/i2c/target_eeprom``
 * ``samples/drivers/memc``
 * ``samples/drivers/mspi/mspi_timing_scan``
@@ -90,20 +90,18 @@ release test. Paths are relative to the workspace root.
 * ``samples/subsys/fs/fs_sample``
 * ``samples/subsys/input/draw_touch_events`` (``-- -DSHIELD=ap510_disp``)
 * ``samples/subsys/logging/logger``
-* ``samples/subsys/mgmt/mcumgr/smp_svr`` (``--sysbuild -T sample.mcumgr.smp_svr.serial``)
 * ``samples/subsys/usb/mass``
 * ``samples/synchronization``
-* ``samples/sysbuild/with_mcuboot`` (``--sysbuild``)
 * ``tests/arch/arm/arm_irq_vector_table``
 * ``tests/benchmarks/mbedtls``
 * ``tests/boards/ambiq/aes_hal_example``
 * ``tests/crypto/mbedtls_psa``
-* ``tests/crypto/secp256r1`` (``-- -DEXTRA_CONF_FILE=mbedtls.conf``)
 * ``tests/crypto/secp256r1`` (``-- -DEXTRA_CONF_FILE=p256-m_raw.conf``)
 * ``tests/drivers/adc/adc_api``
 * ``tests/drivers/audio/dmic_api``
 * ``tests/drivers/counter/counter_basic_api``
 * ``tests/drivers/disk/disk_performance``
+* ``tests/drivers/entropy/api``
 * ``tests/drivers/flash/common``
 * ``tests/drivers/gpio/gpio_basic_api``
 * ``tests/drivers/hwinfo/api``
@@ -126,28 +124,5 @@ release test. Paths are relative to the workspace root.
 * ``tests/subsys/debug/cpu_load``
 * ``tests/subsys/logging/log_api``
 * ``tests/subsys/mem_mgmt/mem_attr_heap``
-* ``tests/subsys/mgmt/mcumgr/img_mgmt_slot_info``
-* ``tests/subsys/sd/sdmmc``
+* ``tests/subsys/sd/mmc``
 * ``tests/subsys/settings/retention``
-
-Samples marked with a shield need it named on the command line, because
-``west build`` does not read ``sample.yaml``:
-
-.. code-block:: console
-
-   west build -p always -b apollo510b_evb <sample path> -- -DSHIELD=ap510_disp
-
-.. _Apollo510 Website:
-   https://ambiq.com/apollo510/
-
-.. _Apollo510 Datasheet:
-   https://contentportal.ambiq.com/documents/20123/2877485/Apollo510-SoC-Datasheet.pdf
-
-.. _Apollo510 EVB Website:
-   For more information, please reach out to Sales and FAE.
-
-.. _SEGGER J-Link software:
-   https://www.segger.com/downloads/jlink
-
-.. _pylink:
-   https://github.com/Square/pylink

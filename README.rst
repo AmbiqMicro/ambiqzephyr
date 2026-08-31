@@ -12,6 +12,30 @@
    <a href="https://scorecard.dev/viewer/?uri=github.com/zephyrproject-rtos/zephyr"><img src="https://api.securityscorecards.dev/projects/github.com/zephyrproject-rtos/zephyr/badge"></a>
    <a href="https://github.com/zephyrproject-rtos/zephyr/actions/workflows/twister.yaml?query=branch%3Amain"><img src="https://github.com/zephyrproject-rtos/zephyr/actions/workflows/twister.yaml/badge.svg?event=push"></a>
 
+Release: 31 August 2026
+#######################
+
+**v4.3.0-ambiq.v1.0.0** is the first official public release of the Ambiq
+Zephyr distribution. It introduces full support for **Apollo510L and
+Apollo330P** and consolidates a year of driver, SoC, board and test work
+across the whole Apollo family. The release is based on upstream Zephyr
+v4.3.0.
+
+See `doc/ambiq/RELEASE_NOTES.rst <doc/ambiq/RELEASE_NOTES.rst>`_ for the full release notes, organised by
+chipset family: Apollo510L/330P, Apollo510/510B, Apollo4x, Apollo3x and
+Apollo2.
+
+Initialise a workspace from the ``ambiq-stable`` branch:
+
+.. code-block:: console
+
+   west init -m https://github.com/AmbiqMicro/ambiqzephyr --mr ambiq-stable
+   west update
+
+The previous line is frozen at tag ``ambiq-stable-pre-v1.0.0`` and remains
+available at branch ``frozen/ambiq-stable-pre-v1.0.0-2026-07``. It receives no
+further updates.
+
 About Ambiq
 ###########
 

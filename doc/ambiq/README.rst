@@ -4,6 +4,13 @@ Ambiq Zephyr Documentation
 Product and platform documentation for Ambiq's Zephyr distribution. The
 repository landing page is `../../README.rst <../../README.rst>`_.
 
+Release
+*******
+
+- `RELEASE_NOTES.rst <RELEASE_NOTES.rst>`_ - v4.3.0-ambiq.v1.0.0, released
+  31 August 2026. Apollo510L and Apollo330P support, organised by chipset
+  family.
+
 Start Here
 **********
 

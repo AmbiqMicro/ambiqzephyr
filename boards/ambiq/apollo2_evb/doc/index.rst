@@ -59,16 +59,14 @@ the following message:
 Building other samples
 ----------------------
 
-The samples and tests below are built for this board as part of the Ambiq SDK
-release test. Paths are relative to the workspace root.
+The samples and tests below are built for this board as part of the Ambiq
+overnight release build set. Paths are relative to the zephyr repository.
 
 * ``samples/cpp/hello_world``
 * ``samples/hello_world``
 * ``samples/philosophers``
 * ``samples/subsys/logging/logger``
-* ``samples/subsys/mgmt/mcumgr/smp_svr`` (``--sysbuild -T sample.mcumgr.smp_svr.serial``)
 * ``samples/synchronization``
-* ``samples/sysbuild/with_mcuboot`` (``--sysbuild``)
 * ``tests/drivers/flash/common``
 * ``tests/drivers/uart/uart_basic_api``
 * ``tests/kernel/common``
@@ -82,9 +80,3 @@ release test. Paths are relative to the workspace root.
 * ``tests/kernel/workq/work``
 * ``tests/lib/heap``
 * ``tests/subsys/logging/log_api``
-
-.. _SEGGER J-Link software:
-   https://www.segger.com/downloads/jlink
-
-.. _pylink:
-   https://github.com/Square/pylink

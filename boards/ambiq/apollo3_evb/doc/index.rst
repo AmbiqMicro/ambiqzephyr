@@ -61,8 +61,8 @@ the following message:
 Building other samples
 ----------------------
 
-The samples and tests below are built for this board as part of the Ambiq SDK
-release test. Paths are relative to the workspace root.
+The samples and tests below are built for this board as part of the Ambiq
+overnight release build set. Paths are relative to the zephyr repository.
 
 * ``samples/basic/blinky_pwm``
 * ``samples/basic/button``
@@ -76,16 +76,13 @@ release test. Paths are relative to the workspace root.
 * ``samples/hello_world``
 * ``samples/philosophers``
 * ``samples/subsys/logging/logger``
-* ``samples/subsys/mgmt/mcumgr/smp_svr`` (``--sysbuild -T sample.mcumgr.smp_svr.serial``)
 * ``samples/synchronization``
-* ``samples/sysbuild/with_mcuboot`` (``--sysbuild``)
 * ``tests/drivers/adc/adc_api``
 * ``tests/drivers/counter/counter_basic_api``
 * ``tests/drivers/gpio/gpio_basic_api``
 * ``tests/drivers/hwinfo/api``
 * ``tests/drivers/pwm/pwm_api``
 * ``tests/drivers/rtc/rtc_api``
-* ``tests/drivers/watchdog/wdt_basic_api``
 * ``tests/kernel/common``
 * ``tests/kernel/context``
 * ``tests/kernel/fifo/fifo_api``
@@ -98,18 +95,3 @@ release test. Paths are relative to the workspace root.
 * ``tests/kernel/workq/work``
 * ``tests/lib/heap``
 * ``tests/subsys/logging/log_api``
-
-.. _Apollo3 Blue Website:
-   https://ambiq.com/apollo3-blue/
-
-.. _Apollo3 Blue Datasheet:
-   https://contentportal.ambiq.com/documents/20123/388390/Apollo3-Blue-SoC-Datasheet.pdf
-
-.. _Apollo3 Blue EVB Website:
-   https://www.ambiq.top/en/apollo3-blue-soc-eval-board
-
-.. _SEGGER J-Link software:
-   https://www.segger.com/downloads/jlink
-
-.. _pylink:
-   https://github.com/Square/pylink

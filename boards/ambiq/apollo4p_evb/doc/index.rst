@@ -62,8 +62,8 @@ the following message:
 Building other samples
 ----------------------
 
-The samples and tests below are built for this board as part of the Ambiq SDK
-release test. Paths are relative to the workspace root.
+The samples and tests below are built for this board as part of the Ambiq
+overnight release build set. Paths are relative to the zephyr repository.
 
 * ``samples/basic/blinky_pwm``
 * ``samples/basic/button``
@@ -74,7 +74,7 @@ release test. Paths are relative to the workspace root.
 * ``samples/drivers/led/pwm``
 * ``samples/drivers/memc`` (``-- -DSHIELD=ap4_evb_disp_shield_rev2``)
 * ``samples/drivers/mspi/mspi_flash`` (``-- -DSHIELD=ap4_evb_disp_shield_rev2``)
-* ``samples/drivers/mspi/mspi_timing_scan`` (``-- -DSHIELD=ap4_evb_disp_shield_rev2``)
+* ``samples/drivers/mspi/mspi_timing_scan`` (``-- -DSHIELD=ap4_evb_disp_shield_rev2 -T sample.drivers.mspi.timing_scan.memc``)
 * ``samples/drivers/watchdog``
 * ``samples/hello_world``
 * ``samples/philosophers``
@@ -91,7 +91,6 @@ release test. Paths are relative to the workspace root.
 * ``tests/drivers/pwm/pwm_api``
 * ``tests/drivers/rtc/rtc_api``
 * ``tests/drivers/watchdog/wdt_basic_api``
-* ``tests/drivers/watchdog/wdt_basic_api`` (``-T drivers.watchdog.pm``)
 * ``tests/kernel/common``
 * ``tests/kernel/context``
 * ``tests/kernel/fifo/fifo_api``
@@ -104,26 +103,4 @@ release test. Paths are relative to the workspace root.
 * ``tests/kernel/workq/work``
 * ``tests/lib/heap``
 * ``tests/subsys/logging/log_api``
-* ``tests/subsys/sd/sdmmc``
-
-Samples marked with a shield need it named on the command line, because
-``west build`` does not read ``sample.yaml``:
-
-.. code-block:: console
-
-   west build -p always -b apollo4p_evb <sample path> -- -DSHIELD=ap4_evb_disp_shield_rev2
-
-.. _Apollo4 Plus Website:
-   https://ambiq.com/apollo4-plus/
-
-.. _Apollo4 Plus Datasheet:
-   https://contentportal.ambiq.com/documents/20123/388415/Apollo4-Plus-SoC-Datasheet.pdf
-
-.. _Apollo4P EVB Website:
-   https://www.ambiq.top/en/apollo4-plus-soc-eval-board
-
-.. _SEGGER J-Link software:
-   https://www.segger.com/downloads/jlink
-
-.. _pylink:
-   https://github.com/Square/pylink
+* ``tests/subsys/sd/mmc``
