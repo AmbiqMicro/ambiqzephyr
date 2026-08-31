@@ -124,7 +124,7 @@ config SOC_AMBIQ_DEEPER_SLEEP_RECOVERY
 	  Either may name any node carrying a gpios property, and the devicetree
 	  flags decide whether asserted means low or high, so a board is free to
 	  use a jumper or test point rather than a button. A board with neither
-	  alias, such as apollo510L_eb, has no trigger and is unaffected.
+	  alias has no trigger and is unaffected.
 	  Apollo510 does not offer the state at all.
 
 	  Off by default. Recovering a board is a developer action, so nothing

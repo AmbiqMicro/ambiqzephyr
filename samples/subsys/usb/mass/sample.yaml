@@ -120,7 +120,6 @@ tests:
     platform_allow:
       - apollo4p_evb
       - apollo510_evb
-      - apollo510_eb
     modules:
       - fatfs
     depends_on:

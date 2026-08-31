@@ -12,8 +12,6 @@ The full board list is in `../doc/ambiq/Supported_Features.rst
 against these board DTS files:
 
 - ``boards/ambiq/apollo510_evb/apollo510_evb.dts``
-- ``boards/ambiq/apollo510_eb/apollo510_eb.dts``
-- ``boards/ambiq/apollo510L_eb/apollo510L_eb.dts``
 - ``boards/ambiq/apollo510dL_evb/apollo510dL_evb.dts``
 - ``boards/ambiq/apollo510b_evb/apollo510b_evb.dts``
 - ``boards/ambiq/apollo330mP_evb/apollo330mP_evb.dts``
@@ -76,7 +74,7 @@ MBOX:
 
 ``tests/drivers/mbox/mbox_data`` uses sysbuild and needs a board with an
 enabled mailbox consumer path. In the checked Ambiq DTS files, that applies to
-``apollo510L_eb``, ``apollo510dL_evb``, and ``apollo330mP_evb``.
+``apollo510dL_evb`` and ``apollo330mP_evb``.
 
 MSPI:
 

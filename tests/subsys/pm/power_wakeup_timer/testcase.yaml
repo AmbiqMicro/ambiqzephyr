@@ -25,7 +25,6 @@ tests:
     platform_allow:
       - stm32l562e_dk
       - apollo510_evb
-      - apollo510L_eb
       - apollo510dL_evb
       - apollo330mP_evb
     tags:
@@ -35,7 +34,6 @@ tests:
     platform_allow:
       - stm32l562e_dk
       - apollo510_evb
-      - apollo510L_eb
       - apollo510dL_evb
       - apollo330mP_evb
     tags:

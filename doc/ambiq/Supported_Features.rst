@@ -18,9 +18,7 @@ Boards
 Apollo5 family:
 
 - ``apollo510_evb``
-- ``apollo510_eb``
 - ``apollo510b_evb``
-- ``apollo510L_eb``
 - ``apollo510dL_evb``
 - ``apollo330mP_evb``
 
@@ -43,8 +41,6 @@ Display and expansion shields:
 - ``ap510_disp``
 - ``ap510_jdi_disp``
 - ``ap4_evb_disp_shield``
-- ``apollo5_eb_display_card``
-- ``apollo5_eb_display_8080_card``
 - ``ambiq_mikrobus_i2c`` / ``ambiq_mikrobus_spi``
 
 Driver Support
@@ -171,19 +167,15 @@ Get to Know Ambiq Components
   │   │   ├── apollo3p_evb/
   │   │   ├── apollo4p_blue_kxr_evb/
   │   │   ├── apollo4p_evb/
-  │   │   ├── apollo510_eb/
   │   │   ├── apollo510_evb/
   │   │   ├── apollo510b_evb/
-  │   │   ├── apollo510dL_evb/
-  │   │   └── apollo510L_eb/
+  │   │   └── apollo510dL_evb/
   │   └── shields/
   │       ├── ambiq_mikrobus_i2c/
   │       ├── ambiq_mikrobus_spi/
   │       ├── ap4_evb_disp_shield/
   │       ├── ap510_disp/
-  │       ├── ap510_jdi_disp/
-  │       ├── apollo5_eb_display_8080_card/
-  │       └── apollo5_eb_display_card/
+  │       └── ap510_jdi_disp/
   ├── drivers/
   │   ├── adc/
   │   │   └── adc_ambiq.c

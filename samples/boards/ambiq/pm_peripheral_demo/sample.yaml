@@ -6,7 +6,6 @@ tests:
     platform_allow:
       - apollo330mP_evb
       - apollo510dL_evb
-      - apollo510L_eb
     tags:
       - pm
       - bluetooth
