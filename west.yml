@@ -37,6 +37,12 @@ manifest:
     - name: acpica
       revision: 8d24867bc9c9d81c81eeac59391cda59333affd4
       path: modules/lib/acpica
+    - name: ambiqhal_ambiq
+      remote: github_ambiqmicro
+      path: modules/hal/ambiq
+      revision: 1577f6e52eebdf5a3a2e2082d5161c1c81858948
+      groups:
+        - hal
     - name: babblesim_base
       remote: babblesim
       repo-path: base
@@ -161,12 +167,6 @@ manifest:
     - name: hal_afbr
       revision: 4e1eea7ea283db9d9ce529b0e9f89c0b5c2660e3
       path: modules/hal/afbr
-      groups:
-        - hal
-    - name: hal_ambiq_internal
-      remote: github_ambiqmicro
-      path: modules/hal/ambiq
-      revision: 1577f6e52eebdf5a3a2e2082d5161c1c81858948
       groups:
         - hal
     - name: hal_atmel

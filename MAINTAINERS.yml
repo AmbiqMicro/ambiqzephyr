@@ -284,9 +284,10 @@ Ambiq Platforms:
   status: maintained
   maintainers:
     - AlessandroLuo
+    - RichardSWheatley
   collaborators:
     - aaronyegx
-    - RichardSWheatley
+    - Eddy-Hartono
   files:
     - soc/ambiq/
     - boards/ambiq/apollo*/
@@ -5252,6 +5253,18 @@ West:
   labels:
     - "area: ACPI"
 
+"West project: ambiqhal_ambiq":
+  status: maintained
+  maintainers:
+    - AlessandroLuo
+    - RichardSWheatley
+  collaborators:
+    - aaronyegx
+    - Eddy-Hartono
+  files:
+    - modules/hal_ambiq/
+  labels:
+    - "platform: Ambiq"
 "West project: babblesim_base":
   status: maintained
   maintainers:
@@ -5468,17 +5481,6 @@ West:
   labels:
     - "platform: Broadcom"
 
-"West project: hal_ambiq_internal":
-  status: maintained
-  maintainers:
-    - AlessandroLuo
-  collaborators:
-    - aaronyegx
-    - RichardSWheatley
-  files:
-    - modules/hal_ambiq/
-  labels:
-    - "platform: Ambiq"
 
 "West project: hal_atmel":
   status: maintained
