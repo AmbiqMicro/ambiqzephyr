@@ -10,7 +10,6 @@ tests:
       - mimxrt1160_evk/mimxrt1166/cm7
       - lpcxpresso55s69/lpc55s69/cpu0
     platform_exclude:
-      - apollo510L_eb
       - apollo330mP_evb
       - apollo510dL_evb
     harness: console
@@ -32,6 +31,5 @@ tests:
     sysbuild: false
     build_only: true
     platform_allow:
-      - apollo510L_eb
       - apollo510dL_evb
       - apollo330mP_evb

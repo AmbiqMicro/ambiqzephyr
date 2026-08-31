@@ -40,7 +40,7 @@ Set ``--shield ap510_jdi_disp`` when you invoke ``west build``. For example:
 
 .. zephyr-app-commands::
    :zephyr-app: samples/drivers/display
-   :board: apollo510_eb
+   :board: apollo510dL_evb
    :shield: ap510_jdi_disp
    :goals: build
 

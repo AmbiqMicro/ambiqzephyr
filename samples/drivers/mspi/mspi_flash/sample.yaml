@@ -11,7 +11,6 @@ tests:
       - hifive_unmatched/fu740/s7
       - hifive_unmatched/fu740/u74
       - apollo330mP_evb
-      - apollo510L_eb
       - apollo510dL_evb
     harness: console
     harness_config:
@@ -27,7 +26,6 @@ tests:
     integration_platforms:
       - apollo3p_evb
       - apollo4p_evb
-      - apollo510_eb
       - apollo510_evb
     extra_args:
       - platform:apollo4p_evb/apollo4p:SHIELD=ap4_evb_disp_shield_rev2
@@ -41,6 +39,4 @@ tests:
       - hifive_unmatched/fu740/s7
       - hifive_unmatched/fu740/u74
     depends_on: mspi
-    platform_allow:
-      - apollo510L_eb
     build_only: true

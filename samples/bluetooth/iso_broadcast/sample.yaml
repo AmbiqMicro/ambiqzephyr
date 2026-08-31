@@ -31,6 +31,5 @@ tests:
         - "Waiting for BIG complete"
     platform_allow:
       - apollo510b_evb
-      - apollo510L_eb
       - apollo510dL_evb
       - apollo330mP_evb

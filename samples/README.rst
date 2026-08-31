@@ -12,8 +12,6 @@ The full board list is in `../doc/ambiq/Supported_Features.rst
 against these board DTS files:
 
 - ``boards/ambiq/apollo510_evb/apollo510_evb.dts``
-- ``boards/ambiq/apollo510_eb/apollo510_eb.dts``
-- ``boards/ambiq/apollo510L_eb/apollo510L_eb.dts``
 - ``boards/ambiq/apollo510dL_evb/apollo510dL_evb.dts``
 - ``boards/ambiq/apollo510b_evb/apollo510b_evb.dts``
 - ``boards/ambiq/apollo330mP_evb/apollo330mP_evb.dts``
@@ -72,8 +70,8 @@ Bluetooth
 *********
 
 ``apollo3_evb``, ``apollo3p_evb``, ``apollo4p_blue_kxr_evb`` and
-``apollo510b_evb`` use SPI HCI. ``apollo510L_eb``, ``apollo510dL_evb`` and
-``apollo330mP_evb`` use IPC HCI. All Ambiq Bluetooth boards are LE only.
+``apollo510b_evb`` use SPI HCI. ``apollo510dL_evb`` and ``apollo330mP_evb``
+use IPC HCI. All Ambiq Bluetooth boards are LE only.
 
 Validated support per board is in `../doc/ambiq/Bluetooth.rst
 <../doc/ambiq/Bluetooth.rst>`_, and the full set of build commands is in
@@ -89,8 +87,8 @@ Validated support per board is in `../doc/ambiq/Bluetooth.rst
    west build -b your_board_here samples/bluetooth/central -p always
    west build -b your_board_here samples/bluetooth/peripheral_amota -p always
 
-The radio subsystem mailbox IPC used by ``apollo510L_eb``, ``apollo510dL_evb``
-and ``apollo330mP_evb`` has its own demonstration sample:
+The radio subsystem mailbox IPC used by ``apollo510dL_evb`` and
+``apollo330mP_evb`` has its own demonstration sample:
 
 .. code-block:: console
 
@@ -122,8 +120,6 @@ Display and UI
 
    west build -b your_board_here --shield ap510_disp samples/drivers/display -p always
    west build -b your_board_here --shield ap510_jdi_disp samples/drivers/display -p always
-   west build -b your_board_here --shield apollo5_eb_display_8080_card samples/drivers/display -p always
-   west build -b your_board_here --shield apollo5_eb_display_card samples/drivers/display -p always
    west build -b your_board_here --shield ap510_disp samples/modules/lvgl/demos -p always
    west build -b your_board_here samples/subsys/input/draw_touch_events -p always
 
