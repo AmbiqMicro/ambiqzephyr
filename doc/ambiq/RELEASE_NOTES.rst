@@ -31,15 +31,12 @@ Boards & SoC Support
 ~~~~~~~~~~~~~~~~~~~~
 
 - **apollo510L soc**: Added support for apollo510L soc.
-- **apollo510L_eb**: Added support for apollo510L_eb board.
-- **apollo5_eb_display_card**: Added support for apollo5_eb_display_card.
 
 Drivers and Sensors
 ~~~~~~~~~~~~~~~~~~~
 
 - **adc**: Added support for ADC driver of apollo510L.
 - **counter**: Added support for Counter driver of apollo510L.
-- **display**: Added support for CO5300 display driver on apollo510L_eb.
 - **flash**: Added support for MRAM driver of apollo510L.
 - **gpio**: Added support for GPIO driver of apollo510L.
 - **hwinfo**: Added support for HWINFO driver of apollo510L.
@@ -49,7 +46,6 @@ Drivers and Sensors
 - **pwm**: Added support for PWM driver of apollo510L.
 - **rtc**: Added support for RTC driver of apollo510L.
 - **sdhc**: Added support for SDIO driver of apollo510L.
-- **sensor**: Added support for accel sensor adxl363 on apollo510L_eb.
 - **serial**: Added support for UART driver of apollo510L.
 - **spi**: Added support for SPI driver of apollo510L.
 - **timer**: Added support for Stimer driver of apollo510L.
@@ -66,9 +62,7 @@ Libraries / Subsystems
 ~~~~~~~~~~~~~~~~~~~~~~
 
 - **coremark**: Added support for apollo510L coremark benchmark.
-- **mcuboot**: Added mcumgr and mcuboot configurations for apollo510L_eb board.
 - **power management**: Added support for apollo510L deeper sleep mode.
-- **storage**: Added zms configurations for apollo510L_eb board.
 
 Bug Fixes
 ---------

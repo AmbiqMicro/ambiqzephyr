@@ -12,7 +12,6 @@ The MSPI device drivers are split into two parts:
 
 Board support:
 
-- ``apollo510_eb``
 - ``apollo510_evb``
 - ``apollo4p_evb``
 - ``apollo3p_evb``

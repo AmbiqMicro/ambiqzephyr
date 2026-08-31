@@ -30,7 +30,6 @@ tests:
       - ek_ra8d2/r7ka8d2kflcac/cm85
       - ek_ra8m2/r7ka8m2jflcac/cm85
       - apollo510_evb
-      - apollo510L_eb
       - apollo510dL_evb
       - apollo330mP_evb
     tags: pm

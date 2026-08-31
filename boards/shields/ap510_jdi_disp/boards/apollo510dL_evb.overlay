@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * Apollo510dL EVB display connector: JDI RGB/control on pads P88–P99; VA/VCOM PWM
- * uses CT pads P102 / P103 with timer 7 via OUTCFG (same arrangement as apollo510_eb,
- * adapted for Apollo510L pin numbering).
+ * uses CT pads P102 / P103 with timer 7 via OUTCFG, adapted for Apollo510L
+ * pin numbering.
  */
 #include <apollo510L/ambiq-apollo510L-pinmux.h>
 

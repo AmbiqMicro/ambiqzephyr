@@ -5,7 +5,6 @@ tests:
     tags: i2s
     platform_allow:
       - apollo330mP_evb
-      - apollo510_eb
       - apollo510_evb
     harness: console
     harness_config:
