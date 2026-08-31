@@ -73,6 +73,8 @@ This table reflects the current Ambiq board focus and PM behavior in this tree.
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
 | FLASH  | not needed       | ambiq-stable       | samples\\subsys\\mgmt\\mcumgr\\smp\_svr       | All              |
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
+| GPIO   | Not Included (1) | ambiq-stable       | tests\drivers\gpio\gpio\_basic\_api           | All              |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
 | HWINFO | Not Included (1) | ambiq-stable       | tests\\drivers\\hwinfo\\api                   | All              |
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
 | I2C    | PM + RUNTIME     | ambiq-stable       | samples\\drivers\\eeprom                      | apollo510dL_evb  |
@@ -85,6 +87,8 @@ This table reflects the current Ambiq board focus and PM behavior in this tree.
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
 | JDI    | Not Included (1) | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
+| MBOX   | Not Included (1) | ambiq-stable       | radio subsystem IPC (no standalone sample)    | 330P / 510L      |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
 |MIPI_DBI| Not Included (1) | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
 |MIPI_DSI| PM + RUNTIME     | ambiq-stable       | samples\\drivers\\display                     | with disp card   |
@@ -92,6 +96,8 @@ This table reflects the current Ambiq board focus and PM behavior in this tree.
 | MSPI   | PM + RUNTIME     | ambiq-stable       | samples\\drivers\\mspi\\mspi\_flash           | All              |
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
 | PDM    | PM Only (2)      | ambiq-stable       | samples\\drivers\\audio\\dmic                 | All              |
++--------+------------------+--------------------+-----------------------------------------------+------------------+
+| PWR_DOM| PM Only (2)      | ambiq-stable       | exercised via CRYPTO and DISPLAY              | apollo5x         |
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
 | PWM    | Not Included (1) | ambiq-stable       | tests\\drivers\\pwm\\pwm\_api                 | All              |
 +--------+------------------+--------------------+-----------------------------------------------+------------------+
