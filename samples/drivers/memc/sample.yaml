@@ -16,6 +16,9 @@ tests:
   sample.drivers.memc.mspi:
     tags: mspi
     filter: dt_alias_exists("psram0")
+    platform_exclude:
+      - apollo330mP_evb
+      - apollo510dL_evb
     integration_platforms:
       - apollo3p_evb
       - apollo4p_evb
