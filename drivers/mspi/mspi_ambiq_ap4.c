@@ -1638,15 +1638,6 @@ static int mspi_dma_transceive(const struct device          *controller,
 		}
 	}
 
-	ret = am_hal_mspi_interrupt_enable(data->mspiHandle, AM_HAL_MSPI_INT_DMACMP);
-	if (ret) {
-		LOG_INST_ERR(MSPI_LOG_HANDLE(controller),
-			     "%u, failed to enable interrupt. code:%d",
-			     __LINE__, ret);
-		ret = -EHOSTDOWN;
-		goto dma_err;
-	}
-
 	while (ctx->packets_left > 0) {
 		uint32_t packet_idx = ctx->xfer.num_packet - ctx->packets_left;
 		const struct mspi_xfer_packet *packet;
