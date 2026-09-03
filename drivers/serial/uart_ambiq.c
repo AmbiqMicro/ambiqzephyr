@@ -827,7 +827,9 @@ static int uart_ambiq_pm_action(const struct device *dev, enum pm_device_action 
 {
 	const struct uart_ambiq_config *config = dev->config;
 	struct uart_ambiq_data *data = dev->data;
+#if !defined(CONFIG_SOC_SERIES_APOLLO2X)
 	am_hal_sysctrl_power_state_e status;
+#endif
 	int err;
 
 	switch (action) {
@@ -838,10 +840,14 @@ static int uart_ambiq_pm_action(const struct device *dev, enum pm_device_action 
 			return err;
 		}
 		k_busy_wait(UART_IO_RESUME_DELAY_US);
+#if !defined(CONFIG_SOC_SERIES_APOLLO2X)
 		status = AM_HAL_SYSCTRL_WAKE;
+#endif
 		break;
 	case PM_DEVICE_ACTION_SUSPEND:
+#if !defined(CONFIG_SOC_SERIES_APOLLO2X)
 		am_hal_uart_tx_flush(data->uart_handler);
+#endif
 		/* Move pins to sleep state */
 		err = pinctrl_apply_state(config->pincfg, PINCTRL_STATE_SLEEP);
 		if ((err < 0) && (err != -ENOENT)) {
@@ -854,12 +860,23 @@ static int uart_ambiq_pm_action(const struct device *dev, enum pm_device_action 
 			 */
 			return err;
 		}
+#if !defined(CONFIG_SOC_SERIES_APOLLO2X)
 		status = AM_HAL_SYSCTRL_DEEPSLEEP;
+#endif
 		break;
 	default:
 		return -ENOTSUP;
 	}
 
+#if defined(CONFIG_SOC_SERIES_APOLLO2X)
+	ARG_UNUSED(data);
+	if (action == PM_DEVICE_ACTION_RESUME) {
+		am_hal_uart_power_on_restore(config->inst_idx);
+	} else {
+		am_hal_uart_power_off_save(config->inst_idx);
+	}
+	return 0;
+#else
 	err = am_hal_uart_power_control(data->uart_handler, status, true);
 
 	if (err != AM_HAL_STATUS_SUCCESS) {
@@ -867,6 +884,7 @@ static int uart_ambiq_pm_action(const struct device *dev, enum pm_device_action 
 	} else {
 		return 0;
 	}
+#endif
 }
 #endif /*CONFIG_PM_DEVICE*/
 
