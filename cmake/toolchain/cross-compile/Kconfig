@@ -3,6 +3,7 @@
 
 config TOOLCHAIN_CROSS_COMPILE_SUPPORTS_THREAD_LOCAL_STORAGE
 	bool "Cross-compile toolchain supports TLS"
+	default y
 	select TOOLCHAIN_SUPPORTS_THREAD_LOCAL_STORAGE
 	help
 	  Set this if the cross-compile toolchain being used for the build
@@ -10,6 +11,7 @@ config TOOLCHAIN_CROSS_COMPILE_SUPPORTS_THREAD_LOCAL_STORAGE
 
 config TOOLCHAIN_CROSS_COMPILE_SUPPORTS_GNU_EXTENSIONS
 	bool "Cross-compile toolchain supports GNU Extensions"
+	default y
 	select TOOLCHAIN_SUPPORTS_GNU_EXTENSIONS
 	help
 	  Set this if the cross-compile toolchain being used for the build
