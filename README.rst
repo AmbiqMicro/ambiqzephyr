@@ -12,18 +12,17 @@
    <a href="https://scorecard.dev/viewer/?uri=github.com/zephyrproject-rtos/zephyr"><img src="https://api.securityscorecards.dev/projects/github.com/zephyrproject-rtos/zephyr/badge"></a>
    <a href="https://github.com/zephyrproject-rtos/zephyr/actions/workflows/twister.yaml?query=branch%3Amain"><img src="https://github.com/zephyrproject-rtos/zephyr/actions/workflows/twister.yaml/badge.svg?event=push"></a>
 
-Release: 31 August 2026
-#######################
+Release: 8 September 2026
+#########################
 
-**v4.3.0-ambiq.v1.0.0** is the first official public release of the Ambiq
-Zephyr distribution. It introduces full support for **Apollo510L and
-Apollo330P** and consolidates a year of driver, SoC, board and test work
-across the whole Apollo family. The release is based on upstream Zephyr
+**v4.3.0-ambiq.v1.0.1** is a maintenance release of the Ambiq Zephyr
+distribution. It documents validated **Bluetooth** support across the Apollo3,
+Apollo4 and Apollo5 EVBs, points the Ambiq HAL at its public repository, and
+adds Apollo2 UART power management. The release is based on upstream Zephyr
 v4.3.0.
 
-See `doc/ambiq/RELEASE_NOTES.rst <doc/ambiq/RELEASE_NOTES.rst>`_ for the full release notes, organised by
-chipset family: Apollo510L/330P, Apollo510/510B, Apollo4x, Apollo3x and
-Apollo2.
+See the `release notes`_ for the full detail, organised by chipset family:
+Apollo510L/330P, Apollo510/510B, Apollo4x, Apollo3x and Apollo2.
 
 Initialise a workspace from the ``ambiq-stable`` branch:
 
@@ -35,6 +34,12 @@ Initialise a workspace from the ``ambiq-stable`` branch:
 The previous line is frozen at tag ``ambiq-stable-pre-v1.0.0`` and remains
 available at branch ``frozen/ambiq-stable-pre-v1.0.0-2026-07``. It receives no
 further updates.
+
+Known Limitations
+#################
+
+- Bluetooth Classic is not yet supported on Apollo510 Lite or
+  Apollo330 Plus.
 
 About Ambiq
 ###########
@@ -93,9 +98,10 @@ Ambiq Documentation
   | 🧩 `Supported Features <doc/ambiq/Supported_Features.rst>`_ — drivers, power management, third-party libraries
   | 🔨 `Build and Flash <doc/ambiq/How_to_Build_and_Flash.rst>`_
   | ⚡ `Power Management <doc/ambiq/Power_Management.rst>`_
+  | 📡 `Bluetooth <doc/ambiq/Bluetooth.rst>`_ — validated support per board
   | 💻 `Sample Build Commands <samples/README.rst>`_
   | 🧪 `Test Build Commands <tests/README.rst>`_
-  | 📝 `Release Notes <doc/ambiq/RELEASE_NOTES.rst>`_
+  | 📝 `Release Notes <https://github.com/AmbiqMicro/ambiqzephyr/releases>`_
 
 For Apollo SoC datasheets, errata, and the AmbiqSuite SDK, see the
 `Ambiq Content Portal`_ and `Ambiq Products`_.
@@ -176,3 +182,6 @@ Additional Resources
 .. _Ambiq Products: https://ambiq.com/products/
 .. _Ambiq Content Portal: https://contentportal.ambiq.com/
 .. _Ambiq HAL Repository: https://github.com/AmbiqMicro/hal_ambiq_internal
+
+.. _release notes:
+   https://github.com/AmbiqMicro/ambiqzephyr/releases

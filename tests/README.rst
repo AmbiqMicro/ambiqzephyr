@@ -26,9 +26,10 @@ Related Ambiq Docs
 - `../doc/ambiq/Supported_Features.rst <../doc/ambiq/Supported_Features.rst>`_
 - `../doc/ambiq/How_to_Build_and_Flash.rst <../doc/ambiq/How_to_Build_and_Flash.rst>`_
 - `../doc/ambiq/How_to_Setup_Toolchain.rst <../doc/ambiq/How_to_Setup_Toolchain.rst>`_
+- `../doc/ambiq/Bluetooth.rst <../doc/ambiq/Bluetooth.rst>`_
 - `../doc/ambiq/How_to_Run_MCUBoot_Samples_and_Tests.rst <../doc/ambiq/How_to_Run_MCUBoot_Samples_and_Tests.rst>`_
 - `../doc/ambiq/How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst <../doc/ambiq/How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst>`_
-- `../doc/ambiq/RELEASE_NOTES.rst <../doc/ambiq/RELEASE_NOTES.rst>`_
+- `Release notes <https://github.com/AmbiqMicro/ambiqzephyr/releases>`_
 
 Driver Tests
 ************

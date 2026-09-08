@@ -7,9 +7,10 @@ repository landing page is `../../README.rst <../../README.rst>`_.
 Release
 *******
 
-- `RELEASE_NOTES.rst <RELEASE_NOTES.rst>`_ - v4.3.0-ambiq.v1.0.0, released
-  31 August 2026. Apollo510L and Apollo330P support, organised by chipset
-  family.
+- `Release notes <https://github.com/AmbiqMicro/ambiqzephyr/releases>`_ - v4.3.0-ambiq.v1.0.1, released 4 September 2026.
+  Validated Bluetooth support per board, the Ambiq HAL moved to its public
+  repository, and Apollo2 UART power management. Published with each GitHub
+  release rather than carried in the tree.
 
 Start Here
 **********
@@ -27,6 +28,8 @@ Subsystem Guides
 
 - `Power_Management.rst <Power_Management.rst>`_ — configuration steps for
   lowest power consumption.
+- `Bluetooth.rst <Bluetooth.rst>`_ — validated Bluetooth support per board.
+- `How_to_Run_Bluetooth_Samples.rst <How_to_Run_Bluetooth_Samples.rst>`_
 - `How_to_Run_Zephyr_USB_Samples.rst <How_to_Run_Zephyr_USB_Samples.rst>`_
 - `How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst <How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst>`_
 - `How_to_Run_MCUBoot_Samples_and_Tests.rst <How_to_Run_MCUBoot_Samples_and_Tests.rst>`_
@@ -42,7 +45,7 @@ Command References
 Releases
 ********
 
-- `RELEASE_NOTES.rst <RELEASE_NOTES.rst>`_
+- `Release notes <https://github.com/AmbiqMicro/ambiqzephyr/releases>`_
 
 External Resources
 ******************

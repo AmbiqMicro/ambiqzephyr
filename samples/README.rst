@@ -26,10 +26,12 @@ Related Ambiq Docs
 - `../doc/ambiq/Supported_Features.rst <../doc/ambiq/Supported_Features.rst>`_
 - `../doc/ambiq/How_to_Build_and_Flash.rst <../doc/ambiq/How_to_Build_and_Flash.rst>`_
 - `../doc/ambiq/How_to_Setup_Toolchain.rst <../doc/ambiq/How_to_Setup_Toolchain.rst>`_
+- `../doc/ambiq/Bluetooth.rst <../doc/ambiq/Bluetooth.rst>`_
+- `../doc/ambiq/How_to_Run_Bluetooth_Samples.rst <../doc/ambiq/How_to_Run_Bluetooth_Samples.rst>`_
 - `../doc/ambiq/How_to_Run_Zephyr_USB_Samples.rst <../doc/ambiq/How_to_Run_Zephyr_USB_Samples.rst>`_
 - `../doc/ambiq/How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst <../doc/ambiq/How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst>`_
 - `../doc/ambiq/How_to_Run_MCUBoot_Samples_and_Tests.rst <../doc/ambiq/How_to_Run_MCUBoot_Samples_and_Tests.rst>`_
-- `../doc/ambiq/RELEASE_NOTES.rst <../doc/ambiq/RELEASE_NOTES.rst>`_
+- `Release notes <https://github.com/AmbiqMicro/ambiqzephyr/releases>`_
 
 Common Samples
 **************
@@ -67,12 +69,30 @@ DMIC / PDM:
 Bluetooth
 *********
 
-``apollo510b_evb`` uses SPI HCI. ``apollo510dL_evb`` and ``apollo330mP_evb``
-use IPC HCI.
+``apollo3_evb``, ``apollo3p_evb``, ``apollo4p_blue_kxr_evb`` and
+``apollo510b_evb`` use SPI HCI. ``apollo510dL_evb`` and ``apollo330mP_evb``
+use IPC HCI. All Ambiq Bluetooth boards are LE only.
+
+Validated support per board is in `../doc/ambiq/Bluetooth.rst
+<../doc/ambiq/Bluetooth.rst>`_, and the full set of build commands is in
+`../doc/ambiq/How_to_Run_Bluetooth_Samples.rst
+<../doc/ambiq/How_to_Run_Bluetooth_Samples.rst>`_.
 
 .. code-block:: console
 
+   west build -b your_board_here samples/bluetooth/beacon -p always
+   west build -b your_board_here samples/bluetooth/broadcaster -p always
+   west build -b your_board_here samples/bluetooth/observer -p always
    west build -b your_board_here samples/bluetooth/peripheral -p always
+   west build -b your_board_here samples/bluetooth/central -p always
+   west build -b your_board_here samples/bluetooth/peripheral_amota -p always
+
+The radio subsystem mailbox IPC used by ``apollo510dL_evb`` and
+``apollo330mP_evb`` has its own demonstration sample:
+
+.. code-block:: console
+
+   west build -b your_board_here samples/boards/ambiq/rss_ipc -p always
 
 Peripheral Samples
 ******************

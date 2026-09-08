@@ -17,6 +17,9 @@ Board support:
 - ``apollo3p_evb``
 - etc.
 
+The Apollo330P and Apollo510L EVBs are excluded from the MEMC, MSPI flash and
+MSPI timing scan samples until their external memory wiring is validated.
+
 Examples Overview
 -----------------
 The following examples may be used to check whether the device and controller are initialized properly.

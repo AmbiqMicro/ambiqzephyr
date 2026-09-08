@@ -9,6 +9,7 @@ See also:
 - `README.rst <README.rst>`_ — Ambiq documentation index
 - `How_to_Build_and_Flash.rst <How_to_Build_and_Flash.rst>`_
 - `Power_Management.rst <Power_Management.rst>`_
+- `Bluetooth.rst <Bluetooth.rst>`_ — validated Bluetooth support per board
 - `../../samples/README.rst <../../samples/README.rst>`_ and
   `../../tests/README.rst <../../tests/README.rst>`_ for per-board build commands
 
@@ -133,6 +134,27 @@ PM_DEVICE column legend:
 - ``Not Included (1)`` — no PM hooks needed. Peripheral is either always-on by design
   (for example TIMER), externally powered (BLE, USB), or has no significant
   power draw when idle (HWINFO, DISPLAY controllers).
+
+Bluetooth
+*********
+
+Boards with validated Bluetooth support, and the host transport each uses:
+
+- ``apollo3_evb`` — Ambiq SPI HCI. Advertising and scanning.
+- ``apollo3p_evb`` — Ambiq SPI HCI. Advertising and scanning.
+- ``apollo4p_blue_kxr_evb`` — Ambiq SPI HCI. Advertising, scanning, and AMOTA.
+- ``apollo510b_evb`` — EM9305 over Ambiq SPI HCI. Connected peripheral and
+  central roles, extended and periodic advertising, PAST, ISO, and AMOTA.
+- ``apollo510dL_evb`` — Ambiq RSS HCI over IPC/mailbox. Connected peripheral
+  and central roles, GATT write, extended and periodic advertising, PAST, ISO,
+  LE Audio (BAP), and AMOTA.
+- ``apollo330mP_evb`` — Ambiq RSS HCI over IPC/mailbox. Same coverage as
+  ``apollo510dL_evb``.
+
+All Ambiq Bluetooth boards are LE only.
+
+Per-sample detail is in `Bluetooth.rst <Bluetooth.rst>`_. Build commands are in
+`How_to_Run_Bluetooth_Samples.rst <How_to_Run_Bluetooth_Samples.rst>`_.
 
 Third-Party Library Support
 ***************************
