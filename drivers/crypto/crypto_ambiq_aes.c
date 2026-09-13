@@ -16,7 +16,6 @@
 #include <zephyr/sys/util.h>
 #include <zephyr/cache.h>
 
-#include <string.h>
 #include <cmsis_gcc.h>
 
 /* ambiq-sdk includes */
@@ -470,7 +469,7 @@ static uint32_t ambiq_cc312_aes_crypt_ctr_ofb(struct ambiq_aes_data *data,
 	}
 
 	ctx->mode = mode;
-	memcpy(ctx->ivBuf, iv, AMBIQ_AES_BLOCK_SIZE);
+	(void)am_hal_cc312_memcpy((uint8_t *)ctx->ivBuf, iv, AMBIQ_AES_BLOCK_SIZE);
 
 	status = am_hal_cc312_aes_set_data_buffers_info(input, &input_info, output, &output_info);
 	if (status != AM_HAL_STATUS_SUCCESS) {
@@ -482,7 +481,7 @@ static uint32_t ambiq_cc312_aes_crypt_ctr_ofb(struct ambiq_aes_data *data,
 		return status;
 	}
 
-	memcpy(iv, ctx->ivBuf, AMBIQ_AES_BLOCK_SIZE);
+	(void)am_hal_cc312_memcpy(iv, (const uint8_t *)ctx->ivBuf, AMBIQ_AES_BLOCK_SIZE);
 	return AM_HAL_STATUS_SUCCESS;
 }
 
@@ -503,6 +502,53 @@ static uint32_t ambiq_cc312_aes_crypt_ofb(struct ambiq_aes_data *data,
 {
 	return ambiq_cc312_aes_crypt_ctr_ofb(data, ctx, CIPHER_OFB, length, iv_off, iv, input,
 					     output);
+}
+
+static uint32_t ambiq_cc312_aes_crypt_cbc(struct ambiq_aes_data *data,
+					  am_hal_cc312_aes_context_t *ctx, int32_t mode,
+					  uint32_t length, uint8_t iv[AMBIQ_AES_BLOCK_SIZE],
+					  const uint8_t *input, uint8_t *output)
+{
+	am_hal_cc312_buffer_t input_info = {0};
+	am_hal_cc312_buffer_t output_info = {0};
+	uint32_t status;
+
+	if (length == 0U) {
+		return AM_HAL_STATUS_SUCCESS;
+	}
+
+	if (ctx == NULL || iv == NULL || input == NULL || output == NULL) {
+		return AM_HAL_STATUS_INVALID_ARG;
+	}
+
+	if ((length % AMBIQ_AES_BLOCK_SIZE) != 0U) {
+		return AM_HAL_STATUS_INVALID_ARG;
+	}
+
+	if (mode != AM_HAL_AES_DECRYPT && mode != AM_HAL_AES_ENCRYPT) {
+		return AM_HAL_STATUS_INVALID_ARG;
+	}
+
+	if ((mode == AM_HAL_AES_ENCRYPT && ctx->dir != CRYPTO_DIRECTION_ENCRYPT) ||
+	    (mode == AM_HAL_AES_DECRYPT && ctx->dir != CRYPTO_DIRECTION_DECRYPT)) {
+		return AM_HAL_STATUS_INVALID_ARG;
+	}
+
+	ctx->mode = CIPHER_CBC;
+	(void)am_hal_cc312_memcpy((uint8_t *)ctx->ivBuf, iv, AMBIQ_AES_BLOCK_SIZE);
+
+	status = am_hal_cc312_aes_set_data_buffers_info(input, &input_info, output, &output_info);
+	if (status != AM_HAL_STATUS_SUCCESS) {
+		return status;
+	}
+
+	status = ambiq_cc312_aes_process(data, ctx, &input_info, &output_info, length);
+	if (status != AM_HAL_STATUS_SUCCESS) {
+		return status;
+	}
+
+	(void)am_hal_cc312_memcpy(iv, (const uint8_t *)ctx->ivBuf, AMBIQ_AES_BLOCK_SIZE);
+	return AM_HAL_STATUS_SUCCESS;
 }
 
 static int ambiq_aes_ecb_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, int32_t hal_mode)
@@ -620,9 +666,6 @@ static int ambiq_aes_ctr_ofb_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, 
 		 * at zero. iv_local is already zeroed above.
 		 */
 	}
-	if (iv_copy_len > 0U) {
-		memcpy(iv_local, iv, iv_copy_len);
-	}
 
 	ret = ambiq_aes_data_from_ctx(ctx, &data);
 	if (ret != 0) {
@@ -631,6 +674,10 @@ static int ambiq_aes_ctr_ofb_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, 
 	dma = data->dma;
 
 	k_mutex_lock(ambiq_cc312_arbiter_lock(), K_FOREVER);
+
+	if (iv_copy_len > 0U) {
+		(void)am_hal_cc312_memcpy(iv_local, iv, iv_copy_len);
+	}
 
 	status = ambiq_aes_prepare_op_ctx(&dma->op_ctx, ctx, AM_HAL_AES_ENCRYPT);
 	if (status != AM_HAL_STATUS_SUCCESS) {
@@ -647,7 +694,7 @@ static int ambiq_aes_ctr_ofb_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, 
 						   &offset, iv_local, pkt->in_buf, out_buf);
 	}
 	if (iv_copy_len > 0U) {
-		memcpy(iv, iv_local, iv_copy_len);
+		(void)am_hal_cc312_memcpy(iv, iv_local, iv_copy_len);
 	}
 	if (status != AM_HAL_STATUS_SUCCESS) {
 		ret = ambiq_hal_status_to_errno(status);
@@ -811,8 +858,8 @@ static int ambiq_aes_xts_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint
 		out_last = out_ptr;
 		out_tail = out_ptr + AMBIQ_AES_BLOCK_SIZE;
 
-		memcpy(t_cur, dma->xts_tweak, sizeof(t_cur));
-		memcpy(t_next, t_cur, sizeof(t_next));
+		(void)am_hal_cc312_memcpy(t_cur, dma->xts_tweak, sizeof(t_cur));
+		(void)am_hal_cc312_memcpy(t_next, t_cur, sizeof(t_next));
 		for (i = 0; i < AMBIQ_AES_BLOCK_SIZE; i++) {
 			next_carry = (uint8_t)(t_next[i] >> 7);
 			t_next[i] = (uint8_t)((t_next[i] << 1) | carry);
@@ -823,7 +870,7 @@ static int ambiq_aes_xts_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint
 		}
 
 		ambiq_aes_secure_zero(c_partial, sizeof(c_partial));
-		memcpy(c_partial, in_tail, leftover);
+		(void)am_hal_cc312_memcpy(c_partial, in_tail, leftover);
 
 		if (hal_mode == AM_HAL_AES_ENCRYPT) {
 			/* CC = E(P_n xor T_n) xor T_n */
@@ -842,7 +889,7 @@ static int ambiq_aes_xts_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint
 			}
 
 			/* C_* = MSB_r(CC) */
-			memcpy(out_tail, dma->xts_tmp_out, leftover);
+			(void)am_hal_cc312_memcpy(out_tail, dma->xts_tmp_out, leftover);
 
 			/* PP = P_* || LSB_{16-r}(CC), then C_n = E(PP xor T_{n+1}) xor T_{n+1} */
 			for (i = 0; i < leftover; i++) {
@@ -878,7 +925,7 @@ static int ambiq_aes_xts_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint
 			}
 
 			/* P_* = MSB_r(PP) */
-			memcpy(out_tail, dma->xts_tmp_out, leftover);
+			(void)am_hal_cc312_memcpy(out_tail, dma->xts_tmp_out, leftover);
 
 			/* CC = C_* || LSB_{16-r}(PP), then P_n = D(CC xor T_n) xor T_n */
 			for (i = 0; i < leftover; i++) {
@@ -941,6 +988,87 @@ static int ambiq_aes_xts_decrypt_op(struct cipher_ctx *ctx, struct cipher_pkt *p
 static int ambiq_aes_ofb_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint8_t *iv)
 {
 	return ambiq_aes_ctr_ofb_op(ctx, pkt, iv, CRYPTO_CIPHER_MODE_OFB);
+}
+
+static int ambiq_aes_cbc_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint8_t *iv,
+			    int32_t hal_mode)
+{
+	struct ambiq_aes_data *data;
+	struct ambiq_aes_dma_data *dma;
+	uint32_t status;
+	uint8_t iv_local[AMBIQ_AES_BLOCK_SIZE] __aligned(AMBIQ_AES_DMA_ALIGNMENT);
+	uint8_t *out_buf;
+	int op_ctx_init = 0;
+	int ret;
+
+	if (ctx == NULL || pkt == NULL || iv == NULL) {
+		return -EINVAL;
+	}
+
+	if ((pkt->in_len == 0U) || ((pkt->in_len % AMBIQ_AES_BLOCK_SIZE) != 0U)) {
+		return -EINVAL;
+	}
+
+	ret = ambiq_aes_get_output_buffer(ctx, pkt, &out_buf, (size_t)pkt->in_len);
+	if (ret != 0) {
+		return ret;
+	}
+
+	ambiq_aes_secure_zero(iv_local, sizeof(iv_local));
+
+	ret = ambiq_aes_data_from_ctx(ctx, &data);
+	if (ret != 0) {
+		return ret;
+	}
+	dma = data->dma;
+
+	k_mutex_lock(ambiq_cc312_arbiter_lock(), K_FOREVER);
+
+	(void)am_hal_cc312_memcpy(iv_local, iv, AMBIQ_AES_BLOCK_SIZE);
+
+	status = ambiq_aes_prepare_op_ctx(&dma->op_ctx, ctx, hal_mode);
+	if (status != AM_HAL_STATUS_SUCCESS) {
+		ret = ambiq_hal_status_to_errno(status);
+		goto cleanup;
+	}
+	op_ctx_init = 1;
+
+	status = ambiq_cc312_aes_crypt_cbc(data, &dma->op_ctx, hal_mode, (uint32_t)pkt->in_len,
+					   iv_local, pkt->in_buf, out_buf);
+	if (status == AM_HAL_STATUS_SUCCESS) {
+		(void)am_hal_cc312_memcpy(iv, iv_local, AMBIQ_AES_BLOCK_SIZE);
+	}
+	if (status != AM_HAL_STATUS_SUCCESS) {
+		ret = ambiq_hal_status_to_errno(status);
+		goto cleanup;
+	}
+
+	pkt->out_len = pkt->in_len;
+	ret = 0;
+
+cleanup:
+	if (op_ctx_init != 0) {
+		(void)am_hal_cc312_aes_free(&dma->op_ctx);
+	}
+
+	if (ret != 0 && out_buf != NULL) {
+		ambiq_aes_secure_zero(out_buf, (size_t)pkt->in_len);
+		pkt->out_len = 0;
+	}
+
+	ambiq_aes_clear_dma_scratch(dma);
+	k_mutex_unlock(ambiq_cc312_arbiter_lock());
+	return ret;
+}
+
+static int ambiq_aes_cbc_encrypt_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint8_t *iv)
+{
+	return ambiq_aes_cbc_op(ctx, pkt, iv, AM_HAL_AES_ENCRYPT);
+}
+
+static int ambiq_aes_cbc_decrypt_op(struct cipher_ctx *ctx, struct cipher_pkt *pkt, uint8_t *iv)
+{
+	return ambiq_aes_cbc_op(ctx, pkt, iv, AM_HAL_AES_DECRYPT);
 }
 
 /* AES-CCM */
@@ -1110,7 +1238,7 @@ static uint32_t ambiq_cc312_ccm_init(struct ambiq_aes_data *data,
 
 	temp_buff[0] |= (((tag_len - 2U) / 2U) << 3);
 	temp_buff[0] |= (q_field_size - 1U);
-	memcpy(temp_buff + 1, nonce, nonce_len);
+	(void)am_hal_cc312_memcpy(temp_buff + 1, nonce, nonce_len);
 
 	am_hal_aes_ccm_reverse_memcpy(temp_buff + 16U - MIN(q_field_size, 4U), (uint8_t *)&data_len,
 				      MIN(q_field_size, 4U));
@@ -1122,10 +1250,10 @@ static uint32_t ambiq_cc312_ccm_init(struct ambiq_aes_data *data,
 
 	ambiq_aes_secure_zero(ctr_state_buf, sizeof(ctr_state_buf));
 	ctr_state_buf[0] = q_field_size - 1U;
-	memcpy(ctr_state_buf + 1, nonce, nonce_len);
+	(void)am_hal_cc312_memcpy(ctr_state_buf + 1, nonce, nonce_len);
 	ctr_state_buf[15] = 1U;
-	memcpy(ctx->ctrStateBuf, ctr_state_buf, AM_HAL_AES_CCM_BLOCK_SIZE);
-
+	(void)am_hal_cc312_memcpy((uint8_t *)ctx->ctrStateBuf, ctr_state_buf,
+				  AM_HAL_AES_CCM_BLOCK_SIZE);
 	return AM_HAL_STATUS_SUCCESS;
 }
 
@@ -1160,7 +1288,7 @@ static uint32_t ambiq_cc312_ccm_process_aad(struct ambiq_aes_data *data,
 	if (aad_len > 0U) {
 		uint32_t copy_size = MIN(first_block_rem_size, aad_len);
 
-		memcpy(temp_buff + a_size, aad, copy_size);
+		(void)am_hal_cc312_memcpy(temp_buff + a_size, aad, copy_size);
 		status = ambiq_cc312_ccm_process(data, ctx, temp_buff, NULL,
 						 AM_HAL_AES_CCM_BLOCK_SIZE);
 		if (status != AM_HAL_STATUS_SUCCESS) {
@@ -1232,9 +1360,9 @@ static uint32_t ambiq_cc312_ccm_finish(struct ambiq_aes_data *data,
 			return status;
 		}
 
-		memcpy(tag, temp_buff, ctx->sizeOfT);
+		(void)am_hal_cc312_memcpy(tag, temp_buff, ctx->sizeOfT);
 	} else {
-		memcpy(temp_buff, tag, ctx->sizeOfT);
+		(void)am_hal_cc312_memcpy(temp_buff, tag, ctx->sizeOfT);
 		status = ambiq_cc312_ccm_process(data, ctx, temp_buff, temp_buff,
 						 AM_HAL_AES_CCM_BLOCK_SIZE);
 		if (status != AM_HAL_STATUS_SUCCESS) {
@@ -1329,7 +1457,10 @@ ambiq_cc312_aes_ccm_auth_decrypt(struct ambiq_aes_data *data, am_hal_cc312_aes_c
 		return AM_HAL_STATUS_INVALID_ARG;
 	}
 
-	memcpy(local_mac_buf, tag, tag_len);
+	k_mutex_lock(ambiq_cc312_arbiter_lock(), K_FOREVER);
+	(void)am_hal_cc312_memcpy(local_mac_buf, tag, tag_len);
+	k_mutex_unlock(ambiq_cc312_arbiter_lock());
+
 	return ambiq_cc312_ccm_auth_crypt(data, ctx, key, key_bits, length, iv, iv_len, aad,
 					  aad_len, input, output, local_mac_buf, tag_len,
 					  AM_HAL_AES_CCM_DECRYPT, AM_HAL_AES_CCM_MODE_CCM);
@@ -1592,7 +1723,7 @@ static uint32_t ambiq_aes_gcm_calc_j0(struct ambiq_aes_data *data, const uint8_t
 	uint32_t status;
 
 	if (ctx->ivSize == AM_HAL_AES_GCM_IV_96_BIT_SIZE) {
-		memcpy(ctx->J0, iv, AM_HAL_AES_GCM_IV_96_BIT_SIZE);
+		(void)am_hal_cc312_memcpy((uint8_t *)ctx->J0, iv, AM_HAL_AES_GCM_IV_96_BIT_SIZE);
 		ctx->J0[3] = AM_HAL_CC312_AES_GCM_SWAP_ENDIAN(0x00000001U);
 		return AM_HAL_STATUS_SUCCESS;
 	}
@@ -1667,7 +1798,8 @@ static uint32_t ambiq_aes_gcm_finish(struct ambiq_aes_data *data, uint8_t *tag)
 	}
 
 	if (ctx->dir == AM_HAL_AES_GCM_ENCRYPT) {
-		memcpy(tag, ctx->preTagBuf, ctx->tagSize);
+		(void)am_hal_cc312_memcpy(tag, ctx->preTagBuf, ctx->tagSize);
+		return AM_HAL_STATUS_SUCCESS;
 	} else if (ambiq_aes_auth_diff(ctx->preTagBuf, tag, ctx->tagSize) != 0U) {
 		return AM_HAL_STATUS_FAIL;
 	}
@@ -1858,6 +1990,11 @@ static int ambiq_aes_set_session_ops(struct cipher_ctx *ctx, enum cipher_mode mo
 						     ? ambiq_aes_ecb_encrypt_op
 						     : ambiq_aes_ecb_decrypt_op;
 		return 0;
+	case CRYPTO_CIPHER_MODE_CBC:
+		ctx->ops.cbc_crypt_hndlr = (op_type == CRYPTO_CIPHER_OP_ENCRYPT)
+						     ? ambiq_aes_cbc_encrypt_op
+						     : ambiq_aes_cbc_decrypt_op;
+		return 0;
 	case CRYPTO_CIPHER_MODE_CTR:
 		ctx->ops.ctr_crypt_hndlr = ambiq_aes_ctr_op;
 		return 0;
@@ -1887,6 +2024,7 @@ static int ambiq_aes_set_session_ops(struct cipher_ctx *ctx, enum cipher_mode mo
 static void ambiq_aes_clear_session_ops(struct cipher_ctx *ctx)
 {
 	ctx->ops.block_crypt_hndlr = NULL;
+	ctx->ops.cbc_crypt_hndlr = NULL;
 	ctx->ops.ctr_crypt_hndlr = NULL;
 	ctx->ops.ccm_crypt_hndlr = NULL;
 	ctx->ops.gcm_crypt_hndlr = NULL;
@@ -1917,9 +2055,10 @@ static int ambiq_aes_validate_session(const struct cipher_ctx *ctx, enum cipher_
 		return -ENOTSUP;
 	}
 
-	if (!(mode == CRYPTO_CIPHER_MODE_ECB || mode == CRYPTO_CIPHER_MODE_CTR ||
-	      mode == CRYPTO_CIPHER_MODE_OFB || mode == CRYPTO_CIPHER_MODE_CCM ||
-	      mode == CRYPTO_CIPHER_MODE_GCM || mode == CRYPTO_CIPHER_MODE_XTS)) {
+	if (!(mode == CRYPTO_CIPHER_MODE_ECB || mode == CRYPTO_CIPHER_MODE_CBC ||
+	      mode == CRYPTO_CIPHER_MODE_CTR || mode == CRYPTO_CIPHER_MODE_OFB ||
+	      mode == CRYPTO_CIPHER_MODE_CCM || mode == CRYPTO_CIPHER_MODE_GCM ||
+	      mode == CRYPTO_CIPHER_MODE_XTS)) {
 		return -ENOTSUP;
 	}
 

@@ -223,6 +223,70 @@
 			status = "disabled";
 		};
 
+		cc312_hmac: hmac@400c0000 {
+			compatible = "ambiq,crypto-hmac";
+			reg = <0x400c0000 0x1f30>;
+			interrupts = <24 0>;
+			power-domains = <&crypto_pd>;
+			status = "disabled";
+		};
+
+		cc312_cmac: cmac@400c0000 {
+			compatible = "ambiq,crypto-cmac";
+			reg = <0x400c0000 0x1f30>;
+			interrupts = <24 0>;
+			power-domains = <&crypto_pd>;
+			status = "disabled";
+		};
+
+		cc312_kdf: kdf@400c0000 {
+			compatible = "ambiq,crypto-kdf";
+			reg = <0x400c0000 0x1f30>;
+			interrupts = <24 0>;
+			power-domains = <&crypto_pd>;
+			status = "disabled";
+		};
+
+		cc312_x25519: x25519@400c0000 {
+			compatible = "ambiq,crypto-x25519";
+			reg = <0x400c0000 0x1f30>;
+			interrupts = <24 0>;
+			power-domains = <&crypto_pd>;
+			status = "disabled";
+		};
+
+		cc312_poly1305: poly1305@400c0000 {
+			compatible = "ambiq,crypto-poly1305";
+			reg = <0x400c0000 0x1f30>;
+			interrupts = <24 0>;
+			power-domains = <&crypto_pd>;
+			status = "disabled";
+		};
+
+		cc312_ed25519: ed25519@400c0000 {
+			compatible = "ambiq,crypto-ed25519";
+			reg = <0x400c0000 0x1f30>;
+			interrupts = <24 0>;
+			power-domains = <&crypto_pd>;
+			status = "disabled";
+		};
+
+		cc312_rsa: rsa@400c0000 {
+			compatible = "ambiq,crypto-rsa";
+			reg = <0x400c0000 0x1f30>;
+			interrupts = <24 0>;
+			power-domains = <&crypto_pd>;
+			status = "disabled";
+		};
+
+		cc312_srp: srp@400c0000 {
+			compatible = "ambiq,crypto-srp";
+			reg = <0x400c0000 0x1f30>;
+			interrupts = <24 0>;
+			power-domains = <&crypto_pd>;
+			status = "disabled";
+		};
+
 		crc32: crc32@40030030 {
 			compatible = "ambiq,hw-crc32";
 			reg = <0x40030030 0x4>;

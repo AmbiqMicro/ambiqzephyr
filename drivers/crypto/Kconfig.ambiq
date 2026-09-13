@@ -13,6 +13,7 @@ config CRYPTO_AMBIQ_AES
 
 		Supported cipher modes:
 		- ECB
+		- CBC
 		- CTR
 		- OFB
 		- CCM
@@ -44,6 +45,7 @@ config CRYPTO_AMBIQ_SHA
 
 		Supported hash algorithms:
 		- SHA-1
+		- SHA-224
 		- SHA-256
 
 if CRYPTO_AMBIQ_SHA
@@ -58,3 +60,104 @@ config CRYPTO_AMBIQ_SHA_MAX_SESSION
 		interleaved; access to the engine itself is serialised.
 
 endif # CRYPTO_AMBIQ_SHA
+
+config CRYPTO_AMBIQ_HMAC
+	bool "Ambiq CryptoCell HMAC driver"
+	default y
+	depends on DT_HAS_AMBIQ_CRYPTO_HMAC_ENABLED
+	select AMBIQ_HAL
+	select POWER_DOMAIN
+	select AMBIQ_CC312_ARBITER
+	help
+	  Enable the Ambiq CryptoCell-312 HMAC driver (SHA-1/224/256).
+
+if CRYPTO_AMBIQ_HMAC
+
+config CRYPTO_AMBIQ_HMAC_MAX_SESSION
+	int "Maximum number of simultaneous HMAC sessions"
+	default 2
+	range 1 8
+
+endif # CRYPTO_AMBIQ_HMAC
+
+config CRYPTO_AMBIQ_CMAC
+	bool "Ambiq CryptoCell AES-CMAC driver"
+	default y
+	depends on DT_HAS_AMBIQ_CRYPTO_CMAC_ENABLED
+	select AMBIQ_HAL
+	select POWER_DOMAIN
+	select AMBIQ_CC312_ARBITER
+	help
+	  Enable the Ambiq CryptoCell-312 AES-CMAC driver.
+
+	  Standalone AES-CBC-MAC is not exposed as a separate Zephyr driver;
+	  use AES-CMAC or AES-CCM for message authentication on CC312.
+
+if CRYPTO_AMBIQ_CMAC
+
+config CRYPTO_AMBIQ_CMAC_MAX_SESSION
+	int "Maximum number of simultaneous AES-CMAC sessions"
+	default 2
+	range 1 8
+
+endif # CRYPTO_AMBIQ_CMAC
+
+config CRYPTO_AMBIQ_HKDF
+	bool "Ambiq CryptoCell HKDF driver"
+	default y
+	depends on DT_HAS_AMBIQ_CRYPTO_KDF_ENABLED
+	select AMBIQ_HAL
+	select POWER_DOMAIN
+	select AMBIQ_CC312_ARBITER
+	help
+	  Enable the Ambiq CryptoCell-312 HKDF driver (SHA-1/224/256).
+
+config CRYPTO_AMBIQ_X25519
+	bool "Ambiq CryptoCell X25519 driver"
+	default n
+	depends on DT_HAS_AMBIQ_CRYPTO_X25519_ENABLED
+	select AMBIQ_HAL
+	select POWER_DOMAIN
+	select AMBIQ_CC312_ARBITER
+	help
+	  Enable the Ambiq CryptoCell-312 X25519 key agreement driver.
+
+config CRYPTO_AMBIQ_POLY1305
+	bool "Ambiq CryptoCell Poly1305 driver"
+	default n
+	depends on DT_HAS_AMBIQ_CRYPTO_POLY1305_ENABLED
+	select AMBIQ_HAL
+	select POWER_DOMAIN
+	select AMBIQ_CC312_ARBITER
+	help
+	  Enable the Ambiq CryptoCell-312 Poly1305 authenticator driver.
+
+config CRYPTO_AMBIQ_ED25519
+	bool "Ambiq CryptoCell Ed25519 driver"
+	default n
+	depends on DT_HAS_AMBIQ_CRYPTO_ED25519_ENABLED
+	select AMBIQ_HAL
+	select POWER_DOMAIN
+	select AMBIQ_CC312_ARBITER
+	help
+	  Enable the Ambiq CryptoCell-312 Ed25519 signature driver.
+
+config CRYPTO_AMBIQ_RSA
+	bool "Ambiq CryptoCell RSA driver"
+	default n
+	depends on DT_HAS_AMBIQ_CRYPTO_RSA_ENABLED
+	select AMBIQ_HAL
+	select POWER_DOMAIN
+	select AMBIQ_CC312_ARBITER
+	help
+	  Enable the Ambiq CryptoCell-312 RSA modular exponentiation driver.
+
+config CRYPTO_AMBIQ_SRP
+	bool "Ambiq CryptoCell SRP-6a driver"
+	default n
+	depends on DT_HAS_AMBIQ_CRYPTO_SRP_ENABLED
+	select AMBIQ_HAL
+	select POWER_DOMAIN
+	select AMBIQ_CC312_ARBITER
+	help
+	  Enable the Ambiq CryptoCell-312 SRP-6a key agreement helpers.

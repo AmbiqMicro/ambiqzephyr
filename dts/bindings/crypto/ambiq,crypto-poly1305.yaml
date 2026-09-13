@@ -1,0 +1,15 @@
+# Copyright (c) 2026, Ambiq Micro, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: Ambiq Micro Cryptocell312 Poly1305
+
+compatible: "ambiq,crypto-poly1305"
+
+include: base.yaml
+
+properties:
+  reg:
+    required: true
+
+  interrupts:
+    required: true

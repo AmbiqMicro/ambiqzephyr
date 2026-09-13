@@ -12,8 +12,6 @@
 #include <zephyr/pm/device_runtime.h>
 #include <zephyr/sys/util.h>
 
-#include <string.h>
-
 #include <soc.h>
 #include <cc312_arbiter.h>
 
@@ -62,20 +60,32 @@ static int ambiq_sha_hal_status_to_errno(uint32_t status)
 
 static am_hal_cc312_sha_mode_e ambiq_sha_hal_mode(enum hash_algo algo)
 {
-	return (algo == CRYPTO_HASH_ALGO_SHA1) ? AM_HAL_CC312_SHA1 : AM_HAL_CC312_SHA256;
+	switch (algo) {
+	case CRYPTO_HASH_ALGO_SHA1:
+		return AM_HAL_CC312_SHA1;
+	case CRYPTO_HASH_ALGO_SHA224:
+		return AM_HAL_CC312_SHA224;
+	default:
+		return AM_HAL_CC312_SHA256;
+	}
 }
 
 static size_t ambiq_sha_digest_size(enum hash_algo algo)
 {
-	if (algo == CRYPTO_HASH_ALGO_SHA1) {
+	switch (algo) {
+	case CRYPTO_HASH_ALGO_SHA1:
 		return AM_HAL_SHA1_DIGEST_SIZE;
+	case CRYPTO_HASH_ALGO_SHA224:
+		return AM_HAL_SHA224_DIGEST_SIZE;
+	default:
+		return AM_HAL_SHA256_DIGEST_SIZE;
 	}
-	return AM_HAL_SHA256_DIGEST_SIZE;
 }
 
 static bool ambiq_sha_algo_supported(enum hash_algo algo)
 {
-	return (algo == CRYPTO_HASH_ALGO_SHA1) || (algo == CRYPTO_HASH_ALGO_SHA256);
+	return (algo == CRYPTO_HASH_ALGO_SHA1) || (algo == CRYPTO_HASH_ALGO_SHA224) ||
+	       (algo == CRYPTO_HASH_ALGO_SHA256);
 }
 
 static struct ambiq_sha_session *ambiq_sha_session_alloc(struct ambiq_sha_data *data,
@@ -175,7 +185,7 @@ out:
 		(void)am_hal_cc312_sha_free(&s->hal);
 		hctx->started = false;
 		if (finish && pkt->out_buf != NULL) {
-			memset(pkt->out_buf, 0, ambiq_sha_digest_size(s->algo));
+			am_hal_cc312_context_clear(pkt->out_buf, ambiq_sha_digest_size(s->algo));
 		}
 	}
 

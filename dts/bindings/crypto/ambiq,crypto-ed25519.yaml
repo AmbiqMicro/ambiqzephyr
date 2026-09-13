@@ -1,0 +1,15 @@
+# Copyright (c) 2026, Ambiq Micro, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: Ambiq Micro Cryptocell312 Ed25519
+
+compatible: "ambiq,crypto-ed25519"
+
+include: base.yaml
+
+properties:
+  reg:
+    required: true
+
+  interrupts:
+    required: true

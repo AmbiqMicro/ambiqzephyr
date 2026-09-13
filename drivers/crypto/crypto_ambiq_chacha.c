@@ -16,7 +16,6 @@
 #include <zephyr/sys/util.h>
 #include <zephyr/cache.h>
 
-#include <string.h>
 #include <cmsis_gcc.h>
 
 #include <soc.h>
