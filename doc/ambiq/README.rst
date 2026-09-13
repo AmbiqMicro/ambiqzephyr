@@ -17,7 +17,8 @@ Start Here
 - `How_to_Setup_Toolchain.rst <How_to_Setup_Toolchain.rst>`_ — Zephyr SDK
   version matrix, environment variables, and version verification.
 - `Supported_Features.rst <Supported_Features.rst>`_ — boards, drivers, power
-  management status, and third-party library support.
+  management status, CC312 DMA/cache coherency notes, and third-party library
+  support.
 - `How_to_Build_and_Flash.rst <How_to_Build_and_Flash.rst>`_ — branch and
   upstream setup, ``west build`` / ``west flash``, shields, console settings,
   and Bluetooth controller firmware.

@@ -119,11 +119,18 @@ static inline const struct device *get_crypto_dev(void)
 }
 
 static const struct device *crypto_dev;
+static uint32_t cipher_cap_flags;
 
 static void *crypto_aes_setup(void)
 {
 	crypto_dev = get_crypto_dev();
 	zassert_true(crypto_dev && device_is_ready(crypto_dev), "Crypto device is not ready");
+
+	cipher_cap_flags = CAP_RAW_KEY | CAP_SYNC_OPS | CAP_SEPARATE_IO_BUFS;
+	if ((crypto_query_hwcaps(crypto_dev) & CAP_NO_IV_PREFIX) != 0U) {
+		cipher_cap_flags |= CAP_NO_IV_PREFIX;
+	}
+
 	return NULL;
 }
 
@@ -211,6 +218,7 @@ ZTEST(crypto_aes, test_ecb_decrypt)
 /* CBC Mode Tests */
 ZTEST(crypto_aes, test_cbc_encrypt)
 {
+	const bool no_iv_prefix = (cipher_cap_flags & CAP_NO_IV_PREFIX) != 0U;
 	uint8_t encrypted[32] __aligned(IO_ALIGNMENT_BYTES) = {0};
 	uint8_t iv_copy[16];
 
@@ -219,13 +227,13 @@ ZTEST(crypto_aes, test_cbc_encrypt)
 	struct cipher_ctx ctx = {
 		.keylen = sizeof(cbc_key),
 		.key.bit_stream = cbc_key,
-		.flags = CAP_RAW_KEY | CAP_SYNC_OPS | CAP_SEPARATE_IO_BUFS,
+		.flags = cipher_cap_flags,
 	};
 
 	struct cipher_pkt pkt = {
 		.in_buf = (uint8_t *)cbc_plaintext,
 		.in_len = sizeof(cbc_plaintext),
-		.out_buf_max = sizeof(encrypted),
+		.out_buf_max = no_iv_prefix ? sizeof(cbc_plaintext) : sizeof(encrypted),
 		.out_buf = encrypted,
 	};
 
@@ -244,30 +252,39 @@ ZTEST(crypto_aes, test_cbc_encrypt)
 		return;
 	}
 
-	/* CBC prepends IV to output, so ciphertext starts at offset 16 */
-	rc = memcmp(encrypted + 16, cbc_ciphertext, sizeof(cbc_ciphertext));
+	if (no_iv_prefix) {
+		rc = memcmp(encrypted, cbc_ciphertext, sizeof(cbc_ciphertext));
+	} else {
+		rc = memcmp(encrypted + 16, cbc_ciphertext, sizeof(cbc_ciphertext));
+	}
 	cipher_free_session(crypto_dev, &ctx);
 	zassert_equal(rc, 0, "CBC encrypt output mismatch");
 }
 
 ZTEST(crypto_aes, test_cbc_decrypt)
 {
-	/* For decrypt, need to prepend IV to ciphertext input */
+	const bool no_iv_prefix = (cipher_cap_flags & CAP_NO_IV_PREFIX) != 0U;
 	uint8_t input[32] __aligned(IO_ALIGNMENT_BYTES);
 	uint8_t decrypted[16] __aligned(IO_ALIGNMENT_BYTES) = {0};
+	uint8_t iv_copy[16];
 
-	/* Prepend IV to ciphertext */
-	memcpy(input, cbc_iv, sizeof(cbc_iv));
-	memcpy(input + 16, cbc_ciphertext, sizeof(cbc_ciphertext));
+	memcpy(iv_copy, cbc_iv, sizeof(cbc_iv));
+
+	if (no_iv_prefix) {
+		memcpy(input, cbc_ciphertext, sizeof(cbc_ciphertext));
+	} else {
+		memcpy(input, cbc_iv, sizeof(cbc_iv));
+		memcpy(input + 16, cbc_ciphertext, sizeof(cbc_ciphertext));
+	}
 
 	struct cipher_ctx ctx = {
 		.keylen = sizeof(cbc_key),
 		.key.bit_stream = cbc_key,
-		.flags = CAP_RAW_KEY | CAP_SYNC_OPS | CAP_SEPARATE_IO_BUFS,
+		.flags = cipher_cap_flags,
 	};
 	struct cipher_pkt pkt = {
 		.in_buf = (uint8_t *)input,
-		.in_len = sizeof(input),
+		.in_len = no_iv_prefix ? sizeof(cbc_ciphertext) : sizeof(input),
 		.out_buf_max = sizeof(decrypted),
 		.out_buf = decrypted,
 	};
@@ -280,7 +297,7 @@ ZTEST(crypto_aes, test_cbc_decrypt)
 		return;
 	}
 
-	rc = cipher_cbc_op(&ctx, &pkt, input);
+	rc = cipher_cbc_op(&ctx, &pkt, no_iv_prefix ? iv_copy : input);
 	if (rc != 0) {
 		cipher_free_session(crypto_dev, &ctx);
 		zassert_equal(rc, 0, "CBC decrypt failed (rc=%d)", rc);

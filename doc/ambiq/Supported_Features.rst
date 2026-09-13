@@ -13,6 +13,20 @@ See also:
 - `../../samples/README.rst <../../samples/README.rst>`_ and
   `../../tests/README.rst <../../tests/README.rst>`_ for per-board build commands
 
+CC312 DMA and cache coherency
+*****************************
+
+Apollo510-class SoCs integrate an Arm CryptoCell-312 engine behind a DMA path
+on Cortex-M55 cores with data cache. Buffers the CC312 reads or writes must
+either live in a non-cacheable region (``CONFIG_NOCACHE_MEMORY`` with
+``__nocache`` sections, 32-byte aligned) or be explicitly cleaned and
+invalidated around each operation. This applies to symmetric ciphers, hash,
+MAC, KDF, and PKA-backed drivers (RSA, X25519, Ed25519, Poly1305, SRP).
+
+See the Ambiq crypto HAL examples under ``tests/boards/ambiq/`` for the
+recommended buffer placement and board overlay patterns (sibling CC312 nodes
+share IRQ 24).
+
 Boards
 ******
 

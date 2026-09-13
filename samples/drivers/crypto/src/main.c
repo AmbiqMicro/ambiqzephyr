@@ -11,6 +11,9 @@
 #include <zephyr/kernel.h>
 #include <string.h>
 #include <zephyr/crypto/crypto.h>
+#if DT_HAS_COMPAT_STATUS_OKAY(ambiq_crypto_aes)
+#include <soc.h>
+#endif
 
 #define LOG_LEVEL CONFIG_CRYPTO_LOG_LEVEL
 #include <zephyr/logging/log.h>
@@ -41,7 +44,11 @@ LOG_MODULE_REGISTER(main);
 #endif
 
 /* Some crypto drivers require IO buffers to be aligned, i.e. due to underlying DMA requirements. */
+#if DT_HAS_COMPAT_STATUS_OKAY(ambiq_crypto_aes)
+#define IO_ALIGNMENT_BYTES 32
+#else
 #define IO_ALIGNMENT_BYTES 4
+#endif
 
 const static uint8_t key[16]
 	__aligned(IO_ALIGNMENT_BYTES) = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
@@ -110,6 +117,9 @@ int validate_hw_compatibility(const struct device *dev)
 	}
 
 	cap_flags = CAP_RAW_KEY | CAP_SYNC_OPS | CAP_SEPARATE_IO_BUFS;
+	if ((flags & CAP_NO_IV_PREFIX) != 0U) {
+		cap_flags |= CAP_NO_IV_PREFIX;
+	}
 
 	return 0;
 
@@ -211,8 +221,11 @@ static const uint8_t cbc_ciphertext[80] = {
 
 void cbc_mode(const struct device *dev)
 {
+	const bool no_iv_prefix = (cap_flags & CAP_NO_IV_PREFIX) != 0U;
 	uint8_t encrypted[80] __aligned(IO_ALIGNMENT_BYTES) = {0};
 	uint8_t decrypted[64] __aligned(IO_ALIGNMENT_BYTES) = {0};
+	const uint8_t *expected_ct = no_iv_prefix ? &cbc_ciphertext[16] : cbc_ciphertext;
+	const size_t expected_ct_len = no_iv_prefix ? sizeof(plaintext) : sizeof(cbc_ciphertext);
 	struct cipher_ctx ini = {
 		.keylen = sizeof(key),
 		.key.bit_stream = key,
@@ -221,12 +234,12 @@ void cbc_mode(const struct device *dev)
 	struct cipher_pkt encrypt = {
 		.in_buf = plaintext,
 		.in_len = sizeof(plaintext),
-		.out_buf_max = sizeof(encrypted),
+		.out_buf_max = no_iv_prefix ? sizeof(plaintext) : sizeof(encrypted),
 		.out_buf = encrypted,
 	};
 	struct cipher_pkt decrypt = {
-		.in_buf = encrypt.out_buf,
-		.in_len = sizeof(encrypted),
+		.in_buf = encrypted,
+		.in_len = no_iv_prefix ? sizeof(plaintext) : sizeof(encrypted),
 		.out_buf = decrypted,
 		.out_buf_max = sizeof(decrypted),
 	};
@@ -249,11 +262,10 @@ void cbc_mode(const struct device *dev)
 
 	LOG_INF("Output length (encryption): %d", encrypt.out_len);
 
-	if (memcmp(encrypt.out_buf, cbc_ciphertext, sizeof(cbc_ciphertext))) {
+	if (memcmp(encrypt.out_buf, expected_ct, expected_ct_len)) {
 		LOG_ERR("CBC mode ENCRYPT - Mismatch between expected and "
 			    "returned cipher text");
-		print_buffer_comparison(cbc_ciphertext, encrypt.out_buf,
-					sizeof(cbc_ciphertext));
+		print_buffer_comparison(expected_ct, encrypt.out_buf, expected_ct_len);
 		goto out;
 	}
 
@@ -266,7 +278,12 @@ void cbc_mode(const struct device *dev)
 		return;
 	}
 
-	if (cipher_cbc_op(&ini, &decrypt, encrypted)) {
+#if DT_HAS_COMPAT_STATUS_OKAY(ambiq_crypto_aes)
+	(void)am_hal_cc312_memcpy(iv, cbc_ciphertext, sizeof(iv));
+#else
+	memcpy(iv, cbc_ciphertext, sizeof(iv));
+#endif
+	if (cipher_cbc_op(&ini, &decrypt, no_iv_prefix ? iv : encrypted)) {
 		LOG_ERR("CBC mode DECRYPT - Failed");
 		goto out;
 	}
