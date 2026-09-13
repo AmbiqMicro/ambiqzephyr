@@ -22,6 +22,9 @@
 #include <zephyr/sys/util.h>
 #include <zephyr/sys/__assert.h>
 #include <zephyr/crypto/hash.h>
+#include <zephyr/crypto/mac.h>
+#include <zephyr/crypto/kdf.h>
+#include <zephyr/crypto/key_agreement.h>
 #include "cipher.h"
 
 /**
@@ -85,6 +88,14 @@ __subsystem struct crypto_driver_api {
 	int (*hash_free_session)(const struct device *dev, struct hash_ctx *ctx);
 	/* Register async hash op completion callback with the driver */
 	int (*hash_async_callback_set)(const struct device *dev, hash_completion_cb cb);
+
+	/* Setup a MAC session */
+	int (*mac_begin_session)(const struct device *dev, struct mac_ctx *ctx, enum mac_algo algo);
+	/* Tear down an established MAC session */
+	int (*mac_free_session)(const struct device *dev, struct mac_ctx *ctx);
+
+	/* HKDF derive (one-shot) */
+	int (*kdf_hkdf)(const struct device *dev, struct kdf_hkdf_pkt *pkt);
 };
 
 /* Following are the public API a user app may call.
@@ -525,6 +536,81 @@ static inline int hash_update(struct hash_ctx *ctx, struct hash_pkt *pkt)
 	pkt->ctx = ctx;
 
 	return ctx->hash_hndlr(ctx, pkt, false);
+}
+
+/**
+ * @}
+ */
+
+/**
+ * @brief Crypto MAC APIs
+ * @defgroup crypto_mac MAC
+ * @ingroup crypto
+ * @{
+ */
+
+static inline int mac_begin_session(const struct device *dev, struct mac_ctx *ctx,
+				    enum mac_algo algo)
+{
+	struct crypto_driver_api *api;
+
+	api = (struct crypto_driver_api *)dev->api;
+	ctx->device = dev;
+
+	if (api->mac_begin_session == NULL) {
+		return -ENOTSUP;
+	}
+
+	return api->mac_begin_session(dev, ctx, algo);
+}
+
+static inline int mac_free_session(const struct device *dev, struct mac_ctx *ctx)
+{
+	struct crypto_driver_api *api;
+
+	api = (struct crypto_driver_api *)dev->api;
+
+	if (api->mac_free_session == NULL) {
+		return -ENOTSUP;
+	}
+
+	return api->mac_free_session(dev, ctx);
+}
+
+static inline int mac_compute(struct mac_ctx *ctx, struct mac_pkt *pkt)
+{
+	pkt->ctx = ctx;
+	return ctx->mac_hndlr(ctx, pkt, true);
+}
+
+static inline int mac_update(struct mac_ctx *ctx, struct mac_pkt *pkt)
+{
+	pkt->ctx = ctx;
+	return ctx->mac_hndlr(ctx, pkt, false);
+}
+
+/**
+ * @}
+ */
+
+/**
+ * @brief Crypto KDF APIs
+ * @defgroup crypto_kdf KDF
+ * @ingroup crypto
+ * @{
+ */
+
+static inline int kdf_hkdf(const struct device *dev, struct kdf_hkdf_pkt *pkt)
+{
+	struct crypto_driver_api *api;
+
+	api = (struct crypto_driver_api *)dev->api;
+
+	if (api->kdf_hkdf == NULL) {
+		return -ENOTSUP;
+	}
+
+	return api->kdf_hkdf(dev, pkt);
 }
 
 /**
