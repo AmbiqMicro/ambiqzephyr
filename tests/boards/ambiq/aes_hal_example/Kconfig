@@ -10,6 +10,9 @@ menu "Ambiq AES HAL example options"
 config AES_HAL_EXAMPLE_TEST_ECB
 	bool "Run AES-ECB tests"
 
+config AES_HAL_EXAMPLE_TEST_CBC
+	bool "Run AES-CBC tests"
+
 config AES_HAL_EXAMPLE_TEST_CTR
 	bool "Run AES-CTR test"
 

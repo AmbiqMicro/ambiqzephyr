@@ -19,4 +19,13 @@ config CHACHA_HAL_EXAMPLE_TEST_SPLIT_STREAMING
 config CHACHA_HAL_EXAMPLE_USE_INPLACE_BUFFERS
 	bool "Use in-place (single) buffers for ChaCha HAL tests"
 
+config CHACHA_HAL_EXAMPLE_TEST_ITERATIONS
+	int "Iterations per ChaCha HAL sub-test"
+	range 1 1000
+	default 5
+	help
+	  Each iteration runs a full 65535-byte ChaCha20 transfer. Keep the
+	  default low for twister/on-device runs (default harness timeout is
+	  ~60s). Raise toward 1000 for longer soak testing.
+
 endmenu

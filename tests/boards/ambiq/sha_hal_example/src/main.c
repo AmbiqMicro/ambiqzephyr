@@ -7,56 +7,80 @@
 #include <zephyr/crypto/crypto.h>
 #include <zephyr/device.h>
 #include <zephyr/kernel.h>
+#include <zephyr/linker/section_tags.h>
 #include <zephyr/sys/printk.h>
 
 #include <string.h>
 
+#include <soc.h>
+
 #define SHA_DEV DEVICE_DT_GET_ONE(ambiq_crypto_sha)
 
-#define SHA1_LEN   20
-#define SHA256_LEN 32
+#define SHA1_LEN          20
+#define SHA224_LEN        28
+#define SHA256_LEN        32
+#define SHA_DMA_ALIGNMENT 32U
 
 #define SHA_CAPS (CAP_SEPARATE_IO_BUFS | CAP_SYNC_OPS)
+
+#if IS_ENABLED(CONFIG_NOCACHE_MEMORY)
+#define SHA_SAMPLE_NOCACHE __nocache
+#else
+#define SHA_SAMPLE_NOCACHE
+#endif
 
 /* Spans more than one DMA chunk, so the driver's DLLI splitting is exercised. */
 #define PATTERN_LEN 100000U
 
-static uint8_t g_pattern[PATTERN_LEN] __aligned(32);
-static uint8_t g_digest[SHA256_LEN] __aligned(32);
+static SHA_SAMPLE_NOCACHE uint8_t g_pattern[PATTERN_LEN] __aligned(SHA_DMA_ALIGNMENT);
+static SHA_SAMPLE_NOCACHE uint8_t g_digest[SHA256_LEN] __aligned(SHA_DMA_ALIGNMENT);
 
 static const char msg_abc[] = "abc";
 static const char msg_448[] = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
 
-static const uint8_t kat_sha1_empty[SHA1_LEN] = {
-	0xda, 0x39, 0xa3, 0xee, 0x5e, 0x6b, 0x4b, 0x0d, 0x32, 0x55,
-	0xbf, 0xef, 0x95, 0x60, 0x18, 0x90, 0xaf, 0xd8, 0x07, 0x09};
+static const uint8_t kat_sha1_empty[SHA1_LEN] = {0xda, 0x39, 0xa3, 0xee, 0x5e, 0x6b, 0x4b,
+						 0x0d, 0x32, 0x55, 0xbf, 0xef, 0x95, 0x60,
+						 0x18, 0x90, 0xaf, 0xd8, 0x07, 0x09};
 
-static const uint8_t kat_sha1_abc[SHA1_LEN] = {
-	0xa9, 0x99, 0x3e, 0x36, 0x47, 0x06, 0x81, 0x6a, 0xba, 0x3e,
-	0x25, 0x71, 0x78, 0x50, 0xc2, 0x6c, 0x9c, 0xd0, 0xd8, 0x9d};
+static const uint8_t kat_sha1_abc[SHA1_LEN] = {0xa9, 0x99, 0x3e, 0x36, 0x47, 0x06, 0x81,
+					       0x6a, 0xba, 0x3e, 0x25, 0x71, 0x78, 0x50,
+					       0xc2, 0x6c, 0x9c, 0xd0, 0xd8, 0x9d};
 
-static const uint8_t kat_sha1_448[SHA1_LEN] = {
-	0x84, 0x98, 0x3e, 0x44, 0x1c, 0x3b, 0xd2, 0x6e, 0xba, 0xae,
-	0x4a, 0xa1, 0xf9, 0x51, 0x29, 0xe5, 0xe5, 0x46, 0x70, 0xf1};
+static const uint8_t kat_sha1_448[SHA1_LEN] = {0x84, 0x98, 0x3e, 0x44, 0x1c, 0x3b, 0xd2,
+					       0x6e, 0xba, 0xae, 0x4a, 0xa1, 0xf9, 0x51,
+					       0x29, 0xe5, 0xe5, 0x46, 0x70, 0xf1};
 
-static const uint8_t kat_sha1_pattern[SHA1_LEN] = {
-	0x0b, 0x2d, 0xbe, 0x11, 0xb2, 0x51, 0xd5, 0x95, 0xb3, 0x5e,
-	0xb4, 0x2f, 0xe8, 0x5b, 0x3a, 0x3e, 0x15, 0x76, 0x7a, 0xa0};
+static const uint8_t kat_sha1_pattern[SHA1_LEN] = {0x0b, 0x2d, 0xbe, 0x11, 0xb2, 0x51, 0xd5,
+						   0x95, 0xb3, 0x5e, 0xb4, 0x2f, 0xe8, 0x5b,
+						   0x3a, 0x3e, 0x15, 0x76, 0x7a, 0xa0};
+
+/* FIPS 180-4 SHA-224 KATs (28-byte digests). */
+static const uint8_t kat_sha224_empty[SHA224_LEN] = {
+	0xd1, 0x4a, 0x02, 0x8c, 0x2a, 0x3a, 0x2b, 0xc9, 0x47, 0x61, 0x02, 0xbb, 0x28, 0x82,
+	0x34, 0xc4, 0x15, 0xa2, 0xb0, 0x1f, 0x82, 0x8e, 0xa6, 0x2a, 0xc5, 0xb3, 0xe4, 0x2f};
+
+static const uint8_t kat_sha224_abc[SHA224_LEN] = {
+	0x23, 0x09, 0x7d, 0x22, 0x34, 0x05, 0xd8, 0x22, 0x86, 0x42, 0xa4, 0x77, 0xbd, 0xa2,
+	0x55, 0xb3, 0x2a, 0xad, 0xbc, 0xe4, 0xbd, 0xa0, 0xb3, 0xf7, 0xe3, 0x6c, 0x9d, 0xa7};
+
+static const uint8_t kat_sha224_448[SHA224_LEN] = {
+	0x75, 0x38, 0x8b, 0x16, 0x51, 0x27, 0x76, 0xcc, 0x5d, 0xba, 0x5d, 0xa1, 0xfd, 0x89,
+	0x01, 0x50, 0xb0, 0xc6, 0x45, 0x5c, 0xb4, 0xf5, 0x8b, 0x19, 0x52, 0x52, 0x25, 0x25};
 
 static const uint8_t kat_sha256_empty[SHA256_LEN] = {
 	0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4,
 	0xc8, 0x99, 0x6f, 0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b,
 	0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55};
 
-static const uint8_t kat_sha256_abc[SHA256_LEN] = {
-	0xba, 0x78, 0x16, 0xbf, 0x8f, 0x01, 0xcf, 0xea, 0x41, 0x41, 0x40,
-	0xde, 0x5d, 0xae, 0x22, 0x23, 0xb0, 0x03, 0x61, 0xa3, 0x96, 0x17,
-	0x7a, 0x9c, 0xb4, 0x10, 0xff, 0x61, 0xf2, 0x00, 0x15, 0xad};
+static const uint8_t kat_sha256_abc[SHA256_LEN] = {0xba, 0x78, 0x16, 0xbf, 0x8f, 0x01, 0xcf, 0xea,
+						   0x41, 0x41, 0x40, 0xde, 0x5d, 0xae, 0x22, 0x23,
+						   0xb0, 0x03, 0x61, 0xa3, 0x96, 0x17, 0x7a, 0x9c,
+						   0xb4, 0x10, 0xff, 0x61, 0xf2, 0x00, 0x15, 0xad};
 
-static const uint8_t kat_sha256_448[SHA256_LEN] = {
-	0x24, 0x8d, 0x6a, 0x61, 0xd2, 0x06, 0x38, 0xb8, 0xe5, 0xc0, 0x26,
-	0x93, 0x0c, 0x3e, 0x60, 0x39, 0xa3, 0x3c, 0xe4, 0x59, 0x64, 0xff,
-	0x21, 0x67, 0xf6, 0xec, 0xed, 0xd4, 0x19, 0xdb, 0x06, 0xc1};
+static const uint8_t kat_sha256_448[SHA256_LEN] = {0x24, 0x8d, 0x6a, 0x61, 0xd2, 0x06, 0x38, 0xb8,
+						   0xe5, 0xc0, 0x26, 0x93, 0x0c, 0x3e, 0x60, 0x39,
+						   0xa3, 0x3c, 0xe4, 0x59, 0x64, 0xff, 0x21, 0x67,
+						   0xf6, 0xec, 0xed, 0xd4, 0x19, 0xdb, 0x06, 0xc1};
 
 static const uint8_t kat_sha256_pattern[SHA256_LEN] = {
 	0xdb, 0x8f, 0x1d, 0x69, 0x25, 0x1d, 0x95, 0xe2, 0xc8, 0x82, 0x68,
@@ -78,7 +102,14 @@ static void report(const char *name, bool ok)
 
 static size_t digest_len(enum hash_algo algo)
 {
-	return (algo == CRYPTO_HASH_ALGO_SHA1) ? SHA1_LEN : SHA256_LEN;
+	switch (algo) {
+	case CRYPTO_HASH_ALGO_SHA1:
+		return SHA1_LEN;
+	case CRYPTO_HASH_ALGO_SHA224:
+		return SHA224_LEN;
+	default:
+		return SHA256_LEN;
+	}
 }
 
 static bool run_oneshot(const struct device *dev, enum hash_algo algo, const uint8_t *in,
@@ -89,8 +120,7 @@ static bool run_oneshot(const struct device *dev, enum hash_algo algo, const uin
 	bool ok;
 	int ret;
 
-	memset(g_digest, 0, sizeof(g_digest));
-
+	am_hal_cc312_context_clear(g_digest, sizeof(g_digest));
 	ret = hash_begin_session(dev, &ctx, algo);
 	if (ret != 0) {
 		printk("  begin_session failed: %d\n", ret);
@@ -116,8 +146,7 @@ static bool run_streaming(const struct device *dev, enum hash_algo algo, const u
 	bool ok;
 	int ret;
 
-	memset(g_digest, 0, sizeof(g_digest));
-
+	am_hal_cc312_context_clear(g_digest, sizeof(g_digest));
 	ret = hash_begin_session(dev, &ctx, algo);
 	if (ret != 0) {
 		printk("  begin_session failed: %d\n", ret);
@@ -176,26 +205,34 @@ int main(void)
 	report("SHA-1   one-shot, empty message",
 	       run_oneshot(dev, CRYPTO_HASH_ALGO_SHA1, NULL, 0U, kat_sha1_empty));
 	report("SHA-1   one-shot, \"abc\"",
-	       run_oneshot(dev, CRYPTO_HASH_ALGO_SHA1, (const uint8_t *)msg_abc,
-			   strlen(msg_abc), kat_sha1_abc));
+	       run_oneshot(dev, CRYPTO_HASH_ALGO_SHA1, (const uint8_t *)msg_abc, strlen(msg_abc),
+			   kat_sha1_abc));
 	report("SHA-1   one-shot, 448-bit message",
-	       run_oneshot(dev, CRYPTO_HASH_ALGO_SHA1, (const uint8_t *)msg_448,
-			   strlen(msg_448), kat_sha1_448));
+	       run_oneshot(dev, CRYPTO_HASH_ALGO_SHA1, (const uint8_t *)msg_448, strlen(msg_448),
+			   kat_sha1_448));
 	report("SHA-1   streaming, byte at a time",
-	       run_streaming(dev, CRYPTO_HASH_ALGO_SHA1, (const uint8_t *)msg_448,
-			     strlen(msg_448), kat_sha1_448));
+	       run_streaming(dev, CRYPTO_HASH_ALGO_SHA1, (const uint8_t *)msg_448, strlen(msg_448),
+			     kat_sha1_448));
 	report("SHA-1   multi-chunk DMA, 100000 bytes",
-	       run_oneshot(dev, CRYPTO_HASH_ALGO_SHA1, g_pattern, PATTERN_LEN,
-			   kat_sha1_pattern));
+	       run_oneshot(dev, CRYPTO_HASH_ALGO_SHA1, g_pattern, PATTERN_LEN, kat_sha1_pattern));
+
+	report("SHA-224 one-shot, empty message",
+	       run_oneshot(dev, CRYPTO_HASH_ALGO_SHA224, NULL, 0U, kat_sha224_empty));
+	report("SHA-224 one-shot, \"abc\"",
+	       run_oneshot(dev, CRYPTO_HASH_ALGO_SHA224, (const uint8_t *)msg_abc, strlen(msg_abc),
+			   kat_sha224_abc));
+	report("SHA-224 one-shot, 448-bit message",
+	       run_oneshot(dev, CRYPTO_HASH_ALGO_SHA224, (const uint8_t *)msg_448, strlen(msg_448),
+			   kat_sha224_448));
 
 	report("SHA-256 one-shot, empty message",
 	       run_oneshot(dev, CRYPTO_HASH_ALGO_SHA256, NULL, 0U, kat_sha256_empty));
 	report("SHA-256 one-shot, \"abc\"",
-	       run_oneshot(dev, CRYPTO_HASH_ALGO_SHA256, (const uint8_t *)msg_abc,
-			   strlen(msg_abc), kat_sha256_abc));
+	       run_oneshot(dev, CRYPTO_HASH_ALGO_SHA256, (const uint8_t *)msg_abc, strlen(msg_abc),
+			   kat_sha256_abc));
 	report("SHA-256 one-shot, 448-bit message",
-	       run_oneshot(dev, CRYPTO_HASH_ALGO_SHA256, (const uint8_t *)msg_448,
-			   strlen(msg_448), kat_sha256_448));
+	       run_oneshot(dev, CRYPTO_HASH_ALGO_SHA256, (const uint8_t *)msg_448, strlen(msg_448),
+			   kat_sha256_448));
 	report("SHA-256 streaming, byte at a time",
 	       run_streaming(dev, CRYPTO_HASH_ALGO_SHA256, (const uint8_t *)msg_448,
 			     strlen(msg_448), kat_sha256_448));

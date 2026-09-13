@@ -20,6 +20,13 @@ Three sub-tests run against it:
 - **Split/streaming** – encrypts in two successive calls (64-byte block + remainder)
   to verify block-counter continuation across calls.
 
+CC312 and Cortex-M55 cache coherency
+************************************
+
+Enable ``CONFIG_NOCACHE_MEMORY`` and use 32-byte aligned ``__nocache`` buffers on
+Apollo510 (Cortex-M55), or flush/invalidate cached buffers around each operation.
+All CC312 engines share IRQ 24; board overlays disable sibling crypto nodes.
+
 Requirements
 ************
 
@@ -43,5 +50,7 @@ Each test can be enabled in ``prj.conf``:
 - ``CONFIG_CHACHA_HAL_EXAMPLE_TEST_DECRYPT_ROUNDTRIP``
 - ``CONFIG_CHACHA_HAL_EXAMPLE_TEST_SPLIT_STREAMING``
 - ``CONFIG_CHACHA_HAL_EXAMPLE_USE_INPLACE_BUFFERS`` (use in-place buffers when ``y``)
+- ``CONFIG_CHACHA_HAL_EXAMPLE_TEST_ITERATIONS`` (default ``5`` for twister;
+  raise toward ``1000`` for soak testing)
 
 If a config is not set to ``y`` the sample prints ``SKIPPED`` for that test.

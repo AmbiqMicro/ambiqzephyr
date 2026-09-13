@@ -21,6 +21,7 @@
 #define ECB_TEST_ITERATIONS TEST_ITERATIONS
 #define CTR_TEST_ITERATIONS TEST_ITERATIONS
 #define OFB_TEST_ITERATIONS TEST_ITERATIONS
+#define CBC_TEST_ITERATIONS TEST_ITERATIONS
 #define CCM_TEST_ITERATIONS 5
 #define GCM_TEST_ITERATIONS 5
 #define XTS_TEST_ITERATIONS TEST_ITERATIONS
@@ -33,15 +34,15 @@
 #endif
 
 #if IS_ENABLED(CONFIG_AES_HAL_EXAMPLE_USE_INPLACE_BUFFERS)
-#define AES_TEST_BUF_FLAGS (CAP_RAW_KEY | CAP_SYNC_OPS | CAP_INPLACE_OPS)
-#define AES_TEST_OUT_BUF(buf) NULL
+#define AES_TEST_BUF_FLAGS        (CAP_RAW_KEY | CAP_SYNC_OPS | CAP_INPLACE_OPS)
+#define AES_TEST_OUT_BUF(buf)     NULL
 #define AES_TEST_OUT_BUF_MAX(len) 0U
-#define AES_TEST_BUFFER_MODE "in-place"
+#define AES_TEST_BUFFER_MODE      "in-place"
 #else
-#define AES_TEST_BUF_FLAGS (CAP_RAW_KEY | CAP_SYNC_OPS | CAP_SEPARATE_IO_BUFS)
-#define AES_TEST_OUT_BUF(buf) buf
+#define AES_TEST_BUF_FLAGS        (CAP_RAW_KEY | CAP_SYNC_OPS | CAP_SEPARATE_IO_BUFS)
+#define AES_TEST_OUT_BUF(buf)     buf
 #define AES_TEST_OUT_BUF_MAX(len) len
-#define AES_TEST_BUFFER_MODE "separate-io"
+#define AES_TEST_BUFFER_MODE      "separate-io"
 #endif
 
 static const struct device *crypto_dev;
@@ -49,6 +50,11 @@ static const struct device *crypto_dev;
 static AES_SAMPLE_NOCACHE uint8_t __aligned(AES_DMA_ALIGNMENT) ecb_pt_in[16];
 static AES_SAMPLE_NOCACHE uint8_t __aligned(AES_DMA_ALIGNMENT) ecb_ct[16];
 static AES_SAMPLE_NOCACHE uint8_t __aligned(AES_DMA_ALIGNMENT) ecb_pt_out[16];
+
+static AES_SAMPLE_NOCACHE uint8_t __aligned(AES_DMA_ALIGNMENT) cbc_pt_in[64];
+static AES_SAMPLE_NOCACHE uint8_t __aligned(AES_DMA_ALIGNMENT) cbc_ct[64];
+static AES_SAMPLE_NOCACHE uint8_t __aligned(AES_DMA_ALIGNMENT) cbc_pt_out[64];
+static AES_SAMPLE_NOCACHE uint8_t __aligned(AES_DMA_ALIGNMENT) cbc_iv[16];
 
 static AES_SAMPLE_NOCACHE uint8_t __aligned(AES_DMA_ALIGNMENT) ctr_pt_in[16];
 static AES_SAMPLE_NOCACHE uint8_t __aligned(AES_DMA_ALIGNMENT) ctr_ct[16];
@@ -141,6 +147,24 @@ static const uint8_t aes_ofb_ct[3][64] = {
 	 0x67, 0xf3, 0x7b, 0xe8, 0x53, 0x8f, 0x5a, 0x8b, 0xe7, 0x40, 0xe4, 0x84},
 };
 
+static const uint8_t aes_cbc_ct[3][64] = {
+	{0x76, 0x49, 0xab, 0xac, 0x81, 0x19, 0xb2, 0x46, 0xce, 0xe9, 0x8e, 0x9b, 0x12,
+	 0xe9, 0x19, 0x7d, 0x50, 0x86, 0xcb, 0x9b, 0x50, 0x72, 0x19, 0xee, 0x95, 0xdb,
+	 0x11, 0x3a, 0x91, 0x76, 0x78, 0xb2, 0x73, 0xbe, 0xd6, 0xb8, 0xe3, 0xc1, 0x74,
+	 0x3b, 0x71, 0x16, 0xe6, 0x9e, 0x22, 0x22, 0x95, 0x16, 0x3f, 0xf1, 0xca, 0xa1,
+	 0x68, 0x1f, 0xac, 0x09, 0x12, 0x0e, 0xca, 0x30, 0x75, 0x86, 0xe1, 0xa7},
+	{0x4f, 0x02, 0x1d, 0xb2, 0x43, 0xbc, 0x63, 0x3d, 0x71, 0x78, 0x18, 0x3a, 0x9f,
+	 0xa0, 0x71, 0xe8, 0xb4, 0xd9, 0xad, 0xa9, 0xad, 0x7d, 0xed, 0xf4, 0xe5, 0xe7,
+	 0x38, 0x76, 0x3f, 0x69, 0x14, 0x5a, 0x57, 0x1b, 0x24, 0x20, 0x12, 0xfb, 0x7a,
+	 0xe0, 0x7f, 0xa9, 0xba, 0xac, 0x3d, 0xf1, 0x02, 0xe0, 0x08, 0xb0, 0xe2, 0x79,
+	 0x88, 0x59, 0x88, 0x81, 0xd9, 0x20, 0xa9, 0xe6, 0x4f, 0x56, 0x15, 0xcd},
+	{0xf5, 0x8c, 0x4c, 0x04, 0xd6, 0xe5, 0xf1, 0xba, 0x77, 0x9e, 0xab, 0xfb, 0x5f,
+	 0x7b, 0xfb, 0xd6, 0x9c, 0xfc, 0x4e, 0x96, 0x7e, 0xdb, 0x80, 0x8d, 0x67, 0x9f,
+	 0x77, 0x7b, 0xc6, 0x70, 0x2c, 0x7d, 0x39, 0xf2, 0x33, 0x69, 0xa9, 0xd9, 0xba,
+	 0xcf, 0xa5, 0x30, 0xe2, 0x63, 0x04, 0x23, 0x14, 0x61, 0xb2, 0xeb, 0x05, 0xe2,
+	 0xc3, 0x9b, 0xe9, 0xfc, 0xda, 0x6c, 0x19, 0x07, 0x8c, 0x6a, 0x9d, 0x1b},
+};
+
 static const uint8_t gcm_key_128[16] = {
 	0x07, 0x1b, 0x11, 0x3b, 0x0c, 0xa7, 0x43, 0xfe,
 	0xcc, 0xcf, 0x3d, 0x05, 0x1f, 0x73, 0x73, 0x82,
@@ -209,10 +233,9 @@ static bool run_ecb_key_test(uint16_t keylen, const uint8_t *exp_enc, const uint
 		.out_buf_max = AES_TEST_OUT_BUF_MAX(sizeof(ecb_pt_out)),
 	};
 
-	memset(ecb_pt_in, 0, sizeof(ecb_pt_in));
-	memset(ecb_ct, 0, sizeof(ecb_ct));
-	memset(ecb_pt_out, 0, sizeof(ecb_pt_out));
-
+	am_hal_cc312_context_clear(ecb_pt_in, sizeof(ecb_pt_in));
+	am_hal_cc312_context_clear(ecb_ct, sizeof(ecb_ct));
+	am_hal_cc312_context_clear(ecb_pt_out, sizeof(ecb_pt_out));
 	rc = cipher_begin_session(crypto_dev, &enc, CRYPTO_CIPHER_ALGO_AES, CRYPTO_CIPHER_MODE_ECB,
 				  CRYPTO_CIPHER_OP_ENCRYPT);
 	if (rc != 0) {
@@ -225,7 +248,7 @@ static bool run_ecb_key_test(uint16_t keylen, const uint8_t *exp_enc, const uint
 			break;
 		}
 #if !IS_ENABLED(CONFIG_AES_HAL_EXAMPLE_USE_INPLACE_BUFFERS)
-		memcpy(ecb_pt_in, ecb_ct, sizeof(ecb_pt_in));
+		(void)am_hal_cc312_memcpy(ecb_pt_in, (const uint8_t *)ecb_ct, sizeof(ecb_pt_in));
 #endif
 	}
 	cipher_free_session(crypto_dev, &enc);
@@ -233,10 +256,10 @@ static bool run_ecb_key_test(uint16_t keylen, const uint8_t *exp_enc, const uint
 		return false;
 	}
 
-	memset(ecb_ct, 0, sizeof(ecb_ct));
-	memset(ecb_pt_out, 0, sizeof(ecb_pt_out));
+	am_hal_cc312_context_clear(ecb_ct, sizeof(ecb_ct));
+	am_hal_cc312_context_clear(ecb_pt_out, sizeof(ecb_pt_out));
 #if IS_ENABLED(CONFIG_AES_HAL_EXAMPLE_USE_INPLACE_BUFFERS)
-	memset(ecb_pt_in, 0, sizeof(ecb_pt_in));
+	am_hal_cc312_context_clear(ecb_pt_in, sizeof(ecb_pt_in));
 #endif
 
 	rc = cipher_begin_session(crypto_dev, &dec, CRYPTO_CIPHER_ALGO_AES, CRYPTO_CIPHER_MODE_ECB,
@@ -251,7 +274,7 @@ static bool run_ecb_key_test(uint16_t keylen, const uint8_t *exp_enc, const uint
 			break;
 		}
 #if !IS_ENABLED(CONFIG_AES_HAL_EXAMPLE_USE_INPLACE_BUFFERS)
-		memcpy(ecb_ct, ecb_pt_out, sizeof(ecb_ct));
+		(void)am_hal_cc312_memcpy(ecb_ct, (const uint8_t *)ecb_pt_out, sizeof(ecb_ct));
 #endif
 	}
 	cipher_free_session(crypto_dev, &dec);
@@ -299,6 +322,106 @@ static int run_ecb_tests(void)
 	return ((unsigned int)ARRAY_SIZE(key_lens) * ECB_TEST_ITERATIONS) - passed;
 }
 
+static bool run_cbc_key_test(uint16_t keylen, const uint8_t *key, const uint8_t *ct_exp)
+{
+	int rc;
+	struct cipher_ctx enc = {
+		.keylen = keylen,
+		.key.bit_stream = (uint8_t *)key,
+		.flags = AES_TEST_BUF_FLAGS,
+	};
+	struct cipher_ctx dec = enc;
+	struct cipher_pkt pkt_enc = {
+		.in_buf = cbc_pt_in,
+		.in_len = sizeof(cbc_pt_in),
+		.out_buf = AES_TEST_OUT_BUF(cbc_ct),
+		.out_buf_max = AES_TEST_OUT_BUF_MAX(sizeof(cbc_ct)),
+	};
+	struct cipher_pkt pkt_dec = {
+#if IS_ENABLED(CONFIG_AES_HAL_EXAMPLE_USE_INPLACE_BUFFERS)
+		.in_buf = cbc_pt_in,
+#else
+		.in_buf = cbc_ct,
+#endif
+		.in_len = sizeof(cbc_ct),
+		.out_buf = AES_TEST_OUT_BUF(cbc_pt_out),
+		.out_buf_max = AES_TEST_OUT_BUF_MAX(sizeof(cbc_pt_out)),
+	};
+
+	am_hal_cc312_context_clear(cbc_pt_in, sizeof(cbc_pt_in));
+	am_hal_cc312_context_clear(cbc_ct, sizeof(cbc_ct));
+	am_hal_cc312_context_clear(cbc_pt_out, sizeof(cbc_pt_out));
+	am_hal_cc312_context_clear(cbc_iv, sizeof(cbc_iv));
+	(void)am_hal_cc312_memcpy(cbc_pt_in, (const uint8_t *)aes_ofb_pt, sizeof(cbc_pt_in));
+	rc = cipher_begin_session(crypto_dev, &enc, CRYPTO_CIPHER_ALGO_AES, CRYPTO_CIPHER_MODE_CBC,
+				  CRYPTO_CIPHER_OP_ENCRYPT);
+	if (rc != 0) {
+		return false;
+	}
+
+	(void)am_hal_cc312_memcpy(cbc_iv, (const uint8_t *)aes_ofb_iv, sizeof(cbc_iv));
+	rc = cipher_cbc_op(&enc, &pkt_enc, cbc_iv);
+	cipher_free_session(crypto_dev, &enc);
+#if IS_ENABLED(CONFIG_AES_HAL_EXAMPLE_USE_INPLACE_BUFFERS)
+	if (rc != 0 || memcmp(cbc_pt_in, ct_exp, sizeof(cbc_pt_in)) != 0) {
+#else
+	if (rc != 0 || memcmp(cbc_ct, ct_exp, sizeof(cbc_ct)) != 0) {
+#endif
+		return false;
+	}
+
+	(void)am_hal_cc312_memcpy(cbc_iv, (const uint8_t *)aes_ofb_iv, sizeof(cbc_iv));
+	rc = cipher_begin_session(crypto_dev, &dec, CRYPTO_CIPHER_ALGO_AES, CRYPTO_CIPHER_MODE_CBC,
+				  CRYPTO_CIPHER_OP_DECRYPT);
+	if (rc != 0) {
+		return false;
+	}
+
+	rc = cipher_cbc_op(&dec, &pkt_dec, cbc_iv);
+	cipher_free_session(crypto_dev, &dec);
+	if (rc != 0) {
+		return false;
+	}
+
+#if IS_ENABLED(CONFIG_AES_HAL_EXAMPLE_USE_INPLACE_BUFFERS)
+	return memcmp(cbc_pt_in, aes_ofb_pt, sizeof(cbc_pt_in)) == 0;
+#else
+	return memcmp(cbc_pt_out, aes_ofb_pt, sizeof(cbc_pt_out)) == 0;
+#endif
+}
+
+static int run_cbc_tests(void)
+{
+	static const uint16_t key_lens[] = {16, 24, 32};
+	unsigned int passed = 0U;
+	bool iter_ok[ARRAY_SIZE(key_lens)];
+	size_t iteration;
+	size_t i;
+
+	if (!IS_ENABLED(CONFIG_AES_HAL_EXAMPLE_TEST_CBC)) {
+		printk("\n[AES-CBC] SKIPPED\n");
+		return 0;
+	}
+
+	print_mode_header("AES-CBC", CBC_TEST_ITERATIONS);
+
+	for (iteration = 0; iteration < CBC_TEST_ITERATIONS; iteration++) {
+		for (i = 0; i < ARRAY_SIZE(key_lens); i++) {
+			iter_ok[i] = run_cbc_key_test(key_lens[i], aes_ofb_keys[i], aes_cbc_ct[i]);
+			passed += iter_ok[i] ? 1U : 0U;
+		}
+
+		printk("  [%u/%u] 128:%s 192:%s 256:%s\n", (unsigned int)iteration + 1U,
+		       CBC_TEST_ITERATIONS, iter_ok[0] ? "PASS" : "FAIL",
+		       iter_ok[1] ? "PASS" : "FAIL", iter_ok[2] ? "PASS" : "FAIL");
+	}
+
+	print_mode_summary("AES-CBC", passed,
+			   (unsigned int)ARRAY_SIZE(key_lens) * CBC_TEST_ITERATIONS);
+
+	return ((unsigned int)ARRAY_SIZE(key_lens) * CBC_TEST_ITERATIONS) - passed;
+}
+
 static bool run_ctr_test(void)
 {
 	static const uint8_t key[16] = {
@@ -332,12 +455,11 @@ static bool run_ctr_test(void)
 		.mode_params.ctr_info = {.ctr_len = 32},
 		.flags = AES_TEST_BUF_FLAGS,
 	};
-	memset(ctr_pt_in, 0, sizeof(ctr_pt_in));
-	memset(ctr_ct, 0, sizeof(ctr_ct));
-	memset(ctr_pt_out, 0, sizeof(ctr_pt_out));
-	memset(ctr_iv, 0, sizeof(ctr_iv));
-	memcpy(ctr_pt_in, pt, sizeof(ctr_pt_in));
-
+	am_hal_cc312_context_clear(ctr_pt_in, sizeof(ctr_pt_in));
+	am_hal_cc312_context_clear(ctr_ct, sizeof(ctr_ct));
+	am_hal_cc312_context_clear(ctr_pt_out, sizeof(ctr_pt_out));
+	am_hal_cc312_context_clear(ctr_iv, sizeof(ctr_iv));
+	(void)am_hal_cc312_memcpy(ctr_pt_in, (const uint8_t *)pt, sizeof(ctr_pt_in));
 	struct cipher_pkt pkt_enc = {
 		.in_buf = ctr_pt_in,
 		.in_len = sizeof(pt),
@@ -361,7 +483,7 @@ static bool run_ctr_test(void)
 		return false;
 	}
 
-	memcpy(ctr_iv, ctr_iv_init, sizeof(ctr_iv));
+	(void)am_hal_cc312_memcpy(ctr_iv, (const uint8_t *)ctr_iv_init, sizeof(ctr_iv));
 	rc = cipher_ctr_op(&ctx, &pkt_enc, ctr_iv);
 	if (rc != 0) {
 		cipher_free_session(crypto_dev, &ctx);
@@ -376,7 +498,7 @@ static bool run_ctr_test(void)
 		return false;
 	}
 
-	memcpy(ctr_iv, ctr_iv_init, sizeof(ctr_iv));
+	(void)am_hal_cc312_memcpy(ctr_iv, (const uint8_t *)ctr_iv_init, sizeof(ctr_iv));
 	rc = cipher_ctr_op(&ctx, &pkt_dec, ctr_iv);
 	cipher_free_session(crypto_dev, &ctx);
 	if (rc != 0) {
@@ -430,16 +552,15 @@ static bool run_ccm_test(void)
 		.flags = AES_TEST_BUF_FLAGS,
 	};
 
-	memset(ccm_pt_in, 0, sizeof(ccm_pt_in));
-	memset(ccm_out, 0, sizeof(ccm_out));
-	memset(ccm_ct_in, 0, sizeof(ccm_ct_in));
-	memset(ccm_pt_out, 0, sizeof(ccm_pt_out));
-	memset(ccm_nonce, 0, sizeof(ccm_nonce));
-	memset(ccm_ad, 0, sizeof(ccm_ad));
-	memcpy(ccm_pt_in, pt, sizeof(ccm_pt_in));
-	memcpy(ccm_nonce, nonce_init, sizeof(nonce_init));
-	memcpy(ccm_ad, ad, sizeof(ccm_ad));
-
+	am_hal_cc312_context_clear(ccm_pt_in, sizeof(ccm_pt_in));
+	am_hal_cc312_context_clear(ccm_out, sizeof(ccm_out));
+	am_hal_cc312_context_clear(ccm_ct_in, sizeof(ccm_ct_in));
+	am_hal_cc312_context_clear(ccm_pt_out, sizeof(ccm_pt_out));
+	am_hal_cc312_context_clear(ccm_nonce, sizeof(ccm_nonce));
+	am_hal_cc312_context_clear(ccm_ad, sizeof(ccm_ad));
+	(void)am_hal_cc312_memcpy(ccm_pt_in, (const uint8_t *)pt, sizeof(ccm_pt_in));
+	(void)am_hal_cc312_memcpy(ccm_nonce, (const uint8_t *)nonce_init, sizeof(nonce_init));
+	(void)am_hal_cc312_memcpy(ccm_ad, (const uint8_t *)ad, sizeof(ccm_ad));
 	struct cipher_pkt pkt_enc = {
 		.in_buf = ccm_pt_in,
 		.in_len = sizeof(ccm_pt_in),
@@ -471,14 +592,13 @@ static bool run_ccm_test(void)
 	ccm_dec_in = ccm_pt_in;
 	ccm_dec_tag = ccm_out + sizeof(ccm_pt_in);
 #else
-	memcpy(ccm_ct_in, ccm_out, sizeof(ccm_ct_in));
+	(void)am_hal_cc312_memcpy(ccm_ct_in, (const uint8_t *)ccm_out, sizeof(ccm_ct_in));
 	ccm_dec_in = ccm_ct_in;
 	ccm_dec_tag = ccm_ct_in + sizeof(ccm_pt_in);
 #endif
-	memset(ccm_nonce, 0, sizeof(ccm_nonce));
-	memcpy(ccm_nonce, nonce_init, sizeof(nonce_init));
-	memcpy(ccm_ad, ad, sizeof(ccm_ad));
-
+	am_hal_cc312_context_clear(ccm_nonce, sizeof(ccm_nonce));
+	(void)am_hal_cc312_memcpy(ccm_nonce, (const uint8_t *)nonce_init, sizeof(nonce_init));
+	(void)am_hal_cc312_memcpy(ccm_ad, (const uint8_t *)ad, sizeof(ccm_ad));
 	struct cipher_pkt pkt_dec = {
 		.in_buf = ccm_dec_in,
 		.in_len = sizeof(ccm_pt_in),
@@ -542,19 +662,18 @@ static bool run_ofb_key_test(uint16_t keylen, const uint8_t *key, const uint8_t 
 		.out_buf_max = AES_TEST_OUT_BUF_MAX(sizeof(ofb_pt_out)),
 	};
 
-	memset(ofb_pt_in, 0, sizeof(ofb_pt_in));
-	memset(ofb_ct, 0, sizeof(ofb_ct));
-	memset(ofb_pt_out, 0, sizeof(ofb_pt_out));
-	memset(ofb_iv, 0, sizeof(ofb_iv));
-	memcpy(ofb_pt_in, aes_ofb_pt, sizeof(ofb_pt_in));
-
+	am_hal_cc312_context_clear(ofb_pt_in, sizeof(ofb_pt_in));
+	am_hal_cc312_context_clear(ofb_ct, sizeof(ofb_ct));
+	am_hal_cc312_context_clear(ofb_pt_out, sizeof(ofb_pt_out));
+	am_hal_cc312_context_clear(ofb_iv, sizeof(ofb_iv));
+	(void)am_hal_cc312_memcpy(ofb_pt_in, (const uint8_t *)aes_ofb_pt, sizeof(ofb_pt_in));
 	rc = cipher_begin_session(crypto_dev, &ctx, CRYPTO_CIPHER_ALGO_AES, CRYPTO_CIPHER_MODE_OFB,
 				  CRYPTO_CIPHER_OP_ENCRYPT);
 	if (rc != 0) {
 		return false;
 	}
 
-	memcpy(ofb_iv, aes_ofb_iv, sizeof(ofb_iv));
+	(void)am_hal_cc312_memcpy(ofb_iv, (const uint8_t *)aes_ofb_iv, sizeof(ofb_iv));
 	rc = cipher_ofb_op(&ctx, &pkt_enc, ofb_iv);
 #if IS_ENABLED(CONFIG_AES_HAL_EXAMPLE_USE_INPLACE_BUFFERS)
 	if (rc != 0 || memcmp(ofb_pt_in, ct_exp, sizeof(ofb_pt_in)) != 0) {
@@ -565,7 +684,7 @@ static bool run_ofb_key_test(uint16_t keylen, const uint8_t *key, const uint8_t 
 		return false;
 	}
 
-	memcpy(ofb_iv, aes_ofb_iv, sizeof(ofb_iv));
+	(void)am_hal_cc312_memcpy(ofb_iv, (const uint8_t *)aes_ofb_iv, sizeof(ofb_iv));
 	rc = cipher_ofb_op(&ctx, &pkt_dec, ofb_iv);
 	cipher_free_session(crypto_dev, &ctx);
 	if (rc != 0) {
@@ -647,17 +766,16 @@ static bool run_gcm_key_test(const uint8_t *key, uint16_t keylen)
 		.flags = AES_TEST_BUF_FLAGS,
 	};
 
-	memset(gcm_pt_in, 0, sizeof(gcm_pt_in));
-	memset(gcm_out, 0, sizeof(gcm_out));
-	memset(gcm_ct_in, 0, sizeof(gcm_ct_in));
-	memset(gcm_pt_out, 0, sizeof(gcm_pt_out));
-	memset(gcm_nonce, 0, sizeof(gcm_nonce));
-	memset(gcm_ad, 0, sizeof(gcm_ad));
-	memset(gcm_tag, 0, sizeof(gcm_tag));
-	memcpy(gcm_pt_in, pt, sizeof(gcm_pt_in));
-	memcpy(gcm_nonce, nonce_init, sizeof(nonce_init));
-	memcpy(gcm_ad, ad, sizeof(gcm_ad));
-
+	am_hal_cc312_context_clear(gcm_pt_in, sizeof(gcm_pt_in));
+	am_hal_cc312_context_clear(gcm_out, sizeof(gcm_out));
+	am_hal_cc312_context_clear(gcm_ct_in, sizeof(gcm_ct_in));
+	am_hal_cc312_context_clear(gcm_pt_out, sizeof(gcm_pt_out));
+	am_hal_cc312_context_clear(gcm_nonce, sizeof(gcm_nonce));
+	am_hal_cc312_context_clear(gcm_ad, sizeof(gcm_ad));
+	am_hal_cc312_context_clear(gcm_tag, sizeof(gcm_tag));
+	(void)am_hal_cc312_memcpy(gcm_pt_in, (const uint8_t *)pt, sizeof(gcm_pt_in));
+	(void)am_hal_cc312_memcpy(gcm_nonce, (const uint8_t *)nonce_init, sizeof(nonce_init));
+	(void)am_hal_cc312_memcpy(gcm_ad, (const uint8_t *)ad, sizeof(gcm_ad));
 	struct cipher_pkt pkt_enc = {
 		.in_buf = gcm_pt_in,
 		.in_len = sizeof(gcm_pt_in),
@@ -691,13 +809,12 @@ static bool run_gcm_key_test(const uint8_t *key, uint16_t keylen)
 #if IS_ENABLED(CONFIG_AES_HAL_EXAMPLE_USE_INPLACE_BUFFERS)
 	gcm_dec_in = gcm_pt_in;
 #else
-	memcpy(gcm_ct_in, gcm_out, sizeof(gcm_ct_in));
+	(void)am_hal_cc312_memcpy(gcm_ct_in, (const uint8_t *)gcm_out, sizeof(gcm_ct_in));
 	gcm_dec_in = gcm_ct_in;
 #endif
-	memset(gcm_nonce, 0, sizeof(gcm_nonce));
-	memcpy(gcm_nonce, nonce_init, sizeof(nonce_init));
-	memcpy(gcm_ad, ad, sizeof(gcm_ad));
-
+	am_hal_cc312_context_clear(gcm_nonce, sizeof(gcm_nonce));
+	(void)am_hal_cc312_memcpy(gcm_nonce, (const uint8_t *)nonce_init, sizeof(nonce_init));
+	(void)am_hal_cc312_memcpy(gcm_ad, (const uint8_t *)ad, sizeof(gcm_ad));
 	struct cipher_pkt pkt_dec = {
 		.in_buf = gcm_dec_in,
 		.in_len = sizeof(gcm_pt_in),
@@ -812,13 +929,12 @@ static bool run_xts_test(void)
 		.flags = AES_TEST_BUF_FLAGS,
 	};
 
-	memset(xts_pt_in, 0, sizeof(xts_pt_in));
-	memset(xts_ct, 0, sizeof(xts_ct));
-	memset(xts_pt_out, 0, sizeof(xts_pt_out));
-	memset(xts_data_unit, 0, sizeof(xts_data_unit));
-	memcpy(xts_pt_in, pt, sizeof(xts_pt_in));
-	memcpy(xts_data_unit, data_unit, sizeof(xts_data_unit));
-
+	am_hal_cc312_context_clear(xts_pt_in, sizeof(xts_pt_in));
+	am_hal_cc312_context_clear(xts_ct, sizeof(xts_ct));
+	am_hal_cc312_context_clear(xts_pt_out, sizeof(xts_pt_out));
+	am_hal_cc312_context_clear(xts_data_unit, sizeof(xts_data_unit));
+	(void)am_hal_cc312_memcpy(xts_pt_in, (const uint8_t *)pt, sizeof(xts_pt_in));
+	(void)am_hal_cc312_memcpy(xts_data_unit, (const uint8_t *)data_unit, sizeof(xts_data_unit));
 	struct cipher_pkt pkt_enc = {
 		.in_buf = xts_pt_in,
 		.in_len = sizeof(xts_pt_in),
@@ -860,9 +976,8 @@ static bool run_xts_test(void)
 		return false;
 	}
 
-	memset(xts_data_unit, 0, sizeof(xts_data_unit));
-	memcpy(xts_data_unit, data_unit, sizeof(xts_data_unit));
-
+	am_hal_cc312_context_clear(xts_data_unit, sizeof(xts_data_unit));
+	(void)am_hal_cc312_memcpy(xts_data_unit, (const uint8_t *)data_unit, sizeof(xts_data_unit));
 	rc = cipher_begin_session(crypto_dev, &dec, CRYPTO_CIPHER_ALGO_AES, CRYPTO_CIPHER_MODE_XTS,
 				  CRYPTO_CIPHER_OP_DECRYPT);
 	if (rc != 0) {
@@ -910,6 +1025,8 @@ int main(void)
 	printk("Test buffer mode: %s\n\n", AES_TEST_BUFFER_MODE);
 
 	fails += run_ecb_tests();
+
+	fails += run_cbc_tests();
 
 	if (IS_ENABLED(CONFIG_AES_HAL_EXAMPLE_TEST_CTR)) {
 		passed = 0U;

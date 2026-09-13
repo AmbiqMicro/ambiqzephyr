@@ -7,7 +7,6 @@ tests:
       - ambiq
       - crypto
       - aes
-    filter: dt_compat_enabled("ambiq,crypto-aes")
     harness: console
     harness_config:
       type: one_line
@@ -15,6 +14,10 @@ tests:
         - "All driver checks passed"
     platform_allow:
       - apollo330mP_evb
+      - apollo330mP_evb/apollo330P
       - apollo510_evb
+      - apollo510_evb/apollo510
       - apollo510b_evb
+      - apollo510b_evb/apollo510b
       - apollo510dL_evb
+      - apollo510dL_evb/apollo510L

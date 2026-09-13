@@ -8,19 +8,28 @@ This test mirrors the ``aes_hal_example`` style but runs through the Zephyr
 Ambiq SHA crypto driver (``CONFIG_CRYPTO_AMBIQ_SHA``).
 
 The test runs known-answer and streaming checks through the ``hash_*`` APIs
-for both digests the CC312 engine implements:
+for each digest the CC312 engine implements:
 
 - SHA-1: empty message, ``abc``, the 448-bit message, the same message fed in
   successive ``hash_update()`` calls, and a long pattern
-- SHA-256: the same five cases
+- SHA-224: empty message, ``abc``, the 448-bit message, and streaming
+- SHA-256: the same five cases as SHA-1
 
 A final check confirms that ``hash_begin_session()`` rejects SHA-512 with
-``-ENOTSUP``, since the engine implements only SHA-1 and SHA-256.
+``-ENOTSUP``, since the engine implements only SHA-1, SHA-224, and SHA-256.
 
 Requirements
 ************
 
 - Ambiq board with the ``ambiq,crypto-sha`` devicetree node enabled.
+
+CC312 and Cortex-M55 cache coherency
+************************************
+
+The CC312 DMA reads application buffers directly. On Apollo510
+(Cortex-M55) enable ``CONFIG_NOCACHE_MEMORY`` and place DMA buffers in
+``__nocache`` sections aligned to 32 bytes, or manually flush and invalidate
+cached buffers around each operation.
 
 All CC312 engines share one interrupt, and the SHA HAL polls for DMA
 completion, so the board overlays disable the AES and ChaCha nodes. A sibling

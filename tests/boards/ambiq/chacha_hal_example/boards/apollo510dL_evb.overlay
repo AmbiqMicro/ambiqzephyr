@@ -3,7 +3,46 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* Disable the AES node so its ISR doesn't conflict with ChaCha on IRQ 24 */
 &cc312_chacha {
 	status = "okay";
+};
+
+&cc312_aes {
+	status = "disabled";
+};
+
+&cc312_sha {
+	status = "disabled";
+};
+
+&cc312_hmac {
+	status = "disabled";
+};
+
+&cc312_cmac {
+	status = "disabled";
+};
+
+&cc312_kdf {
+	status = "disabled";
+};
+
+&cc312_x25519 {
+	status = "disabled";
+};
+
+&cc312_poly1305 {
+	status = "disabled";
+};
+
+&cc312_ed25519 {
+	status = "disabled";
+};
+
+&cc312_rsa {
+	status = "disabled";
+};
+
+&cc312_srp {
+	status = "disabled";
 };
