@@ -28,6 +28,14 @@ BUILD_ASSERT(IS_ENABLED(CONFIG_DT_HAS_VND_MBOX_CONSUMER_ENABLED),
 #define IPC_TX_POOL_BUF_SIZE (256)
 #define IPC_TX_POOL_BUF_NUM  (1)
 
+/* Latest RF trim: OTP 0xE0, else MRAM TRIM1+TRIM2 when Info1 TrimVer >= 2.4 */
+#define AM_REG_INFO1_TRIM_SUBREV_OFFSET  0x00001330
+#define AM_REG_INFO1_RFTRIM_TRIM1_OFFSET 0x00001370
+#define AM_REG_INFO1_RFTRIM_TRIM2_OFFSET 0x000014B0
+#define AM_RSS_RF_TRIM_SIZE0             (0x90)
+#define AM_RSS_RF_TRIM_SIZE1             (0x50)
+#define AM_RSS_RF_TRIM_SIZE              (0xE0)
+
 NET_BUF_POOL_FIXED_DEFINE(ipc_tx_pool, IPC_TX_POOL_BUF_NUM, IPC_TX_POOL_BUF_SIZE, 0, NULL);
 
 static const struct mbox_dt_spec vnd_mbox_tx = MBOX_DT_SPEC_GET(DT_PATH(mbox_consumer), tx);
@@ -134,13 +142,14 @@ struct net_buf *am_rss_mgr_opmode_config(am_rss_opmode_e opmode)
 
 struct am_ipc_sys_set_rftrim_req {
 	struct am_ipc_packet_sys_common_hdr hdr;
-	uint32_t trim[4];
+	uint8_t data[AM_RSS_RF_TRIM_SIZE];
 } __packed;
 
-static int rss_rftrim_words_read(uint32_t trim[4])
+static int rss_rftrim_info_read(uint8_t rf_trim[AM_RSS_RF_TRIM_SIZE])
 {
 	am_hal_status_e st;
 	bool otp_powered = false;
+	int ret = 0;
 
 	if (PWRCTRL->DEVPWRSTATUS_b.PWRSTOTP == 0) {
 		am_hal_pwrctrl_periph_enable(AM_HAL_PWRCTRL_PERIPH_OTP);
@@ -148,10 +157,36 @@ static int rss_rftrim_words_read(uint32_t trim[4])
 	}
 
 	st = am_hal_info1_read(AM_HAL_INFO_INFOSPACE_OTP_INFO1,
-			       AM_REG_OTP_INFO1_RFTRIM_TRIM_VER_O / 4, 4, trim);
-	if ((st != AM_HAL_STATUS_SUCCESS) || (trim[0] == 0)) {
-		st = am_hal_info1_read(AM_HAL_INFO_INFOSPACE_MRAM_INFO1,
-				       AM_REG_INFO1_RFTRIM_TRIM_VER_O / 4, 4, trim);
+			       AM_REG_OTP_INFO1_RFTRIM_TRIM_VER_O / 4,
+			       AM_RSS_RF_TRIM_SIZE / 4, (uint32_t *)rf_trim);
+	if ((st != AM_HAL_STATUS_SUCCESS) || (rf_trim[0] == 0)) {
+		uint32_t trim_main_ver = 0;
+		uint32_t trim_sub_ver = 0;
+
+		am_hal_info1_read(AM_HAL_INFO_INFOSPACE_MRAM_INFO1,
+				  AM_REG_INFO1_TRIM_REV_O / 4, 1, &trim_main_ver);
+		am_hal_info1_read(AM_HAL_INFO_INFOSPACE_MRAM_INFO1,
+				  AM_REG_INFO1_TRIM_SUBREV_OFFSET / 4, 1, &trim_sub_ver);
+
+		/* MRAM RF trim regions are valid only for Info1 TrimVer >= 2.4 */
+		if ((trim_main_ver > 2) ||
+		    ((trim_main_ver == 2) && ((trim_sub_ver & 0x0f) >= 4))) {
+			st = am_hal_info1_read(AM_HAL_INFO_INFOSPACE_MRAM_INFO1,
+					       AM_REG_INFO1_RFTRIM_TRIM1_OFFSET / 4,
+					       AM_RSS_RF_TRIM_SIZE0 / 4,
+					       (uint32_t *)rf_trim);
+			if ((st == AM_HAL_STATUS_SUCCESS) && rf_trim[0]) {
+				st = am_hal_info1_read(
+					AM_HAL_INFO_INFOSPACE_MRAM_INFO1,
+					AM_REG_INFO1_RFTRIM_TRIM2_OFFSET / 4,
+					AM_RSS_RF_TRIM_SIZE1 / 4,
+					(uint32_t *)rf_trim + AM_RSS_RF_TRIM_SIZE0 / 4);
+			}
+		} else {
+			/* No OTP RF trim and Info1 too old for MRAM RF trim */
+			rf_trim[0] = 0;
+			st = AM_HAL_STATUS_SUCCESS;
+		}
 	}
 
 	if (otp_powered) {
@@ -159,32 +194,32 @@ static int rss_rftrim_words_read(uint32_t trim[4])
 	}
 
 	if (st != AM_HAL_STATUS_SUCCESS) {
-		return -EIO;
-	}
-	if (trim[0] == 0) {
-		return -ENOENT;
+		ret = -EIO;
+	} else if (rf_trim[0] == 0) {
+		ret = -ENOENT;
 	}
 
-	return 0;
+	return ret;
 }
 
 struct net_buf *am_rss_mgr_rftrim_config(void)
 {
 	struct net_buf *buf;
 	struct am_ipc_sys_set_rftrim_req req;
-	uint32_t trim[4];
 	int ret;
 
-	ret = rss_rftrim_words_read(trim);
+	memset(&req, 0, sizeof(req));
+
+	ret = rss_rftrim_info_read(req.data);
 	if (ret != 0) {
 		LOG_WRN("RF trim Info1 read failed (%d)", ret);
 		return NULL;
 	}
 
+	req.data[1] = (uint8_t)MCUCTRL->CHIPREV;
 	req.hdr.type = AM_IPC_PACKET_TYPE_SYS_REQ;
 	req.hdr.opcode = AM_IPC_SYS_OP_SET_RFTRIM;
-	req.hdr.size = sizeof(trim);
-	memcpy(req.trim, trim, sizeof(trim));
+	req.hdr.size = AM_RSS_RF_TRIM_SIZE;
 
 	buf = net_buf_alloc(&ipc_tx_pool, K_FOREVER);
 	if (!buf) {
