@@ -8,5 +8,10 @@ config HWINFO_AMBIQ
 	select HWINFO_HAS_DRIVER
 	select AMBIQ_HAL
 	select AMBIQ_HAL_USE_HWINFO
+	# Apollo5x INFO1 TRIM_REV may live in OTP; use the otp_pd runtime PM
+	# domain so enable/disable is refcounted with crypto/TRNG children.
+	select POWER_DOMAIN if SOC_SERIES_APOLLO5X && DT_HAS_AMBIQ_OTP_POWER_DOMAIN_ENABLED
+	select PM_DEVICE if SOC_SERIES_APOLLO5X && DT_HAS_AMBIQ_OTP_POWER_DOMAIN_ENABLED
+	select PM_DEVICE_RUNTIME if SOC_SERIES_APOLLO5X && DT_HAS_AMBIQ_OTP_POWER_DOMAIN_ENABLED
 	help
 	  Enable AMBIQ hwinfo driver

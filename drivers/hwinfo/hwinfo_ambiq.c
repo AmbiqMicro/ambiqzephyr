@@ -8,6 +8,14 @@
 #include <zephyr/drivers/hwinfo.h>
 #include <string.h>
 #include <zephyr/sys/byteorder.h>
+#if defined(CONFIG_SOC_SERIES_APOLLO5X)
+#include <zephyr/device.h>
+#include <zephyr/devicetree.h>
+#include <zephyr/pm/device_runtime.h>
+
+BUILD_ASSERT(DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(otp_pd)),
+	     "Apollo5x hwinfo requires okay otp_pd power domain");
+#endif
 
 ssize_t z_impl_hwinfo_get_device_id(uint8_t *buffer, size_t length)
 {
@@ -27,8 +35,32 @@ ssize_t z_impl_hwinfo_get_device_id(uint8_t *buffer, size_t length)
 	am_hal_mcuctrl_device_t mcu_ctrl_device;
 
 #if (CONFIG_SOC_SERIES_APOLLO5X)
-	am_hal_info1_read(AM_HAL_INFO_INFOSPACE_CURRENT_INFO1, AM_REG_OTP_INFO1_TRIM_REV_O / 4, 1,
-			  &dev_hw_info.factory_trim_version);
+	/*
+	 * INFO1 TRIM_REV lives in OTP when INFO1SELOTP is set. After
+	 * am_hal_pwrctrl_low_power_init(), OTP is powered down and
+	 * am_hal_info1_read() returns AM_HAL_STATUS_HW_ERR without writing
+	 * the destination, leaving factory_trim_version at zero.
+	 *
+	 * Acquire otp_pd through runtime PM so enable/disable is refcounted
+	 * with crypto/TRNG (which parent to the same domain).
+	 */
+	const struct device *otp_pd = DEVICE_DT_GET(DT_NODELABEL(otp_pd));
+	bool otp_held = false;
+
+	if (MCUCTRL->SHADOWVALID_b.INFO1SELOTP) {
+		if (device_is_ready(otp_pd) && (pm_device_runtime_get(otp_pd) == 0)) {
+			otp_held = true;
+		}
+	}
+
+	if (am_hal_info1_read(AM_HAL_INFO_INFOSPACE_CURRENT_INFO1, AM_REG_OTP_INFO1_TRIM_REV_O / 4,
+			      1, &dev_hw_info.factory_trim_version) != AM_HAL_STATUS_SUCCESS) {
+		dev_hw_info.factory_trim_version = 0;
+	}
+
+	if (otp_held) {
+		(void)pm_device_runtime_put(otp_pd);
+	}
 #elif (CONFIG_SOC_SERIES_APOLLO4X)
 	am_hal_mram_info_read(1, AM_REG_INFO1_TRIM_REV_O / 4, 1, &dev_hw_info.factory_trim_version);
 #else
