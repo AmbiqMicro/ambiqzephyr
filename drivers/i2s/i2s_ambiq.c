@@ -75,7 +75,7 @@ static void i2s_ambiq_dma_reload(const struct device *dev, dma_msg *msg, enum i2
 
 	if (dir == I2S_DIR_TX) {
 		dma_transfer.ui32TxTargetAddr = (uint32_t)msg->dma_buf;
-		dma_transfer.ui32TxTotalCount = data->tx_cfg.block_size / 4U;
+		dma_transfer.ui32TxTotalCount = msg->size / 4U;
 		dma_transfer.ui32TxTargetAddrReverse = 0xFFFFFFFF;
 		data->tx_tip_buffer = msg->dma_buf;
 		i2s_hal_cfg.eXfer = AM_HAL_I2S_XFER_TX;
@@ -258,47 +258,10 @@ static int i2s_ambiq_init(const struct device *dev)
 		return -EIO;
 	}
 
-#if CONFIG_PM_DEVICE
-	MCUCTRL->APBDMACTRL_b.HYSTERESIS = 0x0;
-
-	/* Configure XTAL for deepsleep */
-	am_hal_pwrctrl_control(AM_HAL_PWRCTRL_CONTROL_XTAL_PWDN_DEEPSLEEP, 0);
-	MCUCTRL->XTALCTRL = 0;
-	am_hal_rtc_osc_disable();
-
-	VCOMP->PWDKEY = VCOMP_PWDKEY_PWDKEY_Key;
-
-	am_hal_pwrctrl_sram_memcfg_t SRAMMemCfg = {.eSRAMCfg = AM_HAL_PWRCTRL_SRAM_1M,
-						   .eActiveWithMCU = AM_HAL_PWRCTRL_SRAM_NONE,
-						   .eActiveWithGFX = AM_HAL_PWRCTRL_SRAM_NONE,
-						   .eActiveWithDISP = AM_HAL_PWRCTRL_SRAM_NONE,
-						   .eSRAMRetain = AM_HAL_PWRCTRL_SRAM_1M};
-
-	am_hal_pwrctrl_mcu_memory_config_t McuMemCfg = {
-		.eROMMode = AM_HAL_PWRCTRL_ROM_AUTO,
-#if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
-		.eDTCMCfg = AM_HAL_PWRCTRL_DTCM128K,
-#else
-		.eDTCMCfg = AM_HAL_PWRCTRL_ITCM32K_DTCM128K,
-#endif
-		.eRetainDTCM = AM_HAL_PWRCTRL_MEMRETCFG_TCMPWDSLP_RETAIN,
-#if defined(CONFIG_SOC_APOLLO510L) || defined(CONFIG_SOC_APOLLO330P)
-		.eNVMCfg = AM_HAL_PWRCTRL_NVM,
-#else
-		.eNVMCfg = AM_HAL_PWRCTRL_NVM0_ONLY,
-#endif
-		.bKeepNVMOnInDeepSleep = false};
-
-	am_hal_pwrctrl_mcu_memory_config(&McuMemCfg);
-
-	/* Disable SRAM */
-	am_hal_pwrctrl_sram_config(&SRAMMemCfg);
-#endif
-
 	return ret;
 }
 
-#if defined(CONFIG_SOC_APOLLO510)
+#if defined(CONFIG_SOC_APOLLO510) || defined(CONFIG_SOC_APOLLO510B)
 static int i2s_ambiq_clock_settings_derive(uint32_t i2s_bclk_freq, am_hal_i2s_config_t *hal_cfg)
 {
 	int ret;
@@ -438,7 +401,7 @@ static int i2s_ambiq_dma_start(const struct device *dev, enum i2s_dir dir)
 			return -ENOMSG;
 		}
 		data->i2s_transfer.ui32TxTargetAddr = (uint32_t)item.dma_buf;
-		data->i2s_transfer.ui32TxTotalCount = data->tx_cfg.block_size / 4U;
+		data->i2s_transfer.ui32TxTotalCount = item.size / 4U;
 		data->i2s_transfer.ui32TxTargetAddrReverse = 0xFFFFFFFF;
 		data->tx_tip_buffer = item.dma_buf;
 	}
