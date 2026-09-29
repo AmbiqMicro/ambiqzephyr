@@ -1,0 +1,19 @@
+sample:
+  name: Ambiq I2S Loopback
+  description: |
+    Digital I2S0 TX master to I2S1 RX slave loopback for Ambiq boards.
+tests:
+  sample.boards.ambiq.i2s_loopback:
+    tags:
+      - drivers
+      - i2s
+    depends_on: i2s
+    platform_allow:
+      - apollo510b_evb
+    harness: console
+    harness_config:
+      type: multi_line
+      ordered: false
+      regex:
+        - "Ambiq I2S loopback sample"
+        - "bytes passed"
