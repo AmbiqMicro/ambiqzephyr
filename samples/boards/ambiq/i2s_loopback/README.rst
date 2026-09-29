@@ -18,9 +18,32 @@ RX so the Ambiq DMA path does not underrun.
 Requirements
 ************
 
-- Apollo510B EVB Rev 2.0 (or equivalent with the overlay pins available)
+- Apollo510 EVB or Apollo510B EVB Rev 2.0 (or equivalent with the overlay
+  pins available)
 - Three jumper wires for digital loopback
 - EM9305 EXTREF ready so SYSPLL can lock (board default)
+
+Wiring (Apollo510 EVB)
+**********************
+
+.. list-table::
+   :header-rows: 1
+
+   * - I2S0 (TX / master)
+     - Signal
+     - I2S1 (RX / slave)
+   * - GPIO5
+     - CLK
+     - GPIO16
+   * - GPIO7
+     - WS
+     - GPIO10
+   * - GPIO6
+     - DATA
+     - GPIO17
+
+All six pins are on the mikroBUS (click) header: SCK to RST, MISO to CS
+and MOSI to AN. I2S1 receives on its DATA pad, GPIO17.
 
 Wiring (Apollo510B EVB)
 ***********************
@@ -46,6 +69,12 @@ flow-control path.
 
 Building and Running
 ********************
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/boards/ambiq/i2s_loopback
+   :board: apollo510_evb
+   :goals: build flash
+   :compact:
 
 .. zephyr-app-commands::
    :zephyr-app: samples/boards/ambiq/i2s_loopback
