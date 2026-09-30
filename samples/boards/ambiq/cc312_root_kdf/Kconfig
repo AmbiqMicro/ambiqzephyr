@@ -1,0 +1,25 @@
+# Copyright (c) 2026 Ambiq Micro, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "Ambiq CC312 root-KDF example"
+
+source "Kconfig.zephyr"
+
+choice CC312_ROOT_KDF_EXAMPLE_KEY_SOURCE
+	prompt "CMAC-KDF key source"
+	default CC312_ROOT_KDF_EXAMPLE_USE_TEST_KEY
+
+config CC312_ROOT_KDF_EXAMPLE_USE_TEST_KEY
+	bool "Software test key (USER_KEY)"
+	help
+	  Run NIST SP 800-108 CMAC-KDF with a fixed AES test key.
+	  Works without a programmed HUK/KDR — use this for everyday
+	  bring-up on DM boards.
+
+config CC312_ROOT_KDF_EXAMPLE_USE_HUK
+	bool "Device root key (RKEK / HUK)"
+	help
+	  Call am_hal_cc312_root_kdf_cmac() with the hardware root key.
+	  Requires HUK/KDR programmed and usable in the current LCS.
+
+endchoice

@@ -1,0 +1,26 @@
+# Copyright (c) 2026 Ambiq Micro, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+sample:
+  name: Ambiq CC312 root-key (HUK) CMAC-KDF
+  description: Derive device-bound KEKs from RKEK/HUK with label and context
+common:
+  tags:
+    - ambiq
+    - crypto
+    - kdf
+  platform_allow:
+    - apollo510_evb
+    - apollo510b_evb
+    - apollo510dL_evb
+    - apollo330mP_evb
+  harness: console
+  harness_config:
+    type: one_line
+    regex:
+      - "All driver checks passed"
+tests:
+  sample.board.ambiq.cc312_root_kdf:
+    tags:
+      - ambiq
+      - crypto
