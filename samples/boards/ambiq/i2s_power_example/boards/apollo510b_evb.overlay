@@ -1,0 +1,117 @@
+/*
+ * Copyright (c) 2026 Ambiq Micro Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * I2S0 TX power measurement on Apollo510B EVB Rev 2.0.
+ * Keep uart0 for the boot banner; sample suspends it before measuring.
+ * Disable unused board peripherals (not BLE FIT-LP).
+ */
+
+/ {
+	aliases {
+		i2s-tx = &i2s0;
+	};
+
+	leds {
+		status = "disabled";
+	};
+
+	buttons {
+		status = "disabled";
+	};
+
+	chosen {
+		/delete-property/ zephyr,uart-mcumgr;
+		/delete-property/ zephyr,shell-uart;
+		/delete-property/ zephyr,uart-pipe;
+		/delete-property/ zephyr,crc;
+		/delete-property/ zephyr,entropy;
+		/delete-property/ ambiq,psram;
+	};
+};
+
+&pinctrl {
+	i2s0_power: i2s0_power {
+		group0 {
+			pinmux = <I2S0_CLK_P5>,
+				 <I2S0_WS_P7>,
+				 <I2S0_SDOUT_P6>;
+		};
+	};
+};
+
+&i2s0 {
+	pinctrl-0 = <&i2s0_power>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&i2s1 {
+	status = "disabled";
+};
+
+/* apollo510b_evb console is uart1 (not uart0). Keep it for the banner. */
+&uart1 {
+	status = "okay";
+};
+
+&uart0 {
+	status = "disabled";
+};
+
+&itm {
+	status = "disabled";
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-names;
+};
+
+&wdt0 {
+	status = "disabled";
+};
+
+&mspi0 {
+	status = "disabled";
+};
+
+&aps51216ba {
+	status = "disabled";
+};
+
+&sdio0 {
+	status = "disabled";
+
+	mmc {
+		status = "disabled";
+	};
+};
+
+&sdio1 {
+	status = "disabled";
+};
+
+&usb {
+	status = "disabled";
+};
+
+&audadc0 {
+	status = "disabled";
+};
+
+&crc32 {
+	status = "disabled";
+};
+
+&cc312_aes {
+	status = "disabled";
+};
+
+&trng {
+	status = "disabled";
+};
+
+/*
+ * Leave GPIO banks at board defaults. Disabling every ambiq,gpio-bank node
+ * with the GPIO driver still built leaves ambiq_gpio_init() unused and fails
+ * -Werror=unused-function. CONFIG_GPIO=n in prj.conf is the power knob.
+ */

@@ -1,0 +1,25 @@
+sample:
+  name: Ambiq I2S Power Example
+  description: |
+    I2S TX power-measurement sample for Ambiq boards, mirroring AmbiqSuite
+    boards/common5/examples/audio/i2s_power (minimum memory profile in the
+    sample, not in the I2S driver).
+tests:
+  sample.boards.ambiq.i2s_power_example:
+    tags:
+      - drivers
+      - i2s
+      - pm
+    depends_on: i2s
+    platform_allow:
+      - apollo510_evb
+      - apollo510b_evb
+      - apollo510L_eb
+      - apollo330mP_evb
+    harness: console
+    harness_config:
+      type: multi_line
+      ordered: false
+      regex:
+        - "Ambiq I2S power example"
+        - "Shutting down console for power measurement"
