@@ -157,7 +157,8 @@ manifest:
       groups:
         - hal
     - name: hal_ambiq
-      revision: 3d7044ea240fc8dcb7b4c843b76f70cae5db736b
+      revision: 1b2d0ef3216aee2274884059bb983d8926b17c89
+      url: https://github.com/AmbiqMicro/ambiqhal_ambiq.git
       path: modules/hal/ambiq
       groups:
         - hal
