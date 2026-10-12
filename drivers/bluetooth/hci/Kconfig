@@ -311,6 +311,47 @@ config BT_AMBIQ_HCI_IPC
 	help
 	  Supports Ambiq Bluetooth SoC using IPC as the communication protocol.
 
+config BT_AMBIQ_RFXTAL_CUSTOM_CONFIG
+	bool "Program a custom RFXTAL configuration"
+	depends on BT_AMBIQ_HCI_IPC && (SOC_APOLLO510L || SOC_APOLLO330P)
+	help
+	  Program board-specific RFXTAL trim values in am_rss_mgr: via the clock
+	  manager before RSS boot, and by overlaying the same values onto the
+	  Info1 RF-trim blob used for SET_RFTRIM.  Enable when the board RF
+	  crystal needs non-default XO frequency trim / XOCONFIG / radio tune.
+	  When disabled, OTP/MRAM Info1 RFXTAL trims are used if available;
+	  otherwise RSS keeps its defaults.
+
+config BT_AMBIQ_RFXTAL_XO_FREQ_TRIM
+	hex "RFXTAL XO frequency trim"
+	depends on BT_AMBIQ_RFXTAL_CUSTOM_CONFIG
+	range 0x0 0xff
+	default 0xa0
+	help
+	  8-bit RF oscillator frequency trim (ui32XOFreqTrim).  Default is a
+	  typical starting value for Apollo510L / Apollo330P boards; tune per
+	  board characterization as needed.
+
+config BT_AMBIQ_RFXTAL_XO_CONFIG
+	hex "RFXTAL XOCONFIG value"
+	depends on BT_AMBIQ_RFXTAL_CUSTOM_CONFIG
+	range 0x0 0x3ffffff
+	default 0x47c00
+	help
+	  26-bit XOCONFIG field (ui32XOConfig).  Default is a typical starting
+	  value for Apollo510L / Apollo330P boards; tune per board
+	  characterization as needed.
+
+config BT_AMBIQ_RFXTAL_RADIO_TUNE
+	hex "RFXTAL radio tune value"
+	depends on BT_AMBIQ_RFXTAL_CUSTOM_CONFIG
+	range 0x0 0xfffff
+	default 0x54150
+	help
+	  20-bit radio tune field (ui32RadioTune).  Default is a typical
+	  starting value for Apollo510L / Apollo330P boards; tune per board
+	  characterization as needed.
+
 config BT_AMBIQ_RSS_LP
 	bool
 	default y

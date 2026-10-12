@@ -83,6 +83,9 @@ config BT_L2CAP_TX_MTU
 config BT_RX_STACK_SIZE
 	default 2048
 
+config BT_AMBIQ_RFXTAL_CUSTOM_CONFIG
+	default y
+
 endif # BT
 
 endif # BOARD_APOLLO330MP_EVB

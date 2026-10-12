@@ -35,10 +35,9 @@ BUILD_ASSERT(IS_ENABLED(CONFIG_DT_HAS_VND_MBOX_CONSUMER_ENABLED),
 #define AM_RSS_RF_TRIM_SECTION0_SIZE     0x90
 #define AM_RSS_RF_TRIM_RESERVED_GAP_SIZE 0xb0
 #define AM_RSS_RF_TRIM_SECTION1_SIZE     0x50
-#define AM_RSS_RF_TRIM_SECTION1_OFFSET   \
+#define AM_RSS_RF_TRIM_SECTION1_OFFSET                                                             \
 	(AM_RSS_RF_TRIM_SECTION0_SIZE + AM_RSS_RF_TRIM_RESERVED_GAP_SIZE)
-#define AM_RSS_RF_TRIM_SIZE \
-	(AM_RSS_RF_TRIM_SECTION0_SIZE + AM_RSS_RF_TRIM_SECTION1_SIZE)
+#define AM_RSS_RF_TRIM_SIZE (AM_RSS_RF_TRIM_SECTION0_SIZE + AM_RSS_RF_TRIM_SECTION1_SIZE)
 
 NET_BUF_POOL_FIXED_DEFINE(ipc_tx_pool, IPC_TX_POOL_BUF_NUM, IPC_TX_POOL_BUF_SIZE, 0, NULL);
 
@@ -98,9 +97,9 @@ int am_rss_mgr_ipc_shm_config(void)
 	int ret = 0;
 	struct mbox_msg rsp_msg = {0};
 	uint32_t config[] = {AM_HAL_IPC_MBOX_SIGNAL_MSG_IPC_SHM_CONFIG_REQ, 3,
-				 DT_REG_ADDR(DT_NODELABEL(sram_ipc)),
-				 DT_REG_SIZE(DT_NODELABEL(sram_ipc)),
-				 DT_PROP(DT_NODELABEL(ipc0), zephyr_buffer_size)};
+			     DT_REG_ADDR(DT_NODELABEL(sram_ipc)),
+			     DT_REG_SIZE(DT_NODELABEL(sram_ipc)),
+			     DT_PROP(DT_NODELABEL(ipc0), zephyr_buffer_size)};
 	/* Skip if the IPC share memory has been already configured */
 	if (ipc_shm_configured) {
 		return 0;
@@ -149,6 +148,28 @@ struct am_ipc_sys_set_rftrim_req {
 	uint8_t data[AM_RSS_RF_TRIM_SIZE];
 } __packed;
 
+#if defined(CONFIG_BT_AMBIQ_RFXTAL_CUSTOM_CONFIG)
+/* Offsets within the RF trim blob for XOCONFIG / OSCTRIM / RADIOTUNE */
+#define AM_RSS_RF_TRIM_XTAL_CONFIG_OFFSET 0x04
+#define AM_RSS_RF_TRIM_XTAL_TRIM_OFFSET   0x08
+#define AM_RSS_RF_TRIM_RF_TUNE_OFFSET     0x0c
+
+static void rss_rftrim_apply_custom_rfxtal(uint8_t *rf_trim)
+{
+	uint32_t xo_config = CONFIG_BT_AMBIQ_RFXTAL_XO_CONFIG;
+	uint32_t radio_tune = CONFIG_BT_AMBIQ_RFXTAL_RADIO_TUNE;
+
+	/*
+	 * Overlay board RFXTAL values onto the Info1 RF-trim blob before
+	 * SET_RFTRIM so later IPC trim programming does not undo
+	 * AM_HAL_CLKMGR_CONFIGURE_RFXTAL.
+	 */
+	rf_trim[AM_RSS_RF_TRIM_XTAL_TRIM_OFFSET] = (uint8_t)CONFIG_BT_AMBIQ_RFXTAL_XO_FREQ_TRIM;
+	memcpy(&rf_trim[AM_RSS_RF_TRIM_XTAL_CONFIG_OFFSET], &xo_config, sizeof(xo_config));
+	memcpy(&rf_trim[AM_RSS_RF_TRIM_RF_TUNE_OFFSET], &radio_tune, sizeof(radio_tune));
+}
+#endif
+
 static int rss_rftrim_info_read(uint8_t *rf_trim)
 {
 	am_hal_status_e st;
@@ -162,31 +183,32 @@ static int rss_rftrim_info_read(uint8_t *rf_trim)
 		otp_powered = true;
 	}
 
-	st = am_hal_info1_read(AM_HAL_INFO_INFOSPACE_CURRENT_INFO1,
-			       AM_REG_OTP_INFO1_TRIM_REV_O / 4, 1, &trim_main_ver);
+	st = am_hal_info1_read(AM_HAL_INFO_INFOSPACE_CURRENT_INFO1, AM_REG_OTP_INFO1_TRIM_REV_O / 4,
+			       1, &trim_main_ver);
 	st |= am_hal_info1_read(AM_HAL_INFO_INFOSPACE_CURRENT_INFO1,
 				AM_REG_OTP_INFO1_PGM_INFO_O / 4, 1, &trim_sub_ver);
 	if (st != AM_HAL_STATUS_SUCCESS) {
 		ret = -EIO;
-	} else if ((trim_main_ver > 2) ||
-		   ((trim_main_ver == 2) && ((trim_sub_ver & 0x0f) >= 4))) {
+	} else if ((trim_main_ver > 2) || ((trim_main_ver == 2) && ((trim_sub_ver & 0x0f) >= 4))) {
 		/* RF trim is available for Info1 TrimVer >= 2.4 */
 		st = am_hal_info1_read(AM_HAL_INFO_INFOSPACE_CURRENT_INFO1,
 				       AM_REG_OTP_INFO1_RFTRIM_TRIM_VER_O / 4,
-				       AM_RSS_RF_TRIM_SECTION0_SIZE / 4,
-				       (uint32_t *)rf_trim);
+				       AM_RSS_RF_TRIM_SECTION0_SIZE / 4, (uint32_t *)rf_trim);
 		if (st != AM_HAL_STATUS_SUCCESS) {
 			ret = -EIO;
 		} else if (rf_trim[0] != 0) {
-			st = am_hal_info1_read(
-				AM_HAL_INFO_INFOSPACE_CURRENT_INFO1,
-				(AM_REG_OTP_INFO1_RFTRIM_TRIM_VER_O +
-				 AM_RSS_RF_TRIM_SECTION1_OFFSET) / 4,
-				AM_RSS_RF_TRIM_SECTION1_SIZE / 4,
-				(uint32_t *)&rf_trim[AM_RSS_RF_TRIM_SECTION0_SIZE]);
+			st = am_hal_info1_read(AM_HAL_INFO_INFOSPACE_CURRENT_INFO1,
+					       (AM_REG_OTP_INFO1_RFTRIM_TRIM_VER_O +
+						AM_RSS_RF_TRIM_SECTION1_OFFSET) /
+						       4,
+					       AM_RSS_RF_TRIM_SECTION1_SIZE / 4,
+					       (uint32_t *)&rf_trim[AM_RSS_RF_TRIM_SECTION0_SIZE]);
 			if (st != AM_HAL_STATUS_SUCCESS) {
 				ret = -EIO;
 			} else {
+#if defined(CONFIG_BT_AMBIQ_RFXTAL_CUSTOM_CONFIG)
+				rss_rftrim_apply_custom_rfxtal(rf_trim);
+#endif
 				ret = 0;
 			}
 		}
@@ -197,6 +219,42 @@ static int rss_rftrim_info_read(uint8_t *rf_trim)
 	}
 
 	return ret;
+}
+
+static void rss_rfxtal_configure(void)
+{
+	uint32_t status;
+
+	/*
+	 * Program RFXTAL before RSS boot so the HAL can push the config via
+	 * mailbox after power-up.
+	 */
+#if defined(CONFIG_BT_AMBIQ_RFXTAL_CUSTOM_CONFIG)
+	static const am_hal_clkmgr_rfxtal_config_t rfxtal_cfg = {
+		.ui32XOFreqTrim = CONFIG_BT_AMBIQ_RFXTAL_XO_FREQ_TRIM,
+		.ui32XOConfig = CONFIG_BT_AMBIQ_RFXTAL_XO_CONFIG,
+		.ui32RadioTune = CONFIG_BT_AMBIQ_RFXTAL_RADIO_TUNE,
+	};
+
+	status = am_hal_clkmgr_control(AM_HAL_CLKMGR_CONFIGURE_RFXTAL, (void *)&rfxtal_cfg);
+	if (status != AM_HAL_STATUS_SUCCESS) {
+		/*
+		 * HAL may still report a prior Info1 read status even after the
+		 * custom config was cached; do not fail RSS bring-up.
+		 */
+		LOG_WRN("RFXTAL custom config status 0x%08x", status);
+	} else {
+		LOG_INF("RFXTAL custom config applied");
+	}
+
+#else
+	status = am_hal_clkmgr_control(AM_HAL_CLKMGR_CONFIGURE_RFXTAL, NULL);
+	if (status != AM_HAL_STATUS_SUCCESS) {
+		LOG_WRN("RFXTAL Info1 trim unavailable (0x%08x); using RSS defaults", status);
+	} else {
+		LOG_INF("RFXTAL Info1 trim applied");
+	}
+#endif
 }
 
 struct net_buf *am_rss_mgr_rftrim_config(void)
@@ -235,6 +293,8 @@ int am_rss_mgr_rss_enable(bool on)
 	int ret = 0;
 
 	if (on) {
+		rss_rfxtal_configure();
+
 		/* Power up the radio subsystem */
 		ret = am_hal_pwrctrl_rss_bootup();
 		if ((ret != AM_HAL_STATUS_SUCCESS) && (ret != AM_HAL_STATUS_IN_USE)) {
