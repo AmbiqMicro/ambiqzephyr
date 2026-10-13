@@ -93,6 +93,21 @@ static void ambiq_stimer_delta_set(uint32_t ui32Delta)
 #endif
 }
 
+static bool ambiq_stimer_delta_set_ready(void)
+{
+#if defined(CONFIG_SOC_SERIES_APOLLO4X) || defined(CONFIG_SOC_SERIES_APOLLO5X)
+	if (!am_hal_stimer_check_compare_delta_set(0)) {
+		return false;
+	}
+#if !defined(CONFIG_SOC_SERIES_APOLLO5X)
+	if (!am_hal_stimer_check_compare_delta_set(1)) {
+		return false;
+	}
+#endif
+#endif
+	return true;
+}
+
 void stimer_isr(const void *arg)
 {
 	ARG_UNUSED(arg);
@@ -130,8 +145,6 @@ void stimer_isr(const void *arg)
 
 void sys_clock_set_timeout(int32_t ticks, bool idle)
 {
-	ARG_UNUSED(idle);
-
 	if (!IS_ENABLED(CONFIG_TICKLESS_KERNEL)) {
 		return;
 	}
@@ -161,7 +174,7 @@ void sys_clock_set_timeout(int32_t ticks, bool idle)
 	if (delta <= MIN_DELAY) {
 		/*If the delta value is smaller than MIN_DELAY, trigger a interrupt immediately*/
 		am_hal_stimer_int_set(COMPARE_INTERRUPT);
-	} else {
+	} else if (!idle || ambiq_stimer_delta_set_ready()) {
 		ambiq_stimer_delta_set(delta);
 	}
 
