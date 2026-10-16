@@ -284,9 +284,10 @@ Ambiq Platforms:
   status: maintained
   maintainers:
     - AlessandroLuo
+    - RichardSWheatley
   collaborators:
     - aaronyegx
-    - RichardSWheatley
+    - Eddy-Hartono
   files:
     - soc/ambiq/
     - boards/ambiq/apollo*/
@@ -5472,9 +5473,10 @@ West:
   status: maintained
   maintainers:
     - AlessandroLuo
+    - RichardSWheatley
   collaborators:
     - aaronyegx
-    - RichardSWheatley
+    - Eddy-Hartono
   files:
     - modules/hal_ambiq/
   labels:

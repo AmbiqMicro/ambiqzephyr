@@ -27,6 +27,8 @@ Subsystem Guides
 
 - `Power_Management.rst <Power_Management.rst>`_ — configuration steps for
   lowest power consumption.
+- `Bluetooth.rst <Bluetooth.rst>`_ — validated Bluetooth support per board.
+- `How_to_Run_Bluetooth_Samples.rst <How_to_Run_Bluetooth_Samples.rst>`_
 - `How_to_Run_Zephyr_USB_Samples.rst <How_to_Run_Zephyr_USB_Samples.rst>`_
 - `How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst <How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst>`_
 - `How_to_Run_MCUBoot_Samples_and_Tests.rst <How_to_Run_MCUBoot_Samples_and_Tests.rst>`_
