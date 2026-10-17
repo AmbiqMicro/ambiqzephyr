@@ -18,6 +18,9 @@ LOG_MODULE_REGISTER(crypto_ambiq_hkdf, CONFIG_CRYPTO_LOG_LEVEL);
 
 #define DT_DRV_COMPAT ambiq_crypto_kdf
 
+/* Satisfy crypto_query_hwcaps() key-type and IO-buffer asserts for later use. */
+#define AMBIQ_HKDF_CAPS (CAP_RAW_KEY | CAP_SEPARATE_IO_BUFS | CAP_SYNC_OPS)
+
 static int ambiq_hkdf_hal_status_to_errno(uint32_t status)
 {
 	switch (status) {
@@ -93,7 +96,7 @@ static int ambiq_hkdf_derive(const struct device *dev, struct kdf_hkdf_pkt *pkt)
 static int ambiq_hkdf_query_hw_caps(const struct device *dev)
 {
 	ARG_UNUSED(dev);
-	return CAP_SYNC_OPS;
+	return AMBIQ_HKDF_CAPS;
 }
 
 static int ambiq_hkdf_pm_action(const struct device *dev, enum pm_device_action action)

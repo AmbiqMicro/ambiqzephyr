@@ -32,6 +32,12 @@ static int ambiq_srp_hal_status_to_errno(uint32_t status)
 	}
 }
 
+static bool ambiq_srp_hash_supported(enum hash_algo hash)
+{
+	return (hash == CRYPTO_HASH_ALGO_SHA1) || (hash == CRYPTO_HASH_ALGO_SHA224) ||
+	       (hash == CRYPTO_HASH_ALGO_SHA256);
+}
+
 static am_hal_cc312_sha_mode_e ambiq_srp_hal_mode(enum hash_algo hash)
 {
 	switch (hash) {
@@ -39,7 +45,10 @@ static am_hal_cc312_sha_mode_e ambiq_srp_hal_mode(enum hash_algo hash)
 		return AM_HAL_CC312_SHA1;
 	case CRYPTO_HASH_ALGO_SHA224:
 		return AM_HAL_CC312_SHA224;
+	case CRYPTO_HASH_ALGO_SHA256:
+		return AM_HAL_CC312_SHA256;
 	default:
+		/* Callers must reject unsupported hashes via ambiq_srp_hash_supported(). */
 		return AM_HAL_CC312_SHA256;
 	}
 }
@@ -50,6 +59,10 @@ static int ambiq_srp_group_to_hal(const struct crypto_ambiq_srp_group *group,
 	if (group == NULL || hal == NULL || group->n == NULL || group->g == NULL ||
 	    group->modulus_bytes == 0U) {
 		return -EINVAL;
+	}
+
+	if (!ambiq_srp_hash_supported(group->hash)) {
+		return -ENOTSUP;
 	}
 
 	hal->pN = group->n;

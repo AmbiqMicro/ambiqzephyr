@@ -115,7 +115,8 @@ static int ambiq_poly1305_mac_aead(const struct device *dev, const uint8_t *key,
 	uint32_t status;
 	int ret;
 
-	if (key == NULL || mac_out == NULL || data == NULL || data->dma == NULL) {
+	if (key == NULL || mac_out == NULL || (aad_len != 0U && aad == NULL) ||
+	    (length != 0U && input == NULL) || data == NULL || data->dma == NULL) {
 		return -EINVAL;
 	}
 

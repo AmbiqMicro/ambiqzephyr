@@ -101,6 +101,14 @@ static int ambiq_cmac_handler(struct mac_ctx *mctx, struct mac_pkt *pkt, bool fi
 		return -EINVAL;
 	}
 
+	if (pkt->in_len > 0U && pkt->in_buf == NULL) {
+		return -EINVAL;
+	}
+
+	if (pkt->in_len >= AM_HAL_CC312_DLLI_MAX_BUFF_SIZE) {
+		return -EINVAL;
+	}
+
 	k_mutex_lock(ambiq_cc312_arbiter_lock(), K_FOREVER);
 
 	(void)am_hal_cc312_memcpy(data->dma->key_local, mctx->key.bit_stream,

@@ -19,7 +19,16 @@ LOG_MODULE_REGISTER(crypto_ambiq_hmac, CONFIG_CRYPTO_LOG_LEVEL);
 
 #define DT_DRV_COMPAT ambiq_crypto_hmac
 
-#define AMBIQ_HMAC_CAPS (CAP_SEPARATE_IO_BUFS | CAP_SYNC_OPS)
+#define AMBIQ_HMAC_CAPS (CAP_RAW_KEY | CAP_SEPARATE_IO_BUFS | CAP_SYNC_OPS)
+
+/*
+ * Largest buffer handed to a single am_hal_cc312_hmac_update() call. HMAC is
+ * implemented on the HASH engine; CC312 DLLI size is 16 bits (LLI_SIZE_BIT_SIZE
+ * in the Arm cryptocell-312-runtime), so one transfer must stay strictly below
+ * AM_HAL_CC312_DLLI_MAX_BUFF_SIZE. Match the SHA driver's block-aligned chunk.
+ */
+#define AMBIQ_HMAC_MAX_CHUNK                                                                   \
+	ROUND_DOWN(AM_HAL_CC312_DLLI_MAX_BUFF_SIZE - AM_HAL_SHA_BLOCK_SIZE, AM_HAL_SHA_BLOCK_SIZE)
 
 struct ambiq_hmac_session {
 	am_hal_cc312_hmac_context_t hal;
@@ -97,6 +106,25 @@ static struct ambiq_hmac_session *ambiq_hmac_session_alloc(struct ambiq_hmac_dat
 	return s;
 }
 
+static uint32_t ambiq_hmac_feed(struct ambiq_hmac_session *s, const uint8_t *in, size_t len)
+{
+	uint32_t status = AM_HAL_STATUS_SUCCESS;
+
+	while (len > 0U) {
+		size_t chunk = MIN(len, (size_t)AMBIQ_HMAC_MAX_CHUNK);
+
+		status = am_hal_cc312_hmac_update(&s->hal, in, (uint32_t)chunk);
+		if (status != AM_HAL_STATUS_SUCCESS) {
+			break;
+		}
+
+		in += chunk;
+		len -= chunk;
+	}
+
+	return status;
+}
+
 static int ambiq_hmac_handler(struct mac_ctx *mctx, struct mac_pkt *pkt, bool finish)
 {
 	struct ambiq_hmac_session *s = mctx->drv_sessn_state;
@@ -128,7 +156,7 @@ static int ambiq_hmac_handler(struct mac_ctx *mctx, struct mac_pkt *pkt, bool fi
 	}
 
 	if (pkt->in_len > 0U) {
-		status = am_hal_cc312_hmac_update(&s->hal, pkt->in_buf, (uint32_t)pkt->in_len);
+		status = ambiq_hmac_feed(s, pkt->in_buf, pkt->in_len);
 		if (status != AM_HAL_STATUS_SUCCESS) {
 			ret = ambiq_hmac_hal_status_to_errno(status);
 			goto out;
