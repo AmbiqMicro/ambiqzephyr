@@ -11,6 +11,9 @@ set(LVGL_DIR ${ZEPHYR_LVGL_MODULE_DIR})
 
 zephyr_interface_library_named(LVGL)
 zephyr_library()
+# Ambiq draw: wait_for_finish is declared when LV_AMBIQ_CPU_GPU_ASYNC=0
+# but only defined when async is enabled; silence until LVGL pins the fix.
+zephyr_library_compile_options(-Wno-unused-function)
 
 zephyr_include_directories(${LVGL_DIR}/src/)
 zephyr_include_directories(include)
