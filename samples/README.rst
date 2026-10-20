@@ -33,7 +33,7 @@ Related Ambiq Docs
 - `../doc/ambiq/How_to_Run_Zephyr_USB_Samples.rst <../doc/ambiq/How_to_Run_Zephyr_USB_Samples.rst>`_
 - `../doc/ambiq/How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst <../doc/ambiq/How_to_Run_Zephyr_MSPI_Samples_and_Tests.rst>`_
 - `../doc/ambiq/How_to_Run_MCUBoot_Samples_and_Tests.rst <../doc/ambiq/How_to_Run_MCUBoot_Samples_and_Tests.rst>`_
-- `../doc/ambiq/RELEASE_NOTES.rst <../doc/ambiq/RELEASE_NOTES.rst>`_
+- `Release notes <https://github.com/AmbiqMicro/ambiqzephyr/releases>`_
 
 Common Samples
 **************
