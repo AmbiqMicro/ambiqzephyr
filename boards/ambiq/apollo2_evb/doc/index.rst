@@ -62,7 +62,9 @@ Building other samples
 The samples and tests below are built for this board as part of the Ambiq
 overnight release build set. Paths are relative to the zephyr repository.
 
+* ``samples/basic/threads``
 * ``samples/cpp/hello_world``
+* ``samples/drivers/uart/echo_bot``
 * ``samples/hello_world``
 * ``samples/philosophers``
 * ``samples/subsys/logging/logger``

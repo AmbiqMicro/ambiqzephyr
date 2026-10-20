@@ -72,6 +72,7 @@ overnight release build set. Paths are relative to the zephyr repository.
 * ``samples/drivers/counter/alarm``
 * ``samples/drivers/led/pwm``
 * ``samples/drivers/rtc``
+* ``samples/drivers/uart/echo_bot``
 * ``samples/drivers/watchdog``
 * ``samples/hello_world``
 * ``samples/philosophers``

@@ -69,6 +69,7 @@ overnight release build set. Paths are relative to the zephyr repository.
 * ``samples/basic/button``
 * ``samples/basic/threads``
 * ``samples/benchmarks/coremark``
+* ``samples/boards/ambiq/cc312_root_kdf``
 * ``samples/boards/ambiq/dram_click`` (``-- -DSHIELD=ambiq_mikrobus_spi,mikroe_dram_click``)
 * ``samples/cpp/hello_world``
 * ``samples/drivers/adc/adc_dt``
@@ -76,6 +77,7 @@ overnight release build set. Paths are relative to the zephyr repository.
 * ``samples/drivers/audio/dmic``
 * ``samples/drivers/counter/alarm``
 * ``samples/drivers/crc``
+* ``samples/drivers/crypto`` (``-- -DCONFIG_NOCACHE_MEMORY=y``)
 * ``samples/drivers/display`` (``-- -DSHIELD=ap510_disp``)
 * ``samples/drivers/eeprom``
 * ``samples/drivers/i2c/target_eeprom``
@@ -85,6 +87,7 @@ overnight release build set. Paths are relative to the zephyr repository.
 * ``samples/drivers/mspi/mspi_flash``
 * ``samples/drivers/mspi/mspi_timing_scan``
 * ``samples/drivers/rtc``
+* ``samples/drivers/uart/echo_bot``
 * ``samples/drivers/watchdog``
 * ``samples/hello_world``
 * ``samples/modules/lvgl/demos`` (``-- -DSHIELD=ap510_disp``)
@@ -92,11 +95,24 @@ overnight release build set. Paths are relative to the zephyr repository.
 * ``samples/subsys/fs/fs_sample``
 * ``samples/subsys/input/draw_touch_events`` (``-- -DSHIELD=ap510_disp``)
 * ``samples/subsys/logging/logger``
+* ``samples/subsys/shell/shell_module``
 * ``samples/subsys/usb/mass``
 * ``samples/synchronization``
 * ``tests/arch/arm/arm_irq_vector_table``
 * ``tests/benchmarks/mbedtls``
 * ``tests/boards/ambiq/aes_hal_example``
+* ``tests/boards/ambiq/chacha_hal_example``
+* ``tests/boards/ambiq/cmac_hal_example``
+* ``tests/boards/ambiq/ed25519_hal_example``
+* ``tests/boards/ambiq/hkdf_hal_example``
+* ``tests/boards/ambiq/hmac_hal_example``
+* ``tests/boards/ambiq/poly1305_hal_example``
+* ``tests/boards/ambiq/root_kdf_hal_example``
+* ``tests/boards/ambiq/rsa_hal_example``
+* ``tests/boards/ambiq/sha_hal_example``
+* ``tests/boards/ambiq/srp_hal_example``
+* ``tests/boards/ambiq/x25519_hal_example``
+* ``tests/crypto/crypto_aes`` (``-- -DCONFIG_NOCACHE_MEMORY=y``)
 * ``tests/crypto/mbedtls_psa``
 * ``tests/crypto/secp256r1`` (``-- -DEXTRA_CONF_FILE=p256-m_raw.conf``)
 * ``tests/drivers/adc/adc_api``
@@ -109,11 +125,14 @@ overnight release build set. Paths are relative to the zephyr repository.
 * ``tests/drivers/gpio/gpio_basic_api``
 * ``tests/drivers/hwinfo/api``
 * ``tests/drivers/i2s/i2s_api``
+* ``tests/drivers/i2s/i2s_speed``
 * ``tests/drivers/mspi/api`` (``-T drivers.mspi.api.ambiq``)
 * ``tests/drivers/mspi/flash``
 * ``tests/drivers/pwm/pwm_api``
 * ``tests/drivers/retained_mem/api``
 * ``tests/drivers/rtc/rtc_api``
+* ``tests/drivers/uart/uart_basic_api``
+* ``tests/drivers/uart/uart_interrupt_api``
 * ``tests/drivers/watchdog/wdt_basic_api``
 * ``tests/kernel/common``
 * ``tests/kernel/context``

@@ -75,6 +75,7 @@ overnight release build set. Paths are relative to the zephyr repository.
 * ``samples/drivers/mspi/mspi_async``
 * ``samples/drivers/mspi/mspi_flash``
 * ``samples/drivers/rtc``
+* ``samples/drivers/uart/echo_bot``
 * ``samples/drivers/watchdog``
 * ``samples/hello_world``
 * ``samples/philosophers``

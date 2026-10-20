@@ -75,6 +75,7 @@ overnight release build set. Paths are relative to the zephyr repository.
 * ``samples/drivers/memc`` (``-- -DSHIELD=ap4_evb_disp_shield_rev2``)
 * ``samples/drivers/mspi/mspi_flash`` (``-- -DSHIELD=ap4_evb_disp_shield_rev2``)
 * ``samples/drivers/mspi/mspi_timing_scan`` (``-- -DSHIELD=ap4_evb_disp_shield_rev2 -T sample.drivers.mspi.timing_scan.memc``)
+* ``samples/drivers/uart/echo_bot``
 * ``samples/drivers/watchdog``
 * ``samples/hello_world``
 * ``samples/philosophers``

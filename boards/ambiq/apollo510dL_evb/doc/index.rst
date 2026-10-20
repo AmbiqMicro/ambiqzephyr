@@ -63,6 +63,7 @@ overnight release build set. Paths are relative to the zephyr repository.
 * ``samples/basic/threads``
 * ``samples/benchmarks/coremark``
 * ``samples/bluetooth/peripheral``
+* ``samples/boards/ambiq/cc312_root_kdf``
 * ``samples/boards/ambiq/dram_click`` (``-- -DSHIELD=ambiq_mikrobus_spi,mikroe_dram_click``)
 * ``samples/boards/ambiq/pm_peripheral_demo``
 * ``samples/cpp/hello_world``
@@ -70,6 +71,7 @@ overnight release build set. Paths are relative to the zephyr repository.
 * ``samples/drivers/audio/dmic``
 * ``samples/drivers/counter/alarm``
 * ``samples/drivers/crc``
+* ``samples/drivers/crypto`` (``-- -DCONFIG_NOCACHE_MEMORY=y``)
 * ``samples/drivers/display`` (``-- -DSHIELD=ap510_disp``)
 * ``samples/drivers/eeprom`` (``-- -DSHIELD=ambiq_mikrobus_i2c,mikroe_eeram_33v_click``)
 * ``samples/drivers/i2s/output``
@@ -78,6 +80,7 @@ overnight release build set. Paths are relative to the zephyr repository.
 * ``samples/drivers/memc``
 * ``samples/drivers/mspi/mspi_timing_scan``
 * ``samples/drivers/rtc``
+* ``samples/drivers/uart/echo_bot``
 * ``samples/drivers/watchdog``
 * ``samples/hello_world``
 * ``samples/modules/lvgl/demos`` (``-- -DSHIELD=ap510_disp``)
@@ -90,6 +93,18 @@ overnight release build set. Paths are relative to the zephyr repository.
 * ``tests/arch/arm/arm_irq_vector_table``
 * ``tests/benchmarks/mbedtls``
 * ``tests/boards/ambiq/aes_hal_example``
+* ``tests/boards/ambiq/chacha_hal_example``
+* ``tests/boards/ambiq/cmac_hal_example``
+* ``tests/boards/ambiq/ed25519_hal_example``
+* ``tests/boards/ambiq/hkdf_hal_example``
+* ``tests/boards/ambiq/hmac_hal_example``
+* ``tests/boards/ambiq/poly1305_hal_example``
+* ``tests/boards/ambiq/root_kdf_hal_example``
+* ``tests/boards/ambiq/rsa_hal_example``
+* ``tests/boards/ambiq/sha_hal_example``
+* ``tests/boards/ambiq/srp_hal_example``
+* ``tests/boards/ambiq/x25519_hal_example``
+* ``tests/crypto/crypto_aes`` (``-- -DCONFIG_NOCACHE_MEMORY=y``)
 * ``tests/crypto/mbedtls_psa``
 * ``tests/crypto/secp256r1`` (``-- -DEXTRA_CONF_FILE=p256-m_raw.conf``)
 * ``tests/drivers/adc/adc_api``
