@@ -1,0 +1,48 @@
+/*
+ * Copyright (c) 2026 Ambiq Micro Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Apollo510 EVB two-device loopback on the click header:
+ * SCK->RST, MISO->CS, MOSI->AN.
+ * I2S0 uses BSP/Click pins GP5/GP6/GP7.
+ * I2S1 uses BSP pins GP16/GP17/GP10 (not GP18: that pad is on DBG_UART
+ * flow-control).
+ */
+
+/ {
+	aliases {
+		i2s-node1 = &i2s0;
+		i2s-node0 = &i2s1;
+	};
+};
+
+&pinctrl {
+	i2s0_loopback: i2s0_loopback {
+		group0 {
+			pinmux = <I2S0_CLK_P5>,
+				 <I2S0_WS_P7>,
+				 <I2S0_SDOUT_P6>;
+		};
+	};
+
+	i2s1_loopback: i2s1_loopback {
+		group0 {
+			pinmux = <I2S1_CLK_P16>,
+				 <I2S1_WS_P10>,
+				 <I2S1_DATA_P17>;
+		};
+	};
+};
+
+&i2s0 {
+	pinctrl-0 = <&i2s0_loopback>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&i2s1 {
+	pinctrl-0 = <&i2s1_loopback>;
+	pinctrl-names = "default";
+	status = "okay";
+};
