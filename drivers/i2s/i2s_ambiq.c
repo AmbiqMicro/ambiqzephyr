@@ -349,27 +349,31 @@ static int i2s_ambiq_clock_settings_derive(uint32_t i2s_bclk_freq, am_hal_i2s_co
 #error "Unsupported device."
 #endif
 
-static void drop_dma_queue(const struct device *dev)
+static void drop_dma_queue(const struct device *dev, enum i2s_dir dir)
 {
 	dma_msg item;
 	struct i2s_ambiq_data *data = dev->data;
 
-	if (data->tx_tip_buffer != NULL) {
-		k_mem_slab_free(data->tx_cfg.mem_slab, data->tx_tip_buffer);
-		data->tx_tip_buffer = NULL;
+	if (i2s_ambiq_dir_includes_tx(dir)) {
+		if (data->tx_tip_buffer != NULL) {
+			k_mem_slab_free(data->tx_cfg.mem_slab, data->tx_tip_buffer);
+			data->tx_tip_buffer = NULL;
+		}
+
+		while (k_msgq_get(&data->tx_dma_queue, &item, K_NO_WAIT) == 0) {
+			k_mem_slab_free(data->tx_cfg.mem_slab, item.dma_buf);
+		}
 	}
 
-	if (data->rx_tip_buffer != NULL) {
-		k_mem_slab_free(data->rx_cfg.mem_slab, data->rx_tip_buffer);
-		data->rx_tip_buffer = NULL;
-	}
+	if (i2s_ambiq_dir_includes_rx(dir)) {
+		if (data->rx_tip_buffer != NULL) {
+			k_mem_slab_free(data->rx_cfg.mem_slab, data->rx_tip_buffer);
+			data->rx_tip_buffer = NULL;
+		}
 
-	while (k_msgq_get(&data->tx_dma_queue, &item, K_NO_WAIT) == 0) {
-		k_mem_slab_free(data->tx_cfg.mem_slab, item.dma_buf);
-	}
-
-	while (k_msgq_get(&data->rx_dma_queue, &item, K_NO_WAIT) == 0) {
-		k_mem_slab_free(data->rx_cfg.mem_slab, item.dma_buf);
+		while (k_msgq_get(&data->rx_dma_queue, &item, K_NO_WAIT) == 0) {
+			k_mem_slab_free(data->rx_cfg.mem_slab, item.dma_buf);
+		}
 	}
 }
 
@@ -432,6 +436,7 @@ static int i2s_ambiq_configure(const struct device *dev, enum i2s_dir dir,
 
 	if (i2s_config_in->frame_clk_freq == 0U) {
 		LOG_ERR("i2s_configure: invalid frame_clk_freq %u", i2s_config_in->frame_clk_freq);
+		drop_dma_queue(dev, dir);
 		data->i2s_state = I2S_STATE_NOT_READY;
 		return 0;
 	}
@@ -751,7 +756,7 @@ static int i2s_ambiq_trigger(const struct device *dev, enum i2s_dir dir, enum i2
 			ret = -EIO;
 			break;
 		}
-		drop_dma_queue(dev);
+		drop_dma_queue(dev, I2S_DIR_BOTH);
 		if (data->i2s_state == I2S_STATE_RUNNING) {
 			i2s_ambiq_dma_stop(dev);
 		} else {
@@ -782,7 +787,7 @@ static int i2s_ambiq_trigger(const struct device *dev, enum i2s_dir dir, enum i2
 			break;
 		}
 
-		drop_dma_queue(dev);
+		drop_dma_queue(dev, I2S_DIR_BOTH);
 		if (data->i2s_power_on == true) {
 			ret = am_hal_i2s_power_control(data->i2s_handler, AM_HAL_I2S_POWER_OFF,
 						       true);
