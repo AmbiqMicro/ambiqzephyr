@@ -103,6 +103,11 @@ static void i2s_ambiq_tx_dmacpl_handler(const struct device *dev)
 	k_mem_slab_free(data->tx_cfg.mem_slab, data->tx_tip_buffer);
 	data->tx_tip_buffer = NULL;
 
+	if (data->tx_dma_stop) {
+		am_hal_i2s_interrupt_enable(data->i2s_handler, AM_HAL_I2S_INT_TXFIFO_EMPTY);
+		return;
+	}
+
 	ret = k_msgq_get(&data->tx_dma_queue, &item, K_NO_WAIT);
 	if (ret < 0) {
 		am_hal_i2s_interrupt_enable(data->i2s_handler, AM_HAL_I2S_INT_TXFIFO_EMPTY);
