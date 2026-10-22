@@ -5469,7 +5469,7 @@ West:
   labels:
     - "platform: Broadcom"
 
-"West project: hal_ambiq_internal":
+"West project: ambiqhal_ambiq":
   status: maintained
   maintainers:
     - AlessandroLuo
