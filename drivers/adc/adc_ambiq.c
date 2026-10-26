@@ -13,6 +13,11 @@
 #include <zephyr/kernel.h>
 #include <zephyr/cache.h>
 
+#ifdef CONFIG_ADC_AMBIQ_STREAM
+#include <zephyr/rtio/rtio.h>
+#include <zephyr/rtio/work.h>
+#endif /* CONFIG_ADC_AMBIQ_STREAM */
+
 #define ADC_CONTEXT_USES_KERNEL_TIMER
 #define ADC_CONTEXT_ENABLE_ON_COMPLETE
 #include "adc_context.h"
@@ -29,6 +34,29 @@ LOG_MODULE_REGISTER(adc_ambiq, CONFIG_ADC_LOG_LEVEL);
 
 /* Number of slots available. */
 #define AMBIQ_ADC_SLOT_NUMBER AM_HAL_ADC_MAX_SLOTS
+
+#ifdef CONFIG_ADC_AMBIQ_STREAM
+/* Maximum number of channels that can be encoded in a single stream frame. */
+#define AMBIQ_ADC_STREAM_MAX_CHANNELS AMBIQ_ADC_SLOT_NUMBER
+
+/*
+ * Encoded header prepended to every RTIO frame produced by the driver (both the
+ * one-shot and the streaming paths). It is self-describing so that the decoder
+ * can convert the raw samples that immediately follow it without any external
+ * state.
+ */
+struct adc_ambiq_stream_header {
+	uint64_t timestamp_ns;
+	uint16_t vref_mv;
+	uint16_t frame_count; /* number of channel scans stored in the payload */
+	uint8_t num_channels; /* number of samples per scan */
+	uint8_t resolution;
+	/* channel id for each slot, in the order samples are stored */
+	uint8_t channel_ids[AMBIQ_ADC_STREAM_MAX_CHANNELS];
+	/* payload: frame_count * num_channels little-endian uint16_t samples */
+	uint16_t samples[];
+} __packed;
+#endif /* CONFIG_ADC_AMBIQ_STREAM */
 
 #ifdef CONFIG_ADC_AMBIQ_DMA
 #if defined(CONFIG_SOC_SERIES_APOLLO3X)
@@ -58,8 +86,20 @@ struct adc_ambiq_data {
 	bool dma_mode; /* Device tree configuration: DMA enabled */
 	bool use_dma;  /* Runtime decision: actually use DMA for this sequence */
 #endif
+#ifdef CONFIG_ADC_AMBIQ_STREAM
+	struct rtio_iodev_sqe *sqe;
+	uint8_t stream_channel_ids[AMBIQ_ADC_STREAM_MAX_CHANNELS];
+	uint8_t stream_num_channels;
+	uint8_t stream_resolution;
+	uint16_t stream_vref_mv;
+	bool streaming;
+#endif
 	const struct device *dev;
 };
+
+#ifdef CONFIG_ADC_AMBIQ_STREAM
+static void adc_ambiq_stream_isr(const struct device *dev, uint32_t int_mask);
+#endif
 
 static int adc_ambiq_set_resolution(am_hal_adc_slot_prec_e *prec, uint8_t adc_resolution)
 {
@@ -248,6 +288,13 @@ static void adc_ambiq_isr(const struct device *dev)
 
 	/* Read the interrupt status. */
 	am_hal_adc_interrupt_status(data->adcHandle, &ui32IntMask, true);
+
+#ifdef CONFIG_ADC_AMBIQ_STREAM
+	if (data->streaming) {
+		adc_ambiq_stream_isr(dev, ui32IntMask);
+		return;
+	}
+#endif /* CONFIG_ADC_AMBIQ_STREAM */
 
 	/*
 	 * If we got a conversion completion interrupt (which should be our only
@@ -600,6 +647,410 @@ static int adc_ambiq_pm_action(const struct device *dev, enum pm_device_action a
 }
 #endif /* CONFIG_PM_DEVICE */
 
+#ifdef CONFIG_ADC_AMBIQ_STREAM
+
+/* Number of bits required to represent the vref, used as the q31 shift value. */
+static inline uint8_t adc_ambiq_stream_shift(uint16_t vref_mv)
+{
+	return 32 - __builtin_clz(vref_mv);
+}
+
+static inline void adc_ambiq_stream_convert_q31(q31_t *out, uint16_t sample, uint16_t vref_mv,
+						uint8_t resolution, uint8_t shift)
+{
+	uint32_t scale = BIT(resolution);
+	/* micro-volts per LSB */
+	uint32_t sensitivity = (vref_mv * (scale - 1)) / scale * 1000 / scale;
+
+	*out = BIT(31 - shift) * sensitivity / 1000000 * sample;
+}
+
+static int adc_ambiq_decoder_get_frame_count(const uint8_t *buffer, uint32_t channel,
+					     uint16_t *frame_count)
+{
+	const struct adc_ambiq_stream_header *hdr = (const struct adc_ambiq_stream_header *)buffer;
+
+	ARG_UNUSED(channel);
+	*frame_count = hdr->frame_count;
+
+	return 0;
+}
+
+static int adc_ambiq_decoder_get_size_info(struct adc_dt_spec adc_spec, uint32_t channel,
+					   size_t *base_size, size_t *frame_size)
+{
+	ARG_UNUSED(adc_spec);
+	ARG_UNUSED(channel);
+
+	__ASSERT_NO_MSG(base_size != NULL);
+	__ASSERT_NO_MSG(frame_size != NULL);
+
+	*base_size = sizeof(struct adc_data);
+	*frame_size = sizeof(struct adc_sample_data);
+
+	return 0;
+}
+
+static int adc_ambiq_decoder_decode(const uint8_t *buffer, uint32_t channel, uint32_t *fit,
+				    uint16_t max_count, void *data_out)
+{
+	const struct adc_ambiq_stream_header *hdr = (const struct adc_ambiq_stream_header *)buffer;
+	struct adc_data *out = (struct adc_data *)data_out;
+	uint8_t slot = hdr->num_channels;
+	uint8_t shift;
+	uint16_t count = 0;
+
+	/* Map the requested channel id to its slot within a scan. */
+	for (uint8_t i = 0; i < hdr->num_channels; i++) {
+		if (hdr->channel_ids[i] == channel) {
+			slot = i;
+			break;
+		}
+	}
+	if (slot == hdr->num_channels) {
+		return -EINVAL;
+	}
+
+	if (*fit >= hdr->frame_count) {
+		return 0;
+	}
+
+	shift = adc_ambiq_stream_shift(hdr->vref_mv);
+	out->header.base_timestamp_ns = hdr->timestamp_ns;
+	out->shift = shift;
+
+	while (count < max_count && *fit < hdr->frame_count) {
+		uint16_t sample = hdr->samples[(*fit) * hdr->num_channels + slot];
+
+		out->readings[count].timestamp_delta = 0;
+		adc_ambiq_stream_convert_q31(&out->readings[count].value, sample, hdr->vref_mv,
+					     hdr->resolution, shift);
+		count++;
+		(*fit)++;
+	}
+
+	out->header.reading_count = count;
+
+	return count;
+}
+
+static const struct adc_decoder_api adc_ambiq_decoder_api = {
+	.get_frame_count = adc_ambiq_decoder_get_frame_count,
+	.get_size_info = adc_ambiq_decoder_get_size_info,
+	.decode = adc_ambiq_decoder_decode,
+};
+
+static int adc_ambiq_get_decoder(const struct device *dev, const struct adc_decoder_api **api)
+{
+	ARG_UNUSED(dev);
+	*api = &adc_ambiq_decoder_api;
+
+	return 0;
+}
+
+/*
+ * One-shot RTIO path: performed on the RTIO work queue because the classic
+ * am_hal ADC read is blocking. The resulting frame uses the same encoded
+ * header as the streaming path so a single decoder serves both.
+ */
+static void adc_ambiq_submit_oneshot_sync(struct rtio_iodev_sqe *iodev_sqe)
+{
+	const struct adc_read_config *cfg = iodev_sqe->sqe.iodev->data;
+	const struct device *dev = cfg->adc;
+	const struct adc_dt_spec *adc_spec = cfg->adc_spec;
+	uint8_t num_channels = cfg->adc_spec_cnt;
+	uint16_t raw[AMBIQ_ADC_STREAM_MAX_CHANNELS];
+	uint32_t channels = 0;
+	struct adc_ambiq_stream_header *hdr;
+	uint8_t *buf;
+	uint32_t buf_len;
+	size_t frame_len;
+	int rc;
+
+	if (num_channels == 0 || num_channels > AMBIQ_ADC_STREAM_MAX_CHANNELS) {
+		rtio_iodev_sqe_err(iodev_sqe, -EINVAL);
+		return;
+	}
+
+	for (uint8_t i = 0; i < num_channels; i++) {
+		channels |= BIT(adc_spec[i].channel_id);
+	}
+
+	struct adc_sequence sequence = {
+		.channels = channels,
+		.buffer = raw,
+		.buffer_size = num_channels * sizeof(uint16_t),
+		.resolution = adc_spec[0].resolution,
+		.oversampling = adc_spec[0].oversampling,
+	};
+
+	rc = adc_read(dev, &sequence);
+	if (rc != 0) {
+		LOG_WRN("Failed to read ADC samples (%d)", rc);
+		rtio_iodev_sqe_err(iodev_sqe, rc);
+		return;
+	}
+
+	frame_len = sizeof(struct adc_ambiq_stream_header) + num_channels * sizeof(uint16_t);
+	rc = rtio_sqe_rx_buf(iodev_sqe, frame_len, frame_len, &buf, &buf_len);
+	if (rc != 0) {
+		LOG_WRN("Failed to get a read buffer of size %zu bytes", frame_len);
+		rtio_iodev_sqe_err(iodev_sqe, rc);
+		return;
+	}
+
+	hdr = (struct adc_ambiq_stream_header *)buf;
+	hdr->timestamp_ns = k_ticks_to_ns_floor64(k_uptime_ticks());
+	hdr->vref_mv = adc_spec[0].vref_mv;
+	hdr->frame_count = 1;
+	hdr->num_channels = num_channels;
+	hdr->resolution = adc_spec[0].resolution;
+	for (uint8_t i = 0; i < num_channels; i++) {
+		hdr->channel_ids[i] = adc_spec[i].channel_id;
+		hdr->samples[i] = raw[i];
+	}
+
+	rtio_iodev_sqe_ok(iodev_sqe, 0);
+}
+
+static void adc_ambiq_submit_oneshot(const struct device *dev, struct rtio_iodev_sqe *iodev_sqe)
+{
+	struct rtio_work_req *req = rtio_work_req_alloc();
+
+	ARG_UNUSED(dev);
+
+	if (req == NULL) {
+		LOG_ERR("RTIO work item allocation failed. Consider increasing "
+			"CONFIG_RTIO_WORKQ_POOL_ITEMS.");
+		rtio_iodev_sqe_err(iodev_sqe, -ENOMEM);
+		return;
+	}
+
+	rtio_work_req_submit(req, iodev_sqe, adc_ambiq_submit_oneshot_sync);
+}
+
+/* Re-arm the DMA engine for the next scan while the repeat-trigger timer keeps running. */
+static void adc_ambiq_stream_rearm(const struct device *dev)
+{
+	struct adc_ambiq_data *data = dev->data;
+	am_hal_adc_dma_config_t dma_cfg = data->dma_cfg;
+
+	dma_cfg.ui32SampleCount = data->stream_num_channels;
+
+	ADCn(0)->DMACFG_b.DMAEN = 0;
+	am_hal_adc_configure_dma(data->adcHandle, &dma_cfg);
+	am_hal_adc_interrupt_clear(data->adcHandle, AMBIQ_ADC_DMA_INT);
+	am_hal_adc_interrupt_enable(data->adcHandle, AMBIQ_ADC_DMA_INT);
+	ADCn(0)->DMACFG_b.DMAEN = 1;
+}
+
+static void adc_ambiq_stop_stream(const struct device *dev)
+{
+	struct adc_ambiq_data *data = dev->data;
+
+	adc_ambiq_stop_sampling(dev);
+	am_hal_adc_interrupt_disable(data->adcHandle, 0xFF);
+	am_hal_adc_disable(data->adcHandle);
+	data->streaming = false;
+	data->use_dma = false;
+	pm_device_runtime_put_async(dev, K_MSEC(1));
+}
+
+static int adc_ambiq_start_stream(const struct device *dev, const struct adc_read_config *cfg)
+{
+	struct adc_ambiq_data *data = dev->data;
+	const struct adc_ambiq_config *dcfg = dev->config;
+	const struct adc_dt_spec *adc_spec = cfg->adc_spec;
+	uint8_t num_channels = cfg->adc_spec_cnt;
+	uint32_t channels = 0;
+	uint8_t slot = 0;
+	struct adc_sequence sequence = {0};
+	int error;
+
+	if (num_channels == 0 || num_channels > AMBIQ_ADC_STREAM_MAX_CHANNELS) {
+		return -EINVAL;
+	}
+
+	if (!data->dma_mode) {
+		LOG_ERR("ADC streaming requires 'dma-mode' to be enabled in devicetree");
+		return -ENOTSUP;
+	}
+
+	for (uint8_t i = 0; i < num_channels; i++) {
+		if (adc_spec[i].channel_id >= dcfg->num_channels) {
+			LOG_ERR("Invalid channel id %d", adc_spec[i].channel_id);
+			return -EINVAL;
+		}
+		channels |= BIT(adc_spec[i].channel_id);
+	}
+
+	sequence.resolution = adc_spec[0].resolution;
+	sequence.channels = channels;
+
+	/* Streaming always uses the DMA + internal repeat trigger timer engine. */
+	data->use_dma = true;
+
+	error = adc_ambiq_config(dev);
+	if (error < 0) {
+		return error;
+	}
+
+	/* Configure one slot per channel; record the channel id in scan order so the
+	 * decoder can map a channel id back to its sample offset.
+	 */
+	while (channels != 0) {
+		uint8_t channel_id = find_lsb_set(channels) - 1;
+
+		error = adc_ambiq_slot_config(dev, &sequence, channel_id, slot);
+		if (error < 0) {
+			return error;
+		}
+		data->stream_channel_ids[slot] = channel_id;
+		channels &= ~BIT(channel_id);
+		slot++;
+	}
+
+	data->stream_num_channels = num_channels;
+	data->stream_resolution = adc_spec[0].resolution;
+	data->stream_vref_mv = adc_spec[0].vref_mv;
+	data->active_channels = num_channels;
+
+	error = adc_ambiq_dma_config(dev, num_channels);
+	if (error < 0) {
+		return error;
+	}
+
+	adc_ambiq_start_sampling(dev);
+
+	return 0;
+}
+
+static void adc_ambiq_stream_isr(const struct device *dev, uint32_t int_mask)
+{
+	struct adc_ambiq_data *data = dev->data;
+	struct rtio_iodev_sqe *iodev_sqe;
+	struct adc_ambiq_stream_header *hdr;
+	uint32_t num_samples = data->stream_num_channels;
+	uint8_t *buf;
+	uint32_t buf_len;
+	size_t frame_len;
+	bool dma_complete;
+	int rc;
+
+#if defined(CONFIG_SOC_SERIES_APOLLO3X)
+	dma_complete = (int_mask & AM_HAL_ADC_INT_DCMP);
+#else
+	dma_complete = ((int_mask & AM_HAL_ADC_INT_FIFOOVR1) && (ADCn(0)->DMASTAT_b.DMACPL)) ||
+		       (int_mask & AM_HAL_ADC_INT_DCMP);
+#endif
+
+	am_hal_adc_interrupt_clear(data->adcHandle, int_mask);
+
+	if (!dma_complete) {
+		return;
+	}
+
+#if CONFIG_ADC_AMBIQ_HANDLE_CACHE
+	if (!buf_in_nocache((uintptr_t)data->dma_cfg.ui32TargetAddress,
+			    num_samples * sizeof(uint32_t))) {
+		sys_cache_data_invd_range((void *)data->dma_cfg.ui32TargetAddress,
+					  num_samples * sizeof(uint32_t));
+	}
+#endif /* CONFIG_ADC_AMBIQ_HANDLE_CACHE */
+
+	am_hal_adc_samples_read(data->adcHandle, false,
+				(uint32_t *)data->dma_cfg.ui32TargetAddress, &num_samples,
+				data->sample_buf);
+
+	iodev_sqe = data->sqe;
+	data->sqe = NULL;
+
+	/* No consumer is waiting for this frame: stop sampling to save power. The
+	 * next submit will restart the stream.
+	 */
+	if (iodev_sqe == NULL) {
+		adc_ambiq_stop_stream(dev);
+		return;
+	}
+
+	frame_len = sizeof(struct adc_ambiq_stream_header) +
+		    data->stream_num_channels * sizeof(uint16_t);
+
+	rc = rtio_sqe_rx_buf(iodev_sqe, frame_len, frame_len, &buf, &buf_len);
+	if (rc != 0) {
+		rtio_iodev_sqe_err(iodev_sqe, rc);
+		adc_ambiq_stop_stream(dev);
+		return;
+	}
+
+	hdr = (struct adc_ambiq_stream_header *)buf;
+	hdr->timestamp_ns = k_ticks_to_ns_floor64(k_uptime_ticks());
+	hdr->vref_mv = data->stream_vref_mv;
+	hdr->frame_count = 1;
+	hdr->num_channels = data->stream_num_channels;
+	hdr->resolution = data->stream_resolution;
+	for (uint8_t i = 0; i < data->stream_num_channels; i++) {
+		hdr->channel_ids[i] = data->stream_channel_ids[i];
+		hdr->samples[i] = (uint16_t)data->sample_buf[i].ui32Sample;
+	}
+
+	rtio_iodev_sqe_ok(iodev_sqe, 0);
+
+	/* Keep the stream running for the next frame. */
+	adc_ambiq_stream_rearm(dev);
+}
+
+static void adc_ambiq_submit(const struct device *dev, struct rtio_iodev_sqe *iodev_sqe)
+{
+	const struct adc_read_config *cfg = iodev_sqe->sqe.iodev->data;
+	struct adc_ambiq_data *data = dev->data;
+	bool need_start;
+	unsigned int key;
+	int error;
+
+	if (!cfg->is_streaming) {
+		adc_ambiq_submit_oneshot(dev, iodev_sqe);
+		return;
+	}
+
+	key = irq_lock();
+	data->sqe = iodev_sqe;
+	need_start = !data->streaming;
+	if (need_start) {
+		data->streaming = true;
+	}
+	irq_unlock(key);
+
+	if (!need_start) {
+		/* Stream already running; the ISR will complete this sqe with
+		 * the next frame.
+		 */
+		return;
+	}
+
+	error = pm_device_runtime_get(dev);
+	if (error < 0) {
+		data->streaming = false;
+		data->sqe = NULL;
+		rtio_iodev_sqe_err(iodev_sqe, error);
+		return;
+	}
+
+	error = adc_ambiq_start_stream(dev, cfg);
+	if (error < 0) {
+		data->streaming = false;
+		data->sqe = NULL;
+		pm_device_runtime_put(dev);
+		rtio_iodev_sqe_err(iodev_sqe, error);
+	}
+}
+
+#define ADC_AMBIQ_STREAM_API                                                                       \
+	.submit = adc_ambiq_submit, .get_decoder = adc_ambiq_get_decoder,
+#else
+#define ADC_AMBIQ_STREAM_API
+#endif /* CONFIG_ADC_AMBIQ_STREAM */
+
 #ifdef CONFIG_ADC_ASYNC
 #define ADC_AMBIQ_DRIVER_API(n)                                                                    \
 	static DEVICE_API(adc, adc_ambiq_driver_api_##n) = {                                       \
@@ -607,6 +1058,7 @@ static int adc_ambiq_pm_action(const struct device *dev, enum pm_device_action a
 		.read = adc_ambiq_read,                                                            \
 		.read_async = adc_ambiq_read_async,                                                \
 		.ref_internal = DT_INST_PROP(n, internal_vref_mv),                                 \
+		ADC_AMBIQ_STREAM_API                                                               \
 	};
 #else
 #define ADC_AMBIQ_DRIVER_API(n)                                                                    \
@@ -614,6 +1066,7 @@ static int adc_ambiq_pm_action(const struct device *dev, enum pm_device_action a
 		.channel_setup = adc_ambiq_channel_setup,                                          \
 		.read = adc_ambiq_read,                                                            \
 		.ref_internal = DT_INST_PROP(n, internal_vref_mv),                                 \
+		ADC_AMBIQ_STREAM_API                                                               \
 	};
 #endif
 
