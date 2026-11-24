@@ -1,0 +1,28 @@
+# Code owners for AmbiqMicro/ambiqzephyr.
+# GitHub reads this file before the upstream root CODEOWNERS.
+# The last matching pattern wins.
+
+*                                       @RichardSWheatley
+
+# Bluetooth
+/drivers/bluetooth/hci/*apollo*         @Eddy-Hartono @RichardSWheatley
+/drivers/bluetooth/hci/*ambiq*          @Eddy-Hartono @RichardSWheatley
+/dts/bindings/bluetooth/ambiq,*         @Eddy-Hartono @RichardSWheatley
+/samples/bluetooth/**/*apollo*          @Eddy-Hartono @RichardSWheatley
+
+# Graphics
+/drivers/gpu/*ambiq*                    @ReynoWu-Ambiq @RichardSWheatley
+/dts/bindings/gpu/ambiq,*               @ReynoWu-Ambiq @RichardSWheatley
+/include/zephyr/drivers/gpu/*ambiq*     @ReynoWu-Ambiq @RichardSWheatley
+/boards/shields/ap510_disp/             @ReynoWu-Ambiq @RichardSWheatley
+/boards/shields/ap510_jdi_disp/         @ReynoWu-Ambiq @RichardSWheatley
+/samples/boards/ambiq/nemagfx_benchmarks/ @ReynoWu-Ambiq @RichardSWheatley
+/samples/drivers/display/**/*apollo*    @ReynoWu-Ambiq @RichardSWheatley
+/samples/modules/lvgl/**/*apollo*       @ReynoWu-Ambiq @RichardSWheatley
+/samples/subsys/display/**/*apollo*     @ReynoWu-Ambiq @RichardSWheatley
+
+# MSPI
+/drivers/mspi/*ambiq*                   @ReynoWu-Ambiq @RichardSWheatley
+/dts/bindings/mspi/ambiq,*              @ReynoWu-Ambiq @RichardSWheatley
+/samples/drivers/mspi/**/*apollo*       @ReynoWu-Ambiq @RichardSWheatley
+/tests/drivers/mspi/**/*apollo*         @ReynoWu-Ambiq @RichardSWheatley
